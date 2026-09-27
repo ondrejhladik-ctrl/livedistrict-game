@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+<title>Žižkov Night Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="game" width="320" height="180"></canvas>
+    <div id="scanlines"></div>
+
+    <div id="hud">
+      <div>
+        <div class="label">SKÓRE</div><div id="score">0</div>
+        <div class="label">km/h</div><div id="speed">0</div>
+      </div>
+      <div class="right"><div class="label">REKORD</div><div id="best">0</div></div>
+    </div>
+
+    <div id="title" class="overlay">
+      <div class="sub">← → / A D &nbsp;řízení &nbsp;·&nbsp; M zvuk<br>na mobilu klepej na levou / pravou půlku</div>
+      <div class="sub blink">MEZERNÍK / KLEPNI PRO START</div>
+    </div>
+    <div id="gameover" class="overlay hidden">
+      <div class="neon red">GAME OVER</div>
+      <div class="sub" id="gameover-info"></div>
+      <div class="sub blink">MEZERNÍK / KLEPNI PRO NOVOU JÍZDU</div>
+    </div>
+    <!-- checkpoint: the screen goes black with a pixel-art title, then the next level starts -->
+    <!-- loading screen: pixel-art Prague rooftops at night, a click fades it into the game -->
+    <div id="loading" class="overlay loading">
+      <canvas id="loading-canvas" width="640" height="360"></canvas>
+    </div>
+
+    <!-- petrol station: shown once the car has stopped by the pump -->
+    <div id="station-hint" class="overlay hidden"><div class="sub blink" style="position:absolute;bottom:6%">KLEPNI / MEZERNÍK PRO POKRAČOVÁNÍ</div></div>
+
+    <!-- dev mode (key O): free camera -->
+    <div id="dev" class="hidden"></div>
+
+    <!-- touch hint: the two halves of the screen steer (shown on touch screens only) -->
+    <div id="touch-hint"><span>◀</span><span>▶</span></div>
+
+    <div id="checkpoint" class="overlay blackout hidden">
+      <div class="cp-title" data-text="CHECKPOINT">CHECKPOINT</div>
+      <div class="sub" id="checkpoint-level"></div>
+    </div>
+  </div>
+</div>
+
+<!-- phones held upright: ask to turn the phone -->
+<div id="rotate"><div class="rotate-icon">📱</div><div>OTOČ TELEFON NA ŠÍŘKU</div></div>
+
+<!-- Load order matters: each file only uses what is loaded above it
+     (or calls it later, at runtime). -->
+<script src="js/config.js"></script>
+<script src="js/util.js"></script>
+<script src="js/assets/tower-image.js"></script>
+<script src="js/assets/loading-car-image.js"></script>
+<script src="js/assets/smoker-image.js"></script>
+
+<script src="js/world/fog.js"></script>
+<script src="js/world/sky.js"></script>
+<script src="js/world/road.js"></script>
+<script src="js/world/city.js"></script>
+<script src="js/world/rain.js"></script>
+<script src="js/world/lamps.js"></script>
+<script src="js/world/exit.js"></script>
+<script src="js/world/station.js"></script>
+
+<script src="js/sprites/corvair.js"></script>
+<script src="js/sprites/traffic-cars.js"></script>
+
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/loading.js"></script>
+<script src="js/ui/input.js"></script>
+<script src="js/ui/audio.js"></script>
+
+<script src="js/game/traffic.js"></script>
+<script src="js/game/particles.js"></script>
+<script src="js/game/puddles.js"></script>
+<script src="js/ui/cutscene.js"></script>
+<script src="js/game/game.js"></script>
+<script src="js/ui/devmode.js"></script>
+<script src="js/ui/dev3d.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
