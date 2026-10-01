@@ -1,12 +1,13 @@
 // Street lamps (from CONFIG.lamps.startAt metres on): a row of Prague-style
 // lamps with greenish light on both pavements. Each one lights up the fog, casts a
 // cone of light and a bright pool on the road – and cars passing under a lamp
-// light up for a moment (see lightAt + Renderer).
+// light up for a moment (see lightAt + Renderer). None on the bridge (Biome 'bridge').
 const Lamps = (() => {
   const L = CONFIG.lamps;
   let firstWz = Infinity;                 // world depth of the first lamp (Infinity = no lamps yet)
 
   function reset() { firstWz = Infinity; }
+  const onBridge = wz => Biome.zone(wz) === 'bridge';
 
   // switch the lamps on: the first ones appear far ahead, in the fog
   function activate(dist) {
@@ -18,7 +19,7 @@ const Lamps = (() => {
     const out = [];
     if (firstWz === Infinity) return out;
     let wz = Math.max(firstWz, Math.ceil((dist + .3) / L.spacing) * L.spacing);
-    for (; wz - dist < CONFIG.city.drawZ; wz += L.spacing) out.push(wz);
+    for (; wz - dist < CONFIG.city.drawZ; wz += L.spacing) if (!onBridge(wz)) out.push(wz);
     return out;
   }
 
@@ -26,7 +27,7 @@ const Lamps = (() => {
   function range(z0, z1) {
     const out = [];
     if (firstWz === Infinity) return out;
-    for (let wz = Math.max(firstWz, Math.ceil(z0 / L.spacing) * L.spacing); wz < z1; wz += L.spacing) out.push(wz);
+    for (let wz = Math.max(firstWz, Math.ceil(z0 / L.spacing) * L.spacing); wz < z1; wz += L.spacing) if (!onBridge(wz)) out.push(wz);
     return out;
   }
 

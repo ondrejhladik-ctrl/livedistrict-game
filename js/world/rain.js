@@ -87,9 +87,18 @@ const Rain = (() => {
 
   const px = (ctx, x, y, col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); };
 
+  // The rain is vague: everything is drawn into its own layer first, then laid
+  // over the picture blurred (a half-size and a quarter-size copy stretched back
+  // up smoothly) with only a faint crisp trace on top.
+  const layer = Util.canvas(W, H), lg = layer.getContext('2d');
+  const half = Util.canvas(W / 2, H / 2), hg = half.getContext('2d');
+  const quarter = Util.canvas(W / 4, H / 4), qg = quarter.getContext('2d');
+
   // the rain itself + lightning – drawn over everything
-  function drawDrops(ctx) {
+  function drawDrops(out) {
     if (intensity < .02 && !beads.length) return;
+    const ctx = lg;
+    ctx.clearRect(0, 0, W, H);
 
     // distant streaks
     ctx.fillStyle = 'rgba(170,205,235,.3)';
@@ -137,9 +146,19 @@ const Rain = (() => {
       }
     }
 
+    hg.imageSmoothingEnabled = qg.imageSmoothingEnabled = true;
+    hg.clearRect(0, 0, half.width, half.height); hg.drawImage(layer, 0, 0, half.width, half.height);
+    qg.clearRect(0, 0, quarter.width, quarter.height); qg.drawImage(half, 0, 0, quarter.width, quarter.height);
+    out.save();
+    out.imageSmoothingEnabled = true;
+    out.globalAlpha = .9; out.drawImage(quarter, 0, 0, W, H);          // wide, faint haze of the drops
+    out.globalAlpha = 1; out.drawImage(half, 0, 0, W, H);              // the blurred drops
+    out.globalAlpha = .22; out.drawImage(layer, 0, 0);                 // a faint crisp trace
+    out.restore();
+
     if (flash > 0) {
-      ctx.fillStyle = `rgba(210,230,255,${(.35 * flash).toFixed(3)})`;
-      ctx.fillRect(0, 0, W, H);
+      out.fillStyle = `rgba(210,230,255,${(.35 * flash).toFixed(3)})`;
+      out.fillRect(0, 0, W, H);
     }
   }
 

@@ -1,17 +1,16 @@
 // Keyboard + touch/mouse input.
 //   Input.direction()  → -1 left, 0 none, +1 right
 //   Input.onStart(fn)  → called on Space / Enter / tap
-//   Input.onMute(fn)   → called on M
 const Input = (() => {
   const keys = {};
   const pointers = new Map();      // pointerId → clientX
   const wrap = document.getElementById('wrap');     // the whole screen (incl. the black bars) is the touch area
-  let startHandler = () => {}, muteHandler = () => {};
+  let startHandler = () => {};
 
   addEventListener('keydown', e => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLButtonElement) return;                                           // typing into the sign-up form
     keys[e.code] = true;
     if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); startHandler(); }
-    if (e.code === 'KeyM') muteHandler();
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
   addEventListener('keyup', e => { keys[e.code] = false; });
@@ -51,6 +50,5 @@ const Input = (() => {
     direction,
     clearTouches: () => pointers.clear(),
     onStart: fn => { startHandler = fn; },
-    onMute: fn => { muteHandler = fn; },
   };
 })();

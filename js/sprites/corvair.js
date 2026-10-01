@@ -25,12 +25,10 @@ const Corvair = (() => {
     bodyDkr: '#07080b',   // louvre slots
     glass: '#2a3042', glassTop: '#1d2230', glassHi: '#56607c', glassStreak: '#3d4660',
     seat: '#101118', groundShadow: 'rgba(0,0,0,.5)',
-    panelShade: '#aeaba1',
-    chrome: '#ececE4', chromeDk: '#8f8f88', bezel: '#5c5c56', panel: '#c8c5ba',
+    chrome: '#ececE4', chromeDk: '#8f8f88', panel: '#08090c',
     tire: '#090909', tireHi: '#262626', script: '#f4e6c8', exhaust: '#2a2a2a',
-    plate: '#e9ddb2', plateRed: '#c24a3a', plateTxt: '#4a2c1a', plateLow: '#8a6a40',
   };
-  const LIGHTS = [[12, 22], [19, 22], [44, 22], [51, 22]];   // tail light centre pixels
+  const LIGHTS = [[10, 22], [54, 22]];   // tail light centre pixels: one on each side, out by the fenders as on the real car
 
   // rear body outline: half-width from the centre line per row
   // (narrow at the roof pillars, fenders sweep out to bumper width)
@@ -44,12 +42,12 @@ const Corvair = (() => {
   const bodyBand = y => y === 11 ? C.bodyHi : y === 12 ? C.bodyMid
     : y >= 16 && y <= 17 ? C.shade : y >= 24 ? C.shade : C.body;
 
-  // small round light: dark bezel + red lens (r = rect helper of the frame)
+  // small round light: a red lens in a black rim (the panel's black; r = rect helper of the frame)
   function roundLight(r, cx, cy) {
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const d = dx * dx + dy * dy;
       if (d > 5) continue;
-      r(cx + dx, cy + dy, 1, 1, d >= 4 ? (dy < 0 ? C.chromeDk : C.bezel)
+      r(cx + dx, cy + dy, 1, 1, d >= 4 ? C.panel
         : dx <= 0 && dy <= 0 && d > 0 ? '#ff7a6a' : '#ff2a2a');
     }
   }
@@ -122,17 +120,13 @@ const Corvair = (() => {
     r(31, 16, 3, 1, C.chrome, deck);                                    // badge
     r(44, 16, 1, 1, C.script, deck); r(46, 16, 5, 1, C.script, deck);   // "Corvair"
 
-    // ---------- silver tail panel set into the body, rounded corners ----------
+    // ---------- black tail panel set into the body, rounded corners (nothing on it
+    // but the lights – the only bright thing on the back is the bumper) ----------
     r(5, 18, 54, 8, C.panel);
-    r(6, 18, 52, 1, C.chrome); r(6, 24, 52, 1, C.panelShade); r(6, 25, 52, 1, C.chromeDk);
-    for (const [x, y] of [[5, 18], [58, 18], [5, 25], [58, 25]]) r(x, y, 1, 1, C.shade);
+    for (const [x, y] of [[5, 18], [58, 18], [5, 25], [58, 25]]) r(x, y, 1, 1, bodyBand(y));
 
-    // 4 small round lights: dark bezel + red lens
+    // one round light on each side
     for (const [cx, cy] of LIGHTS) roundLight(r, cx, cy);
-
-    // Montana plate
-    r(27, 19, 10, 6, C.plate); r(27, 19, 10, 1, C.plateRed);
-    r(28, 21, 8, 2, C.plateTxt); r(28, 23, 8, 1, C.plateLow);
 
     // bumper + underbody
     r(2, 26, 60, 2, C.chrome); r(2, 26, 60, 1, '#ffffff'); r(2, 28, 60, 1, C.chromeDk);

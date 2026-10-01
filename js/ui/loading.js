@@ -1,229 +1,309 @@
-// Loading screen shown when the page opens: an abstract pixel-art night view
-// over the Prague rooftops from a terrace. Drawn at half resolution (big
-// pixels) with flat colours and simple shapes: a halftone sky of equal squares,
-// a moon, one black city silhouette with a few lit windows and the railing as
-// two lines. The Žižkov tower is the same pixel-art tower as in the game
-// (mirrored – another angle), drawn at full resolution between the sky and the
-// rooftops, with fog rising over its foot and the whole city. The black
-// Corvair from the photo stands on the terrace in front. No text on it: after a short load the
-// player clicks (or presses a key) to continue into the game.
-// Only green, black and white: every frame is mapped by brightness onto a
-// black → green → white palette at the end.
+// Loading screen shown when the page opens – like the title card of "Drive":
+// a night skyline slides past in a loop behind LOADING… (CLICK TO START once
+// loaded) in the middle. The sky is the game's own (halftone green glow,
+// stars, the Žižkov tower); in front of it three layers of the game's houses
+// move to the left at different speeds (far = slow and foggy, near = fast and
+// dark): dark blue blocks with a neon edge, Prague tenements with mansard
+// roofs, lime-green modern blocks and tall teal glass towers
+// and blinking red warning lights on top. Drawn at the game's 320×180, scaled up.
+// After a short load the player clicks (or presses a key): the title sequence
+// runs (Intro – CHECKPOINT stands up letter by letter, the car, the road) and
+// waits with MEZERNÍK / KLEPNI PRO START above the word. On the press the word
+// backs off into the distance, then the (optional, now switched off) leaderboard
+// sign-up opens (Account.offerSignUp). Then the first ride starts at once.
 const Loading = (() => {
-  const LW = 160, LH = 90;                     // low-res drawing size (scaled ×2 to the canvas)
-  const HORIZON = 75;                          // where the rooftops meet the terrace
+  const W = 320, H = 180;
   const DURATION = 3.2;                        // seconds before a click can continue
+  const SKY_DOWN = 32;                         // the game's sky sits lower here: the horizon behind the low houses
+  const FOG = '24,44,36';                      // a darker version of the game's fog colour (44,78,64)
+  const TOWER_RIGHT = 110;                     // the sky is shifted right: the Žižkov tower stands at the right
+  const SKY_DARK = .38;                        // the sky is darker here than in the game
+  const SMOG = [78, 86, 88];                   // grey smog over the nearer houses
   const el = document.getElementById('loading');
+  const startText = document.getElementById('loading-start');
+  const prompt = document.getElementById('loading-prompt');            // what to press, above the word in the title sequence
+  prompt.style.setProperty('--word-top', `${Intro.wordTop * 100}%`);
   const canvas = document.getElementById('loading-canvas');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
+  const buf = Util.canvas(W, H), g = buf.getContext('2d');
+  const r = (c, x, y, w, h, col) => Util.rect(c, x, y, w, h, col);
+  const ri = (a, b) => Math.floor(Util.rand(a, b + 1));             // random integer a…b
 
-  const back = Util.canvas(LW, LH), front = Util.canvas(LW, LH);   // behind / in front of the tower
-  const fg = front.getContext('2d');
-  let g = back.getContext('2d');                                        // current low-res layer
-  const r = (x, y, w, h, c) => Util.rect(g, x, y, w, h, c);
-  const INK = '#020306';                       // the black of every silhouette
+  // ---------- the houses (front views, in the game's colours) ----------
+  const NAVY = ['#23233a', '#1b1b2e', '#26263e', '#1e1e30'];
+  const WIN = () => { const p = Math.random(); return p < .1 ? '#a6e83a' : p < .18 ? '#4f7a1c' : '#0c0c14'; };
 
-  // ---------- static layers (built once) ----------
-  const stars = Array.from({ length: 18 }, () => ({
-    x: Math.floor(Util.rand(0, LW)), y: Math.floor(Util.rand(0, 16)), bright: Math.random() < .35,
-  }));
-
-  // ---------- chunky pixel sky (same look as the pixelated car) ----------
-  // Solid 4×4 px blocks – the car's pixel size – in the car's night palette:
-  // blue-black at the top, dark teal-green towards the horizon, shades mixed
-  // with random noise, like a pixelated photo. The moon is blocks of the same grid.
-  const SK = 4;                                                      // sky pixels per low-res pixel
-  const CELL = 4, DOT = 4, SKY_TOP = 0, SKY_BOTTOM = HORIZON * SK;
-  const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
-  const SKY = ['#04060c', '#070b16', '#0b1220', '#0f1a2a', '#132432', '#172e36', '#1c3a3c', '#244640'];
-  const MOON = { x: 120, y: 60, r: 22, light: ['#d8d8c6', '#e6e6d4', '#f2f2e2'], shade: ['#a2a696', '#aeb2a2', '#bcc0b0'] };   // in sky pixels
-
-  const skyCells = [];
-  for (let cy = SKY_TOP, row = 0; cy < SKY_BOTTOM; cy += CELL, row++) {
-    const t = Math.pow((cy - SKY_TOP) / (SKY_BOTTOM - SKY_TOP), 1.3);   // 0 top … 1 horizon
-    for (let cx = 0, col = 0; cx < LW * SK; cx += CELL, col++) {
-      // noisy like a pixelated photo: every block shifted a random bit lighter or darker
-      const f = Util.clamp(t * (SKY.length - 1) + Util.rand(-.9, .9), 0, SKY.length - 1);
-      skyCells.push({ x: cx, y: cy, shade: SKY[Math.round(f)], noise: Math.random() });
-    }
+  // dark blue block: neon green top edge, a grid of small windows
+  function classic(w, h) {
+    const c = Util.canvas(w, h), b = c.getContext('2d');
+    r(b, 0, 0, w, h, Util.pick(NAVY));
+    r(b, 0, 0, w, 1, '#8fd42a');
+    for (let y = 3; y < h - 2; y += 4) for (let x = 2; x < w - 2; x += 3) r(b, x, y, 2, 2, WIN());
+    return c;
   }
-
-  function drawSky(t) {
-    for (const c of skyCells) {
-      const dx = c.x + 2 - MOON.x, dy = c.y + 2 - MOON.y;
-      const v = Math.floor(c.noise * 3);                                // noisy variant 0–2
-      let col = c.shade;
-      if (dx * dx + dy * dy <= MOON.r * MOON.r) col = (dx + dy > 12 ? MOON.shade : MOON.light)[v];
-      Util.rect(ctx, c.x, c.y, DOT, DOT, col);
-    }
+  // Prague tenement: mansard roof with dormers and chimneys, cornice, windows, shops
+  function prague(w, h) {
+    const roof = ri(5, 8), c = Util.canvas(w, h + roof + 3), b = c.getContext('2d'), top = roof + 3;
+    const wall = Util.pick(NAVY);
+    for (let i = 0; i < roof; i++) r(b, Math.round(i * .6), top - roof + i, w - Math.round(i * .6) * 2, 1, '#15151e');   // wider towards the bottom
+    for (let x = 4; x < w - 5; x += Math.max(6, ri(6, 12))) r(b, x, 0, 2, top - roof + 1, '#101018');                  // chimneys
+    for (let x = 3; x < w - 4; x += 6) r(b, x, top - roof + 2, 2, 2, Math.random() < .2 ? '#a6e83a' : '#07070d');   // dormers
+    r(b, 0, top, w, h, wall);
+    r(b, 0, top, w, 1, Util.shade(wall, .25));                                                                          // cornice
+    for (let y = top + 3; y < top + h - 6; y += 5) for (let x = 2; x < w - 2; x += 4) r(b, x, y, 2, 3, WIN());
+    r(b, 0, top + h - 5, w, 1, Util.shade(wall, .25));
+    for (let x = 1; x < w - 3; x += 5) r(b, x, top + h - 4, 3, 4, Math.random() < .3 ? '#2f4a22' : '#0c0c14');        // shop windows
+    return c;
   }
-
-
-  // The city: still Prague (pitched roofs, a dome, a church spire, a few tall
-  // blocks), but in the game's building style – dark blue-grey walls, a neon
-  // green edge along the roofs and a grid of windows, some lit neon green.
-  const city = Util.canvas(LW, LH), cg = city.getContext('2d');
-  (function drawCity() {
-    const c = (x, y, w, h, col) => Util.rect(cg, x, y, w, h, col);
-    const WALLS = ['#1b1b2e', '#23233a', '#1e1e30', '#161626'];
-    const EDGE = '#6cb820', EDGE_DK = '#3f7414';
-    const win = () => { const p = Math.random(); return p < .12 ? '#a6e83a' : p < .2 ? '#4f7a1c' : '#0c0c14'; };
-    function house(x, w, h, roof) {
-      const top = HORIZON - h, wall = Util.pick(WALLS);
-      c(x, top, w, h, wall);
-      c(x, top, 1, h, Util.shade(wall, -.35));
-      for (let wy = top + 2; wy < HORIZON - 1; wy += 2) for (let wx = x + 1; wx < x + w - 1; wx += 2) c(wx, wy, 1, 1, win());
-      if (roof) {                                                        // pitched roof, neon ridge
-        const rh = Math.floor(w / 3);
-        for (let i = 0; i < rh; i++) c(x + rh - 1 - i, top - rh + i, w - (rh - 1 - i) * 2, 1, i === 0 ? EDGE : '#11111c');
-      } else c(x, top, w, 1, EDGE);                                     // flat roof, neon edge
-    }
-    for (let x = 0; x < LW;) {
-      const tall = Math.random() < .18;                                  // now and then a panel block
-      const w = Math.floor(tall ? Util.rand(8, 13) : Util.rand(5, 12));
-      const h = Math.floor(tall ? Util.rand(13, 19) : Util.rand(4, 11));
-      house(x, w, h, !tall && Math.random() < .55);
-      x += w;
-    }
-    // the dome and the church spire, with neon edges
-    for (let y = 0; y < 4; y++) c(76 - (y + 1), HORIZON - 16 + y, (y + 1) * 2, 1, y === 0 ? EDGE : '#11111c');
-    c(75, HORIZON - 19, 1, 3, EDGE_DK);
-    house(72, 8, 12, false);
-    for (let y = 0; y < 10; y++) c(30 - Math.floor(y / 3), HORIZON - 22 + y, 1 + Math.floor(y / 3) * 2, 1, y < 2 ? EDGE : '#11111c');
-    house(27, 7, 12, false);
-  })();
-
-  // the Žižkov tower: the same pixel-art tower as in the game (cut out the same
-  // way), seen from another angle here – so it is mirrored. Full resolution.
-  const TOWER_X = 250, TOWER_SCALE = 1.75;                             // in canvas pixels (320×180)
-  let tower = null, towerTop = 0, towerH = 0, antennaX = 0;
-  (function loadTower() {
-    const img = new Image();
-    img.onload = () => {
-      const clean = Sky.cutOut(img);
-      const w = Math.round(clean.width * TOWER_SCALE), h = Math.round(clean.height * TOWER_SCALE);
-      const c = Util.canvas(w, h), tg = c.getContext('2d');
-      tg.imageSmoothingEnabled = false;
-      tg.translate(w, 0); tg.scale(-1, 1);                           // turned: seen from the other side
-      tg.drawImage(clean, 0, 0, w, h);
-      tower = c; towerH = h; towerTop = HORIZON * 2 - h - 4;
-      antennaX = TOWER_X + w - Math.round(8 * TOWER_SCALE);            // antenna column after mirroring
-    };
-    img.src = TOWER_IMAGE;
-  })();
-
-  function drawTower(t) {
-    if (!tower) return;
-    ctx.drawImage(tower, TOWER_X, towerTop);
-    if (Math.floor(t * 1.5) % 2 === 0) Util.rect(ctx, antennaX, towerTop - 1, 2, 2, '#ff3030');   // aircraft light
-  }
-
-  // fog like in the game: haze rising towards the horizon (hiding the tower's
-  // foot and the far city) and a few soft wisps rolling slowly past
-  const FOG_RGB = '44,78,64';
-  const wisps = Array.from({ length: 7 }, () => ({
-    x: Util.rand(0, LW * 2), y: Util.rand(HORIZON * 2 - 60, HORIZON * 2 - 6),
-    rx: Util.rand(40, 90), ry: Util.rand(7, 14), speed: Util.rand(3, 8), a: Util.rand(.15, .3),
-  }));
-  function drawFog(t) {
-    const y0 = 70, y1 = HORIZON * 2;
-    const haze = ctx.createLinearGradient(0, y0, 0, y1);
-    haze.addColorStop(0, `rgba(${FOG_RGB},0)`);
-    haze.addColorStop(1, `rgba(${FOG_RGB},.5)`);
-    ctx.fillStyle = haze;
-    ctx.fillRect(0, y0, LW * 2, y1 - y0);
-    for (const w of wisps) {
-      const x = ((w.x + t * w.speed) % (LW * 2 + w.rx * 2)) - w.rx;
-      ctx.save();
-      ctx.translate(x, w.y); ctx.scale(1, w.ry / w.rx);                // a flat ellipse
-      const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, w.rx);
-      gr.addColorStop(0, `rgba(120,170,140,${w.a})`);
-      gr.addColorStop(1, 'rgba(120,170,140,0)');
-      ctx.fillStyle = gr;
-      ctx.fillRect(-w.rx, -w.rx, w.rx * 2, w.rx * 2);
-      ctx.restore();
-    }
-  }
-
-  // ---------- one frame: back layer (low-res) → tower (full-res) → front layer (low-res) ----------
-  function drawBack(t) {
-    g = back.getContext('2d');
-    g.clearRect(0, 0, LW, LH);                                        // the sky is drawn separately (drawSky)
-    for (const s of stars) r(s.x, s.y, 1, 1, s.bright && Math.random() > .03 ? '#e8ecf4' : '#5a6478');
-  }
-
-  // Ground under the car, in the same look as the pixelated car: 4×4 px blocks
-  // of dark blue-grey asphalt with random noise, darker far away, a touch of
-  // green city glow near the railing. Built once at full canvas resolution.
-  const CAR_X = 26, CAR_Y = 134, CAR_SCALE = 2;                    // the car's place on the terrace (320×180 units)
-  const GROUND = ['#06080e', '#0a0e16', '#0e131d', '#121a26', '#18212e', '#1e2836'];
-  const ground = Util.canvas(LW * SK, LH * SK);
-  (function drawGround() {
-    const gg = ground.getContext('2d'), y0 = HORIZON * SK, y1 = LH * SK;
-    for (let y = y0; y < y1; y += 4) {
-      const t = (y - y0) / (y1 - y0);                                 // 0 far (railing) … 1 near
-      for (let x = 0; x < LW * SK; x += 4) {
-        const f = Util.clamp(1 + t * 3 + Util.rand(-1, 1), 0, GROUND.length - 1);
-        let col = GROUND[Math.round(f)];
-        if (t < .18 && Math.random() < .35 - t) col = '#132a24';          // green glow of the city
-        Util.rect(gg, x, y, 4, 4, col);
+  // modern lime-green block: dark floor lines, framed panes or dark teal glass ribbons
+  function modern(w, h) {
+    const c = Util.canvas(w, h), b = c.getContext('2d'), glass = Math.random() < .5;
+    r(b, 0, 0, w, h, Util.pick(['#86c42e', '#7cb82a', '#92cc38', '#6fae26']));
+    for (let y = 1; y < h - 3; y += 4) {
+      r(b, 0, y, w, 1, '#0c1026');                                                                                   // floor slab
+      if (glass) r(b, 0, y + 1, w, 2, '#12383a');
+      for (let x = 0; x < w; x += 4) {
+        if (Math.random() < .12) r(b, x + 1, y + 1, 3, 2, '#d4ff7a');                                                   // a lit pane
+        r(b, x, y + 1, 1, 2, glass ? '#86c42e' : '#0c1026');                                                            // mullion
       }
     }
-    // soft blocky shadow under the car
-    const cx = (CAR_X + 75) * SK / 2, cy = (CAR_Y + 40) * SK / 2;
-    for (let y = cy - 8; y < cy + 12; y += 4) for (let x = cx - 150; x < cx + 150; x += 4) {
-      const d = ((x - cx) / 150) ** 2 + ((y - cy) / 12) ** 2;
-      if (d < 1 && Math.random() < 1.2 - d) Util.rect(gg, x, y, 4, 4, '#030408');
+    r(b, 0, 0, w, 1, '#0c1026');
+    return c;
+  }
+  // tall teal glass tower (like the Drive skyline): teal and green windows
+  function tower(w, h) {
+    const c = Util.canvas(w, h), b = c.getContext('2d');
+    r(b, 0, 0, w, h, Util.pick(['#15434c', '#1d5a66', '#123a44']));
+    r(b, 0, 0, 1, h, '#0d2a30');
+    for (let y = 3; y < h - 2; y += 3) for (let x = 2; x < w - 2; x += 3) {
+      const p = Math.random();
+      r(b, x, y, 2, 1, p < .12 ? '#a6e83a' : p < .2 ? '#4f7a1c' : p < .5 ? '#2a7480' : '#0d2a30');
     }
+    return c;
+  }
+  // near and dark: a few lit windows
+  function dark(w, h) {
+    const c = Util.canvas(w, h), b = c.getContext('2d');
+    r(b, 0, 0, w, h, Util.pick(['#07070d', '#0a0a12', '#08080f']));
+    r(b, 0, 0, w, 1, '#1b1b2e');
+    for (let y = 3; y < h; y += 4) for (let x = 2; x < w - 2; x += 3) if (Math.random() < .09) r(b, x, y, 2, 2, Math.random() < .7 ? '#4f7a1c' : '#a6e83a');
+    return c;
+  }
+
+  // Three layers, each a strip that repeats seamlessly (a house crossing the
+  // right end is drawn again at the left). fog: how much the night haze covers it,
+  // smog: how grey and washed-out the grey smog makes it, dusk: how much it sinks into the dark.
+  const LAYERS = [
+    { speed: 6, width: 520, base: 150, h: [12, 32], fog: .72, dusk: .35, kinds: [classic, prague, tower] },
+    { speed: 14, width: 600, base: 168, h: [22, 52], fog: .28, smog: .85, dusk: .5, kinds: [classic, prague, modern, tower, tower] },
+    { speed: 30, width: 680, base: 186, h: [12, 30], fog: 0, smog: .75, dusk: .3, kinds: [dark] },
+  ].map(L => {
+    const strip = Util.canvas(L.width, H), sg = strip.getContext('2d'), lights = [];
+    for (let x = 0; x < L.width;) {
+      const kind = Util.pick(L.kinds), w = kind === tower ? ri(14, 24) : ri(16, 34);
+      const pic = kind(w, ri(...L.h) + (kind === tower ? 10 : 0));
+      const y = L.base - pic.height;
+      for (const dx of [0, -L.width]) sg.drawImage(pic, x + dx, y);
+      if (pic.height > 48 && Math.random() < .7) lights.push({ x: x + Math.floor(w / 2), y: y - 1, phase: Math.random() * 2 });   // warning light on top
+      x += w + (Math.random() < .25 ? ri(1, 4) : 0);
+    }
+    if (L.fog) {                                                       // haze over the houses only
+      sg.globalCompositeOperation = 'source-atop';
+      sg.fillStyle = `rgba(${FOG},${L.fog})`;
+      sg.fillRect(0, 0, L.width, H);
+      sg.globalCompositeOperation = 'source-over';
+    }
+    if (L.smog) {                                                      // grey smog: colours fade to grey
+      const id = sg.getImageData(0, 0, L.width, H), d = id.data, k = L.smog;
+      for (let i = 0; i < d.length; i += 4) {
+        if (!d[i + 3]) continue;
+        const l = d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11;
+        d[i] = (d[i] + (l - d[i]) * k) * (1 - k * .5) + SMOG[0] * k * .5;
+        d[i + 1] = (d[i + 1] + (l - d[i + 1]) * k) * (1 - k * .5) + SMOG[1] * k * .5;
+        d[i + 2] = (d[i + 2] + (l - d[i + 2]) * k) * (1 - k * .5) + SMOG[2] * k * .5;
+      }
+      sg.putImageData(id, 0, 0);
+    }
+    sg.globalCompositeOperation = 'source-atop';                      // the houses in the dusk
+    sg.fillStyle = `rgba(0,0,0,${L.dusk})`;
+    sg.fillRect(0, 0, L.width, H);
+    sg.globalCompositeOperation = 'source-over';
+    return { ...L, strip, lights };
+  });
+
+  // ---------- the street by the middle houses: lamps, "19. 3." billboards, trees ----------
+  // Standing at the foot of the middle houses and moving with them; the dark
+  // outlines of the front houses pass in front. The lamps' and billboards' glow
+  // is added every frame, so it shines through the smog.
+  const GROUND = LAYERS[1].base;
+  const LAMP_COLORS = [CONFIG.lamps.rgb, CONFIG.lamps.rgb, '220,235,255', '120,180,255', '100,225,200', '200,255,190'];   // green (as in the game), cold white, blue, teal, warm
+  // a flickering lamp: mostly on, a short blackout, and now and then a stutter
+  function lampOn(light, t) {
+    if (!light || !light.flicker) return true;
+    const c = (t + light.phase) % 5;
+    if (c > 3.9) return Math.sin(t * 43 + light.phase) + Math.sin(t * 17) > .3;
+    return c > .25;
+  }
+  const STREET = (() => {
+    const width = 760, strip = Util.canvas(width, H), sg = strip.getContext('2d'), glows = [];
+    const sign = City.devData().SIGN;
+    const put = (fn, x) => { for (const dx of [0, -width]) fn(x + dx); };   // seamless loop
+    // Street lamp: a pole of any height with one head or a cross arm with two,
+    // in one of several light colours; some flicker like a dying tube. The
+    // heads are drawn every frame (so they can go dark), the pole is in the strip.
+    function lamp(x) {
+      const pole = ri(11, 19), top = GROUND - pole, two = Math.random() < .6;
+      const rgb = Util.pick(LAMP_COLORS), light = { flicker: Math.random() < .22, phase: Util.rand(0, 5) };
+      put(px => {
+        r(sg, px, top, 1, pole, '#23252f');
+        if (two) r(sg, px - 2, top, 5, 1, '#23252f');
+        else r(sg, px, top, 2, 1, '#23252f');
+      }, x);
+      const heads = two ? [x - 3, x + 3] : [x + 2];
+      for (const hx of heads) glows.push({ x: hx, y: top + 1, r: ri(6, 9), a: .5, rgb, light, head: true });
+      glows.push({ x, y: GROUND, r: ri(8, 13), a: .2, rgb, light, flat: true });   // light pool on the pavement
+    }
+    // every billboard a bit different: the neon "19. 3." sign bright, dimmed or
+    // nearly dead (with a few dead letters now and then), on one or two legs of any height
+    function billboard(x) {
+      const dim = Util.pick([0, 0, .3, .5, .72]);
+      const pw = sign.width, ph = sign.height;
+      const pic = Util.canvas(pw, ph), pg = pic.getContext('2d');
+      pg.drawImage(sign, 0, 0);
+      const broken = Math.random() < .3;
+      if (broken) for (let i = 0; i < ri(2, 5); i++)                   // dead bits of the neon
+        r(pg, ri(2, pw - 4), ri(2, ph - 3), 1, 1, '#0b2410');
+      if (dim) {
+        pg.globalCompositeOperation = 'source-atop';
+        pg.fillStyle = `rgba(0,0,0,${dim})`;
+        pg.fillRect(0, 0, pw, ph);
+      }
+      const legH = ri(3, 8), top = GROUND - legH - ph, twoLegs = Math.random() < .6;
+      put(px => {
+        if (twoLegs) { r(sg, px + 3, top + ph, 1, legH, '#1b1b2e'); r(sg, px + pw - 4, top + ph, 1, legH, '#1b1b2e'); }
+        else r(sg, px + Math.floor(pw / 2), top + ph, 1, legH, '#1b1b2e');
+        sg.drawImage(pic, px, top);
+      }, x);
+      if (dim < .7) glows.push({ x: x + pw / 2, y: top + ph / 2, r: pw * .9, a: .3 * (1 - dim), rgb: '150,235,70' });
+      return pw;
+    }
+    function tree(x) {                                                 // dark round crown of blobs on a thin trunk
+      const cw = ri(7, 11), ch = ri(7, 10), top = GROUND - 4 - ch;
+      const blobs = Array.from({ length: 5 }, () => ({ x: Util.rand(cw * .25, cw * .75), y: Util.rand(ch * .3, ch * .7), rad: Util.rand(cw * .25, cw * .42) }));
+      put(px => {
+        r(sg, px + Math.floor(cw / 2), GROUND - 5, 1, 5, '#0c0e10');
+        for (let y = 0; y < ch; y++) for (let xx = 0; xx < cw; xx++) {
+          const inside = blobs.some(b => (xx - b.x) ** 2 + (y - b.y) ** 2 <= b.rad * b.rad);
+          if (!inside) continue;
+          const lit = y < ch * .35 && Math.random() < .35;                // a little lamp light on the top leaves
+          r(sg, px + xx, top + y, 1, 1, lit ? '#1f3a26' : Math.random() < .5 ? '#0b1a12' : '#0e2016');
+        }
+      }, x);
+      return cw;
+    }
+    // a billboard at least every ~110 px, so there are always a couple on screen
+    let lastBoard = false, lastBoardX = -200;
+    for (let x = 6; x < width - 30;) {
+      const p = Math.random(), due = x - lastBoardX > 110;
+      if (!due && p < .36) { lamp(x); x += Math.random() < .3 ? ri(5, 9) : ri(12, 34); lastBoard = false; }   // irregular: sometimes close, sometimes far apart
+      else if (due || (p < .6 && !lastBoard)) { lastBoardX = x; x += billboard(x) + ri(10, 18); lastBoard = true; }
+      else { x += tree(x) + ri(2, 10); lastBoard = false; }
+    }
+    return { speed: LAYERS[1].speed, width, strip, glows };             // moves with the middle houses
   })();
 
-  // terrace: the railing as two lines with a few posts (in front of the fog)
-  function drawFront(t) {
-    g = fg;
-    g.clearRect(0, 0, LW, LH);
-    r(0, HORIZON - 15, LW, 1, '#2a3244');
-    r(0, HORIZON - 7, LW, 1, '#2a3244');
-    for (const x of [4, 46, 88, 118, 156]) r(x, HORIZON - 15, 1, 15, '#2a3244');
-  }
-
-  // ---------- the black Corvair parked on the terrace ----------
-  // Cut out of the photo and pixelated (js/assets/loading-car-image.js), 75×21 px
-  // drawn at 2× in 320×180 units – big, chunky pixels.
-  // tinted a little green by the neon city light (same effect as the cars in the game)
-  let car = null;
-  const carImg = new Image();
-  carImg.onload = () => {
-    const c = Util.canvas(carImg.width, carImg.height);
-    c.getContext('2d').drawImage(carImg, 0, 0);
-    car = Util.neonTint(c, .2, .35);
-  };
-  carImg.src = LOADING_CAR_IMAGE;
-
-  // ---------- green, black and white ----------
-  // Brightness → palette: black, three greens from dark to neon, a pale green
-  // and white. A lookup table by luminance, applied to the finished frame.
-  const PALETTE = [[0, '#000000'], [9, '#04120a'], [20, '#0c2a12'], [36, '#1f5a1a'], [60, '#3f8a1e'],
-    [100, '#8fd42a'], [150, '#d4ff9a'], [205, '#ffffff']];
-  const LUT = new Uint8Array(256 * 3);
-  for (let l = 0; l < 256; l++) {
-    let hex = PALETTE[0][1];
-    for (const [from, c] of PALETTE) if (l >= from) hex = c;
-    const n = parseInt(hex.slice(1), 16);
-    LUT[l * 3] = n >> 16; LUT[l * 3 + 1] = (n >> 8) & 255; LUT[l * 3 + 2] = n & 255;
-  }
-  function toGreen() {
-    const id = ctx.getImageData(0, 0, canvas.width, canvas.height), d = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const l = Math.round(d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11) * 3;
-      d[i] = LUT[l]; d[i + 1] = LUT[l + 1]; d[i + 2] = LUT[l + 2];
+  function drawStreet(t) {
+    const L = STREET, off = (t * L.speed) % L.width;
+    g.drawImage(L.strip, -off, 0);
+    g.drawImage(L.strip, L.width - off, 0);
+    g.globalCompositeOperation = 'lighter';
+    for (const gl of L.glows) {
+      const x = ((gl.x - off) % L.width + L.width) % L.width;
+      if (x < -gl.r || x > W + gl.r || !lampOn(gl.light, t)) continue;
+      if (gl.head) {                                                   // the lamp head itself
+        g.globalCompositeOperation = 'source-over';
+        r(g, Math.round(x), gl.y, 1, 1, `rgb(${gl.rgb.split(',').map(v => Math.min(255, +v + 60)).join(',')})`);
+        g.globalCompositeOperation = 'lighter';
+      }
+      g.save();
+      g.translate(x, gl.y);
+      if (gl.flat) g.scale(1, .25);                                   // a pool of light on the ground
+      const gr = g.createRadialGradient(0, 0, 0, 0, 0, gl.r);
+      gr.addColorStop(0, `rgba(${gl.rgb},${gl.a})`);
+      gr.addColorStop(1, `rgba(${gl.rgb},0)`);
+      g.fillStyle = gr;
+      g.fillRect(-gl.r, -gl.r, gl.r * 2, gl.r * 2);
+      g.restore();
     }
-    ctx.putImageData(id, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+  }
+
+  // ---------- one frame ----------
+  function draw(t) {
+    r(g, 0, 0, W, H, '#000');
+    g.save(); g.translate(0, SKY_DOWN);
+    Sky.draw(g, t, TOWER_RIGHT);                                       // the game's sky, the Žižkov tower on the right
+    r(g, 0, 0, W, H, `rgba(0,0,0,${SKY_DARK})`);
+    g.restore();
+    // below the sky's edge the haze goes on (no black strip, no hard horizon)
+    const horizon = SKY_DOWN + CONFIG.screen.HORIZON;
+    const below = g.createLinearGradient(0, horizon - 6, 0, H);
+    below.addColorStop(0, `rgba(${FOG},0)`);
+    below.addColorStop(.12, `rgba(${FOG},.9)`);
+    below.addColorStop(1, `rgba(${FOG},.5)`);
+    g.fillStyle = below;
+    g.fillRect(0, horizon - 6, W, H - horizon + 6);
+    LAYERS.forEach((L, i) => {
+      if (i === 1) {                                                   // fog between the far and the middle houses
+        const band = g.createLinearGradient(0, horizon - 22, 0, horizon + 26);
+        band.addColorStop(0, `rgba(${FOG},0)`);
+        band.addColorStop(.5, `rgba(${FOG},.75)`);
+        band.addColorStop(1, `rgba(${FOG},0)`);
+        g.fillStyle = band;
+        g.fillRect(0, horizon - 22, W, 48);
+        g.save(); g.translate(0, SKY_DOWN + 10);
+        g.globalAlpha = .45;
+        Fog.drawWisps(g, t);                                           // slow wisps, as in the game (fainter)
+        g.globalAlpha = 1;
+        g.restore();
+      }
+      if (i === 2) {                                                   // ground mist: hides where the middle houses end
+        const base = LAYERS[1].base, mist = g.createLinearGradient(0, base - 26, 0, H);
+        mist.addColorStop(0, `rgba(${FOG},0)`);
+        mist.addColorStop(.55, `rgba(${FOG},.55)`);
+        mist.addColorStop(1, `rgba(${FOG},.7)`);
+        g.fillStyle = mist;
+        g.fillRect(0, base - 26, W, H - base + 26);
+        drawStreet(t);                                                 // at the foot of the middle houses, above the mist
+      }
+      drawLayer(L, t);
+    });
+    // dark at the bottom, for CLICK TO START
+    const shade = g.createLinearGradient(0, 140, 0, H);
+    shade.addColorStop(0, 'rgba(0,0,0,0)');
+    shade.addColorStop(1, 'rgba(0,0,0,.85)');
+    g.fillStyle = shade;
+    g.fillRect(0, 140, W, H - 140);
+  }
+
+  const blit = () => ctx.drawImage(buf, 0, 0, canvas.width, canvas.height);
+
+  // one layer of houses, moved to the left in a loop, with its blinking warning lights
+  function drawLayer(L, t) {
+    const off = (t * L.speed) % L.width;
+    g.drawImage(L.strip, -off, 0);
+    g.drawImage(L.strip, L.width - off, 0);
+    for (const lt of L.lights) {
+      if (Math.floor(t * 1.4 + lt.phase) % 2) continue;
+      const x = Math.round(((lt.x - off) % L.width + L.width) % L.width);
+      if (x < W) r(g, x, lt.y, 1, 1, L.fog > .5 ? '#8a2a2a' : '#ff3030');
+    }
   }
 
   // ---------- running the screen ----------
   const start = performance.now();
-  let loaded = false, done = false, raf = 0;
+  let loaded = false, done = false;
   const elapsed = () => (performance.now() - start) / 1000;
 
   // timed by the clock (not by frames), so it also works if drawing is throttled
@@ -231,56 +311,66 @@ const Loading = (() => {
     if (elapsed() < DURATION) return;
     clearInterval(check);
     loaded = true;
+    startText.textContent = 'CLICK TO START';
+    startText.classList.add('blink');
   }, 100);
 
   let lastDraw = -1;
   function frame() {
-    if (done) return;
+    if (el.classList.contains('hidden')) return;                      // (it goes on drawing while it fades out)
     const t = elapsed();
-    // ~30 fps is plenty for the slow fog – saves battery on phones
-    if (t - lastDraw < 1 / 30) { raf = requestAnimationFrame(frame); return; }
-    lastDraw = t;
-    drawSky(t);                                                       // halftone sky with the moon
-    drawBack(t);
-    ctx.drawImage(back, 0, 0, canvas.width, canvas.height);           // big pixels: stars
-    ctx.save();
-    ctx.scale(SK / 2, SK / 2);                                        // tower + fog are laid out in 320×180 units
-    drawTower(t);
-    ctx.restore();
-    ctx.drawImage(city, 0, 0, canvas.width, canvas.height);           // rooftops (big pixels)
-    ctx.save();
-    ctx.scale(SK / 2, SK / 2);
-    drawFog(t);                                                       // fog over the tower's foot and the whole city
-    ctx.restore();
-    drawFront(t);                                                     // terrace stays sharp in front of the fog
-    ctx.drawImage(front, 0, 0, canvas.width, canvas.height);
-    ctx.drawImage(ground, 0, 0);                                      // noisy pixel ground under the car
-    ctx.save();
-    ctx.scale(SK / 2, SK / 2);
-    if (car) ctx.drawImage(car, CAR_X, CAR_Y, car.width * CAR_SCALE, car.height * CAR_SCALE);   // the Corvair in the foreground
-    ctx.restore();
-    toGreen();                                                        // only green, black and white
-    raf = requestAnimationFrame(frame);
+    if (intro === 'running') {                                         // the title sequence: every frame
+      Intro.draw(ctx, t);
+      el.classList.toggle('hold', Intro.waiting());                    // waiting for the press: what to press shows
+      Raster.loading.render();
+    } else if (!intro && t - lastDraw >= 1 / 30) {                   // ~30 fps is plenty for the slow skyline – saves battery on phones
+      lastDraw = t;
+      draw(t);
+      blit();
+      Raster.loading.render();
+    }
+    requestAnimationFrame(frame);
   }
 
-  // leaving the screen only once loaded, and only by the player's click / key
-  function proceed() {
+  // the click (only once loaded): the title sequence. It waits for the press that
+  // starts the game (start: Space, Enter, a click or a tap – see Intro.press), then
+  // the (optional) leaderboard sign-up, then the game.
+  const doneFns = [];
+  let intro = null;                                                    // null → 'font' (the title font loading) → 'running'
+  function proceed(start) {
     if (!loaded || done) return;
+    if (intro === 'running' && !Intro.ended()) {
+      if (Intro.press(elapsed(), start)) Sound.init();                 // the beat starts with the press (phones only allow sound from one)
+      return;
+    }
+    if (intro) return;
+    intro = 'font';
+    el.classList.add('intro');                                         // the titles disappear
+    const font = document.fonts ? document.fonts.load(`74px ${Intro.font}`) : Promise.resolve();
+    Promise.race([font, new Promise(ok => setTimeout(ok, 1500))]).catch(() => {}).then(() => {
+      intro = 'running';
+      Intro.start(elapsed(), () => { if (typeof Account !== 'undefined') Account.offerSignUp(finish); else finish(); });
+    });
+  }
+  // into the game
+  function finish() {
+    if (done) return;
     done = true;
-    cancelAnimationFrame(raf);
+    doneFns.forEach(fn => fn());
     el.classList.add('fadeout');
     setTimeout(() => el.classList.add('hidden'), 500);
   }
 
-  // while the screen is up, keys and taps belong to it (they never start the game)
+  // while the screen is up, keys and taps belong to it (the game is started from
+  // here: by the press in the title sequence)
   addEventListener('keydown', e => {
-    if (done) return;
+    if (done || (intro === 'running' && Intro.ended())) return;        // (after the sequence: typing into the sign-up)
     e.stopImmediatePropagation(); e.preventDefault();
-    proceed();
+    if (!e.repeat) proceed(e.code === 'Space' || e.code === 'Enter');   // (a held key does not skip the word backing off)
   }, true);
-  el.addEventListener('pointerdown', e => { e.stopPropagation(); proceed(); });
+  el.addEventListener('pointerdown', e => { e.stopPropagation(); proceed(true); });
 
-  raf = requestAnimationFrame(frame);
+  requestAnimationFrame(frame);
 
-  return { isDone: () => done };
+  return { isDone: () => done, onDone: fn => { if (done) fn(); else doneFns.push(fn); } };
 })();

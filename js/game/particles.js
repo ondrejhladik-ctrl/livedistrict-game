@@ -1,8 +1,15 @@
-// Pixel particles with gravity: the crash explosion, water splashes and the
-// bits of road thrown up by the wheels when the car swerves.
+// Particles with gravity: the crash (sparks, debris, dust, smoke), water
+// splashes and the bits of road thrown up by the wheels when the car swerves.
+// Sparks, debris, dust and road bits are tiny crisp pixels. Only the smoke is
+// soft and vague: drawn into a half-size and a quarter-size layer that are
+// stretched back up smoothly (a blurred core and a wide faint glow), with tiny
+// crisp specks rising in it. Everything fades out towards the end of its life.
 const Particles = (() => {
+  const { W, H } = CONFIG.screen;
   const list = [];
-  const COLORS = ['#ffec60', '#ff9a20', '#ff4a20', '#ffffff', '#3a3e4c'];
+  const COLORS = ['#ffffff', '#e8ffd8', '#a6e83a', '#9fd4ff', '#3a3e4c'];
+  const half = Util.canvas(W / 2, H / 2), hg = half.getContext('2d');
+  const quarter = Util.canvas(W / 4, H / 4), qg = quarter.getContext('2d');
 
   function burst(x, y, count = 70, colors = COLORS) {
     for (let i = 0; i < count; i++) list.push({
@@ -28,8 +35,31 @@ const Particles = (() => {
     }
   }
 
+  // a little dust puff under a wheel (the drifting car): a small cluster of
+  // pale pixels that drifts back and out and is gone quickly
+  function puff(x, y, side, count) {
+    for (let i = 0; i < count; i++) list.push({
+      x: x + Util.rand(-3, 3), y: y + Util.rand(-2, 1), vx: side * Util.rand(4, 22), vy: Util.rand(6, 22),
+      life: Util.rand(.2, .4), color: Util.pick(['#ffffff', '#c8d0e0', '#8a90a8']), size: Util.pick([1, 1, 2]), gravity: 0,
+    });
+  }
+
+  // a puff of dark smoke: rises slowly, grows and drifts
+  function smoke(x, y) {
+    list.push({
+      x: x + Util.rand(-3, 3), y, vx: Util.rand(-5, 5), vy: Util.rand(-20, -12),
+      life: Util.rand(1.2, 2), color: Util.pick(['#2a2d33', '#3a3e46', '#4a4e56']),
+      size: 2, grow: Util.rand(3, 6), gravity: -6, soft: true,
+    });
+    for (let i = 0; i < 2; i++) list.push({                         // tiny specks rising with it
+      x: x + Util.rand(-4, 4), y: y - Util.rand(0, 3), vx: Util.rand(-8, 8), vy: Util.rand(-28, -14),
+      life: Util.rand(.8, 1.5), color: Util.pick(['#5a5e66', '#7a7e86', '#a8acb4']), size: 1, gravity: -4,
+    });
+  }
+
   function update(dt) {
     for (const p of list) {
+      if (p.maxLife === undefined) p.maxLife = p.life;
       p.x += p.vx * dt; p.y += p.vy * dt;
       p.vy += (p.gravity ?? 120) * dt;
       if (p.grow) p.size += p.grow * dt;                           // coming closer → bigger
@@ -38,12 +68,40 @@ const Particles = (() => {
     for (let i = list.length - 1; i >= 0; i--) if (list[i].life <= 0) list.splice(i, 1);
   }
 
+  const fade = p => Math.min(1, p.life / ((p.maxLife || p.life) * .6));   // fade out over the last part of its life
+
   function draw(ctx) {
+    if (!list.length) return;
+    // the crisp ones: tiny pixels (1–2 px)
     for (const p of list) {
-      const s = Math.round(p.size || 2);
-      Util.rect(ctx, p.x - s / 2, p.y - s / 2, s, s, p.color);
+      if (p.soft) continue;
+      const s = Util.clamp(Math.round(p.size || 1), 1, 2);
+      ctx.globalAlpha = fade(p);
+      Util.rect(ctx, Math.round(p.x), Math.round(p.y), s, s, p.color);
     }
+    ctx.globalAlpha = 1;
+    // the soft ones (smoke): blurred
+    if (!list.some(p => p.soft)) return;
+    hg.clearRect(0, 0, half.width, half.height);
+    for (const p of list) {
+      if (!p.soft) continue;
+      const s = Math.max(1, (p.size || 2) * .6), life = p.maxLife || p.life;
+      hg.globalAlpha = Math.min(1, p.life / (life * .6)) * .85;         // fade out over the last part of its life
+      hg.fillStyle = p.color;
+      hg.fillRect(p.x / 2 - s / 2, p.y / 2 - s / 2, s, s);
+    }
+    hg.globalAlpha = 1;
+    qg.clearRect(0, 0, quarter.width, quarter.height);
+    qg.imageSmoothingEnabled = true;
+    qg.drawImage(half, 0, 0, quarter.width, quarter.height);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = .7;
+    ctx.drawImage(quarter, 0, 0, W, H);                               // the wide, faint glow
+    ctx.globalAlpha = .9;
+    ctx.drawImage(half, 0, 0, W, H);                                  // the blurred core
+    ctx.restore();
   }
 
-  return { burst, spray, update, draw, reset: () => { list.length = 0; } };
+  return { burst, spray, puff, smoke, update, draw, reset: () => { list.length = 0; } };
 })();

@@ -1,6 +1,7 @@
-// Puddles (rain levels): dark reflective patches on the road. They appear more
-// and more often the longer it rains. Driving through one makes the car skid.
-// Each puddle: { x (road units), wz (world depth), w (half width), hit }.
+// Puddles (rain levels): dark reflective patches on the road and on the
+// pavements. They appear more and more often the longer it rains. Driving
+// through one makes the car skid.
+// Each puddle: { x (road units), wz (world depth), w (half width), hit, pavement }.
 const Puddles = (() => {
   const R = CONFIG.rain;
   const list = [];
@@ -19,6 +20,10 @@ const Puddles = (() => {
         const I = R.puddleEvery;
         timer = Math.max(I.min, I.start - rainTime * I.decay) * Util.rand(.6, 1.4);
         list.push({ x: Util.rand(-.8, .8), wz: dist + CONFIG.traffic.spawnZ, w: Util.rand(.18, .34), hit: false });
+        if (Math.random() < R.pavementPuddles) {                    // and one on a pavement (between the kerb and the houses)
+          const side = Math.random() < .5 ? -1 : 1, w = Util.rand(.2, .4);
+          list.push({ x: side * Util.rand(CONFIG.road.kerb + w * .6, CONFIG.road.pavement - w * .8), wz: dist + CONFIG.traffic.spawnZ + Util.rand(-2, 2), w, hit: false, pavement: true });
+        }
       }
     }
     for (let i = list.length - 1; i >= 0; i--) if (list[i].wz - dist < .3) list.splice(i, 1);

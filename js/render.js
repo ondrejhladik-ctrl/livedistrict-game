@@ -3,7 +3,7 @@
 const Renderer = (() => {
   const { W, H } = CONFIG.screen;
   const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });   // (the palette and Style.keep read it every frame)
   ctx.imageSmoothingEnabled = false;
 
   // red halo around tail lights; (lx, ly) and radius in sprite pixels
@@ -82,7 +82,7 @@ const Renderer = (() => {
     const s = CONFIG.spriteScale / car.z;
     const w = TrafficCars.width * s, h = TrafficCars.height * s;
     const left = Math.round(View.x(car.x, car.z) - w / 2), top = Math.round(View.y(0, car.z) - h);
-    const fog = Fog.amount(car.z);
+    const fog = Fog.amount(car.z * .6);                              // cars cut through the fog more than houses (seen from afar)
     // while switching on, the lights flicker for a moment like old bulbs
     const on = car.light >= 1 || (car.light > 0 && Math.random() < car.light);
     ctx.globalAlpha = 1 - fog;
@@ -109,7 +109,8 @@ const Renderer = (() => {
 
   function drawPlayer(state, z, dist) {
     const pose = playerPose(state, z), { frame, s } = pose;
-    const left = Math.round(pose.left), top = Math.round(pose.top), w = Math.round(pose.w), h = Math.round(pose.h);
+    if (state.crashed) { drawCrashed(state, pose, z); return; }
+    const left = Math.round(pose.left + (state.drift || 0)), top = Math.round(pose.top), w = Math.round(pose.w), h = Math.round(pose.h);   // drift: the tail swinging out
     ctx.drawImage(frame.img, left, top, w, h);
     lampLight(frame.img, left, top, w, h, Lamps.lightAt(z, dist));
     const underCanopy = Math.abs(state.px) > 1.1 ? Station.lightAt(z, dist) : 0;
@@ -117,12 +118,33 @@ const Renderer = (() => {
     glow(frame.lights, left, top, s, .22, 3.5);
   }
 
-  // black fade over everything (turning off to / leaving the petrol station)
+  // After a crash: the car thrown up, rolling over and lying on its roof
+  // (Game.crashPose), with its shadow on the road shrinking while it flies.
+  function drawCrashed(state, pose, z) {
+    const p = Game.crashPose(state.crashT), w = Math.round(pose.w), h = Math.round(pose.h);
+    const gx = View.x(state.px + p.slide, z), gy = View.y(0, z);
+    const k = 1 / (1 + p.lift * .9);
+    ctx.fillStyle = `rgba(0,0,0,${(.55 * k).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.ellipse(gx, gy - 1, w * .5 * k, Math.max(1, h * .12 * k), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.save();
+    ctx.translate(Math.round(gx), Math.round(gy - h / 2 - p.lift * h));
+    ctx.rotate(p.angle);
+    ctx.drawImage(pose.frame.img, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
+  // black fade over everything (turning off to / leaving the petrol station) –
+  // laid over the finished frame, so it also covers the soft glows drawn there
   function drawFade(state) {
     if (state.fade <= 0) return;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = `rgba(0,0,0,${state.fade.toFixed(3)})`;
-    ctx.fillRect(0, 0, W, H);
+    const a = state.fade.toFixed(3);
+    Style.after(g => {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = `rgba(0,0,0,${a})`;
+      g.fillRect(0, 0, W, H);
+    });
   }
 
   function draw(state) {
@@ -153,18 +175,27 @@ const Renderer = (() => {
   function drawStreet(state, dist) {
     const shift = dist - state.dist;
     Util.rect(ctx, -10, -10, W + 20, H + 20, '#000');
+    View.setCurve(dist);                                             // the road's curves, seen from here
+    const biome = Biome.mix(dist);                                   // Prague night → Pattaya day (over the bridge)
+    Fog.setMix(biome);
+    // the sky is infinitely far: it slides sideways as the road turns
+    const T = CONFIG.track, skyShift = Util.clamp(-Track.heading(dist) * T.skyShift, -150, 150);
 
-    Sky.draw(ctx, state.time, View.look());
-    Road.draw(ctx, dist);
-    Fog.drawWisps(ctx, state.time);   // behind the buildings: only shows far down the road
+    Sky.draw(ctx, state.time, View.look() + Math.round(skyShift));
+    Biome.drawSky(ctx, biome, Math.round(skyShift));                 // the green day sky and the PATTAYA city hill
+    Road.draw(ctx, dist, state.time);
+    Fog.drawWisps(ctx, state.time, 1 - biome * .85);   // behind the buildings (faint in the Pattaya day)
     City.draw(ctx, dist, Exit.state.active ? [Station.item()] : []);   // petrol station among the houses
+    Bridge.draw(ctx, dist);            // the bridge: boats below, railings, pylons and cables
+    Props.draw(ctx, dist);             // litter and smokers on the pavements
     Puddles.draw(ctx, dist);
     Rain.drawMood(ctx);                // darker, wetter night when it rains
     Lamps.draw(ctx, dist);             // street lamps light up the rainy night
     Exit.draw(ctx, dist);              // petrol station sign at the turn-off
 
     // cars far → near, the player slotted in at its own depth
-    const pz = CONFIG.player.z - shift;
+    // (after a crash the car flies on ahead: further down the road, drawn smaller)
+    const pz = CONFIG.player.z - shift + (state.crashed ? Game.crashPose(state.crashT).ahead : 0);
     const byDepth = Traffic.cars.map(c => ({ ...c, z: c.z - shift })).filter(c => c.z > .3).sort((a, b) => b.z - a.z);
     for (const car of byDepth) if (car.z >= pz && car.z < CONFIG.traffic.drawZ) drawTrafficCar(car, dist);
     if (pz > .3) drawPlayer(state, pz, dist);

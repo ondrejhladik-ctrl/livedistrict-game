@@ -3,8 +3,8 @@
 // player gets close – see Traffic and Renderer).
 const TrafficCars = (() => {
   const GLASS = '#101018', GLASS_HI = '#3a4058';
-  const LIGHTS_ON = { red: '#ff2626', redDk: '#9a0a0a', amber: '#ffa020' };
-  const LIGHTS_OFF = { red: '#5a1616', redDk: '#3a0c0c', amber: '#6a4a24' };
+  const LIGHTS_ON = { red: '#ff2626', redDk: '#9a0a0a', amber: '#f0f0ea' };   // (the "amber" lamp is a white reversing light)
+  const LIGHTS_OFF = { red: '#5a1616', redDk: '#3a0c0c', amber: '#5a5a58' };
   // tail-light centres per body type (for the glow)
   const LIGHT_POS = { van: [[8, 20], [55, 20]], hatch: [[9, 19], [55, 19]], sedan: [[11, 18], [52, 18]] };
 
@@ -51,15 +51,42 @@ const TrafficCars = (() => {
 
   const models = [
     ['#e8e8f0', 'sedan'], ['#3848c8', 'sedan'], ['#c8203c', 'hatch'], ['#e0c020', 'hatch'],
-    ['#20a8a8', 'sedan'], ['#8a44c8', 'van'], ['#d8d8d8', 'van'], ['#f07820', 'hatch'], ['#3a3a44', 'sedan'],
+    ['#20a8a8', 'sedan'], ['#8a44c8', 'van'], ['#d8d8d8', 'van'], ['#3a78c8', 'hatch'], ['#3a3a44', 'sedan'],
   ].map(([color, type]) => ({
     off: Util.neonTint(draw(color, type, false)),      // greenish city light on the paint
     on: Util.neonTint(draw(color, type, true)),
     lights: LIGHT_POS[type],
   }));
 
+  // Pattaya: a scooter seen from behind – rider in a helmet, sometimes a passenger
+  function scooter(shirt, helmet, body, passenger, lightsOn) {
+    const c = Util.canvas(64, 34), g = c.getContext('2d'), r = (x, y, w, h, col) => Util.rect(g, x, y, w, h, col);
+    const RED = lightsOn ? '#ff2626' : '#5a1616', skin = '#c8a07a';
+    r(29, 25, 6, 9, '#080808'); r(30, 26, 1, 6, '#2a2a2a');            // rear wheel
+    r(26, 19, 12, 7, body); r(26, 19, 12, 1, Util.shade(body, .35));    // rear body
+    r(29, 20, 6, 2, RED); r(29, 23, 6, 2, '#e4e4e4');                   // tail light, number plate
+    r(23, 20, 3, 7, '#1a1a2a'); r(38, 20, 3, 7, '#1a1a2a');             // legs
+    r(22, 26, 4, 2, '#e8e8e0'); r(38, 26, 4, 2, '#e8e8e0');             // flip-flops
+    r(25, 8, 14, 12, shirt); r(25, 8, 1, 12, Util.shade(shirt, -.3)); r(38, 8, 1, 12, Util.shade(shirt, -.3));
+    r(22, 10, 3, 7, skin); r(39, 10, 3, 7, skin);                       // arms to the handlebar
+    r(30, 6, 4, 2, skin); r(27, 0, 10, 7, helmet); r(28, 0, 8, 1, Util.shade(helmet, .4));   // neck, helmet
+    if (passenger) { r(26, 3, 12, 6, Util.shade(shirt, .25)); r(28, -1, 8, 5, '#2a2a2a'); r(24, 5, 2, 5, skin); r(38, 5, 2, 5, skin); }
+    return c;
+  }
+  const bikes = [['#e8e8e0', '#c83a3a', '#2a2a30'], ['#3a78c8', '#f0f0ea', '#c83a3a'], ['#d8c840', '#2a2a30', '#3a3a44'],
+    ['#c83a3a', '#e8e8e0', '#f0f0ea'], ['#2e8a4a', '#1f3a8a', '#d8d8d8'], ['#f0a0c8', '#f0f0ea', '#3a3a44']]
+    .map(([shirt, helmet, body]) => {
+      const p = Math.random() < .35;
+      return { off: Util.neonTint(scooter(shirt, helmet, body, p, false), .06, .15), on: Util.neonTint(scooter(shirt, helmet, body, p, true), .06, .15), lights: [[32, 21]], bike: true };
+    });
+  // Pattaya cars: pink and green-yellow taxis among the others
+  const thaiModels = [['#e05a9a', 'sedan'], ['#e05a9a', 'sedan'], ['#8ad83a', 'sedan'], ['#f0f0ea', 'hatch'], ['#b8bcc4', 'sedan'], ['#c83a3a', 'van'], ['#3a78c8', 'hatch']]
+    .map(([color, type]) => ({ off: Util.neonTint(draw(color, type, false), .08, .2), on: Util.neonTint(draw(color, type, true), .08, .2), lights: LIGHT_POS[type] }));
+
   return {
     width: 64, height: 34,
     random: () => Util.pick(models),   // { off, on, lights }
+    bike: () => Util.pick(bikes),
+    thai: () => Util.pick(thaiModels),
   };
 })();

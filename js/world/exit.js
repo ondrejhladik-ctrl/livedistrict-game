@@ -1,31 +1,59 @@
-// The turn-off to the petrol station (at CONFIG.exit.at metres): a gap in the
+// The turn-off to a petrol station (at each of CONFIG.exit.at metres): a gap in the
 // buildings on one side of the street, the forecourt asphalt reaching out from
-// the road, and a green neon petrol-pump sign at its start. The station itself
+// the road, and a green neon highway-shield sign (a running horse) at its start. The station itself
 // (canopy, pumps, shop) is Station.
 const Exit = (() => {
   const X = CONFIG.exit;
   const ex = { active: false, side: 1, wz: 0 };
 
-  // green neon sign with a petrol pump icon (pixel map)
-  const PUMP = [
-    '..............',
-    '.#######......',
-    '.#.....#......',
-    '.#.....#.##...',
-    '.#######..#...',
-    '.#######..#...',
-    '.#######..#...',
-    '.#######..#...',
-    '.#######.##...',
-    '.#######......',
-    '#########.....',
+  // green neon sign: an American highway shield (the "U.S. route" kind) with a
+  // running horse in it – a pixel map traced from the reference pictures.
+  //   . see-through   K the dark board   g dim glow   G neon   L bright neon
+  const SHIELD = [
+    '...................GG...................',
+    '.....GGGG.........GLLG.........GGGG.....',
+    '....GLLLLGGGGGGGGGLggLGGGGGGGGGLLLLG....',
+    '...GLggggLLLLLLLLLgKKgLLLLLLLLLggggLG...',
+    '..GLgKKKKgggggggggKKKKgggggggggKKKKgLG..',
+    '.GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG.',
+    'GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG',
+    '.GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG.',
+    '..GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG..',
+    '...GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG...',
+    '...GLggggggggggggggggggggggggggggggLG...',
+    '...GLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLG...',
+    '....GLggggggggggggggggggggggggggggLG....',
+    '....GLgKKKKKKKKKKKKKKKKKKKKKKKKKKgLG....',
+    '....GLgKKKKKKKKKKKKKKKKKKKKKKKKKKgLG....',
+    '....GLgKKKKKKKKKKKKKKKKKKKKKKKKKKgLG....',
+    '...GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG...',
+    '...GLgKKKKKKKKKKKKKKKKKKKKKLGKKKKKgLG...',
+    '...GLgKKKKKKKKKKKKKKKKKKKLLLLKKKKKgLG...',
+    '..GLgKKKKKKKKKKKKKKKKKKKLLLLLGKKKKKgLG..',
+    '..GLgKKKKKKKKKKKKKKKKKKGLLLKGLKKKKKgLG..',
+    '..GLgKKKKKKKKKKKKKKKKKKLLLLKKKKKKKKgLG..',
+    '.GLgKKKKKKKKKKKKKKKKKKLLLLLKKKKKKKKKgLG.',
+    '.GLgKKKKKKKLLGKKKKKKKKLLLLLKKKKKKKKKgLG.',
+    '.GLgKKKKKLLLKGLLLLLLLLLLLLLKKKKKKKKKgLG.',
+    '.GLgKKKLLLKKKLLLLLLLLLLLLLLLGLLgKKKKgLG.',
+    '.GLgKKKKKKKKKLLLLLLLLLLLLLLLLLLLGKKKgLG.',
+    '.GLgKKKKKgLLLLLLLLLLLLLLLLKgKKKKLLKKgLG.',
+    '.GLgKKKKGLLLLLLLLLKKKKKGLLKKKKKKKGLKgLG.',
+    '.GLgKKKLLKKKKKKKLKKKKKKKGLGKKKKKKKgKgLG.',
+    '..GLgLLGKKKKKKKLLLLgKKKgLGKKKKKKKKKgLG..',
+    '..GLggKKKKKKKKKKKKKgKLLLKKKKKKKKKKggLG..',
+    '...GLLggKKKKKKKKKKKKKKKKKKKKKKKKggLLG...',
+    '....GGLLggggggKKKKKKKKKKKKggggggLLGG....',
+    '......GGLLLLLLggggKKKKggggLLLLLLGG......',
+    '........GGGGGGLLLLgKKgLLLLGGGGGG........',
+    '..............GGGGLggLGGGG..............',
+    '..................GLLG..................',
+    '...................GG...................',
   ];
   const SIGN = (function () {
-    const w = PUMP[0].length + 4, h = PUMP.length + 4;
-    const c = Util.canvas(w, h), g = c.getContext('2d');
-    Util.rect(g, 0, 0, w, h, '#6cb820');
-    Util.rect(g, 1, 1, w - 2, h - 2, '#0b2410');
-    PUMP.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '#') Util.rect(g, x + 2, y + 2, 1, 1, '#c8ff5a'); }));
+    const COL = { K: '#0b2410', g: '#3f7a16', G: '#6cb820', L: '#c8ff5a' };
+    const c = Util.canvas(SHIELD[0].length, SHIELD.length), g = c.getContext('2d');
+    SHIELD.forEach((row, y) => [...row].forEach((ch, x) => { if (COL[ch]) Util.rect(g, x, y, 1, 1, COL[ch]); }));
     return c;
   })();
 
@@ -38,6 +66,7 @@ const Exit = (() => {
     ex.wz = dist + X.ahead;
     City.clearZone(side, ex.wz - 1, ex.wz + X.length + 1);   // room for the station between the houses
     City.addBehind(side, ex.wz - 1, ex.wz + X.length + 1, 6.6);   // and houses behind it
+    Props.clearZone(side, ex.wz - 2, ex.wz + X.length + 2);        // nothing lying on the forecourt
   }
 
   // How far the asphalt reaches out on the exit side at this depth
@@ -53,10 +82,10 @@ const Exit = (() => {
   }
 
   // called by Road for every row: paint the branch over pavement and verge
-  function drawRow(ctx, y, worldZ, hw, asphalt, edgeCol) {
+  function drawRow(ctx, y, worldZ, hw, cx, asphalt, edgeCol) {       // cx: the road's middle on this row
     const r = reach(worldZ);
     if (!r) return;
-    const cx = View.CX - View.cam() * hw, inner = cx + ex.side * hw * .96;
+    const inner = cx + ex.side * hw * .96;
     const outer = r > 50 ? (ex.side > 0 ? CONFIG.screen.W : 0) : cx + ex.side * hw * r;
     const x0 = Math.min(inner, outer), x1 = Math.max(inner, outer);
     Util.rect(ctx, x0, y, x1 - x0, 1, asphalt);
@@ -74,8 +103,7 @@ const Exit = (() => {
     ctx.globalAlpha = 1 - fog;
     Util.rect(ctx, x - pw / 2, yTop, pw, yGround - yTop, '#23252f');
     const sw = Math.max(4, .5 * px), sh = sw * SIGN.height / SIGN.width;
-    ctx.globalAlpha = 1 - fog * .7;                               // neon cuts through the fog a little
-    ctx.drawImage(SIGN, Math.round(x - sw / 2), Math.round(yTop - sh), Math.round(sw), Math.round(sh));
+    // the glow first, behind the sign – so the board stays dark and the horse stands out
     ctx.globalAlpha = 1;
     const R = sw * 1.1, cx = x, cy = yTop - sh / 2;
     const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
@@ -85,6 +113,12 @@ const Exit = (() => {
     ctx.fillStyle = halo;
     ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
     ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1 - fog * .7;                               // neon cuts through the fog a little
+    const smooth = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = sw < SIGN.width;                  // far away: averaged down, so the horse stays readable
+    Style.keep(ctx, () => ctx.drawImage(SIGN, Math.round(x - sw / 2), Math.round(yTop - sh), Math.round(sw), Math.round(sh)));   // its own greens (the palette turned the soft edges grey)
+    ctx.imageSmoothingEnabled = smooth;
+    ctx.globalAlpha = 1;
   }
 
   return { state: ex, reset, begin, drawRow, draw, reach };

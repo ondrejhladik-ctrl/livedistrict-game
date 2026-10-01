@@ -5,8 +5,16 @@ const Fog = (() => {
 
   // 0 … F.max, grows exponentially with depth: near things are clear, the
   // farthest ones melt completely into the fog (which matches the horizon sky)
-  const amount = z => Math.min(F.max, 1 - Math.exp(-Math.max(0, z - F.start) / F.range));
-  const color = z => `rgba(${F.rgb},${amount(z).toFixed(3)})`;
+  const smooth = z => Math.min(F.max, 1 - Math.exp(-Math.max(0, z - F.start) / F.range));
+  const STEPS = CONFIG.style.fogSteps;
+  // with the simple look the fog comes in steps: the distance in bands
+  const simple = () => (typeof Style !== 'undefined' ? Style.simple() : CONFIG.style.simple);   // (follows the K toggle)
+  const amount = z => { const a = smooth(z); return simple() && STEPS ? Math.min(F.max, Math.round(a * STEPS) / STEPS) : a; };
+  // the fog's colour changes with the biome: night green → bright Pattaya haze
+  const NIGHT = F.rgb.split(',').map(Number), DAY = [150, 210, 110];
+  let rgb = F.rgb;
+  const setMix = m => { rgb = NIGHT.map((v, i) => Math.round(v + (DAY[i] - v) * m)).join(','); };
+  const color = z => `rgba(${rgb},${amount(z).toFixed(3)})`;
 
   // vertical haze gradient ending at the horizon (used on the sky layer)
   function band(g, fromY, alpha, width) {
@@ -46,17 +54,17 @@ const Fog = (() => {
     wg.globalCompositeOperation = 'source-over';
   })();
 
-  function drawWisps(ctx, time) {
+  function drawWisps(ctx, time, fade = 1) {
     const wrap = v => ((v % W) + W) % W;
     const a = wrap(time * 5), b = wrap(time * 11);   // drift only with time, not with steering
-    ctx.globalAlpha = .6;
+    ctx.globalAlpha = .6 * fade;
     ctx.drawImage(wisps, Math.round(-a), HORIZON - 16);
     ctx.drawImage(wisps, Math.round(W - a), HORIZON - 16);
-    ctx.globalAlpha = .45;
+    ctx.globalAlpha = .45 * fade;
     ctx.drawImage(wisps, Math.round(b - W), HORIZON - 6, W, 30);
     ctx.drawImage(wisps, Math.round(b), HORIZON - 6, W, 30);
     ctx.globalAlpha = 1;
   }
 
-  return { amount, color, band, drawWisps };
+  return { amount, color, band, drawWisps, setMix };
 })();

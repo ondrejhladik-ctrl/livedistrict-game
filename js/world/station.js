@@ -9,7 +9,8 @@ const Station = (() => {
   const L = CONFIG.exit.length;
   const NEAR = .2;
   const C = {
-    shop: '#1b1b2e', shopSide: '#15151e', window: '#c8e8b0', shelf: '#9ac880', door: '#3a4a38',
+    shop: '#1b1b2e', shopSide: '#15151e', shelf: '#5d7152',
+    glass: [[0, '#cfdeb6'], [.5, '#a5b98f'], [1, '#6c7f60']],   // the lit shop seen through the glass: soft light, brighter up by the ceiling
     canopy: '#15151e', under: '#0d0e14', light: '#f2ffe4', neon: '#8fd42a', neonDk: '#4f8a18',
     post: '#1c1e28', pump: '#20222c', pumpTop: '#6cb820', display: '#9ad86a', island: '#2a2c38',
   };
@@ -55,21 +56,161 @@ const Station = (() => {
     poly(ctx, [s.P(x, ya, za), s.P(x, ya, zb), s.P(x, yb, zb), s.P(x, yb, za)], col);
   }
 
+  // A lit opening (the window, the door) on the shop's camera-facing side: the lit
+  // shop seen through the glass – it glows, so the fog dims it only a little – a
+  // soft glow spilling over its edges and light on the ground in front of it
+  // (both laid over the finished frame, after the palette: see Style.after).
+  function litStrip(ctx, s, ya, yb, da, db, dist, wz, pool) {
+    const za = Math.max(wz + da - dist, NEAR), zb = wz + db - dist;
+    if (zb <= za) return;
+    const x = s.sx, pts = [s.P(x, ya, za), s.P(x, ya, zb), s.P(x, yb, zb), s.P(x, yb, za)];
+    const ys = pts.map(p => p[1]), gr = ctx.createLinearGradient(0, Math.min(...ys), 0, Math.max(...ys));
+    C.glass.forEach(([at, col]) => gr.addColorStop(at, col));
+    const zm = (za + zb) / 2, k = 1 - Fog.amount(zm) * .6;
+    const seen = Style.keep(ctx, () => {                               // own colours: the soft light stays smooth
+      poly(ctx, pts, gr);
+      ctx.globalAlpha = .5;
+      poly(ctx, pts, Fog.color(zm));
+      ctx.globalAlpha = 1;
+    });
+    // the glows fade with how much of the glass is really to be seen (not through the houses in front)
+    Style.after(g => Util.softGlow(g, pts, k * seen.shown()));
+    const a = s.P(x, 0, za), b = s.P(x, 0, zb), foot = s.P(x, 0, zm), c = s.P(x - .25, 0, zm), e = s.P(x - .6, 0, zm);
+    const rx = Math.abs(b[0] - a[0]) / 2 + 2, ry = Math.max(1, Math.abs(e[1] - foot[1]) * .6);
+    Style.after(g => Util.ellipseLight(g, (a[0] + b[0] + c[0] * 2) / 4, c[1], rx, ry, '200,230,175', pool * k * seen.shown()));
+  }
+
   // ---------- NPC: the smoker by the shop's back door ----------
   // The PS1 villager from the reference picture (js/assets/smoker-image.js):
   // long robe, hands clasped, a cigarette between the fingers. Every few
   // seconds he takes a drag – the tip glows – and blows a puff out of his mouth.
-  const NPC = { x: 3.55, d: 5.5, height: .8 };   // by the shop's back door (road x, depth from wz, height)
-  const NPC_W = 26, NPC_H = 56, SMOKE_EVERY = 4.2;
+  // ---------- the vodka flyer stuck on the shop wall, next to the back door ----------
+  // On the bare wall between the shop window and the back door, next to the smoker:
+  // VODKA in navy letters, a French tricolour stripe, the
+  // bottle (pixelated from a photo, js/assets/vodka-image.js), a red discount
+  // badge – on paper with tape in the corners, looking like the smoker. Drawn onto the wall plane, so it is seen in perspective.
+  // Its depth span keeps the paper's proportions: depth units are drawn wider than
+  // height units (140 px vs 92 px per unit), so .52 tall × 36/62 × 92/140 ≈ .2 deep.
+  const FLYER_AT = { d0: 4.83, d1: 5.03, y0: .54, y1: 1.06 };   // depth span and height on the wall (the window ends at 4.8, the door starts at 5.2)
+  const LETTERS = {
+    V: ['#...#', '#...#', '#...#', '#...#', '.#.#.', '.#.#.', '..#..'],
+    O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+    D: ['####.', '#...#', '#...#', '#...#', '#...#', '#...#', '####.'],
+    K: ['#...#', '#..#.', '#.#..', '##...', '#.#..', '#..#.', '#...#'],
+    A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
+  };
+  // Made the same way as the smoker: drawn big (as if it were a photo of a real
+  // flyer), then averaged down to the low resolution – soft, blurry pixels – and
+  // graded into the smoker's murky yellowed palette, with grime and stains.
+  let FLYER = null;
+  const bottle = new Image();
+  bottle.onload = () => {
+    const W = 36, H = 62, U = 4, big = Util.canvas(W * U, H * U), g = big.getContext('2d');
+    const r = (x, y, w, h, col) => Util.rect(g, x * U, y * U, w * U, h * U, col);
+    r(0, 0, W, H, '#d6dade');                                         // paper
+    r(0, 0, W, .5, '#e8ecee'); r(W - .5, 0, .5, H, '#b0b4b8'); r(0, H - .5, W, .5, '#a8acb0');
+    [...'VODKA'].forEach((ch, i) => LETTERS[ch].forEach((row, y) =>
+      [...row].forEach((on, x) => { if (on === '#') r(3 + i * 6 + x, 3 + y, 1, 1, '#1c3272'); })));
+    r(11, 12, 5, 1.5, '#2a48a8'); r(16, 12, 5, 1.5, '#f4f4f4'); r(21, 12, 5, 1.5, '#c42a2a');   // tricolour
+    g.imageSmoothingEnabled = true;
+    g.drawImage(bottle, 14 * U, 16 * U, bottle.width * U, bottle.height * U);   // the bottle
+    g.fillStyle = '#c42a2a';                                          // discount badge
+    g.beginPath(); g.arc(7 * U, 47 * U, 6 * U, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#7a1818'; g.lineWidth = U * .7; g.stroke();
+    g.fillStyle = '#ffffff'; g.font = `bold ${5 * U}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('%', 7 * U, 47.5 * U);
+    g.globalAlpha = .5; r(0, 30, W, .6, '#9a9ea2'); g.globalAlpha = 1;  // a fold across the middle
+    for (const [x, y] of [[0, 0], [W - 6, 0], [0, H - 3], [W - 6, H - 3]]) { g.globalAlpha = .5; r(x, y, 6, 3, '#c8c4ae'); g.globalAlpha = 1; }   // tape
+    for (let i = 0; i < 7; i++) {                                     // grime and water stains
+      const x = Util.rand(0, W) * U, y = Util.rand(0, H) * U, rad = Util.rand(3, 9) * U;
+      const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+      gr.addColorStop(0, `rgba(60,58,34,${Util.rand(.12, .3).toFixed(2)})`); gr.addColorStop(1, 'rgba(60,58,34,0)');
+      g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    // averaged down to the low resolution: soft pixels like the pixelated photo
+    const c = Util.canvas(W, H), cg = c.getContext('2d');
+    cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
+    cg.drawImage(big, 0, 0, W, H);
+    // the smoker's palette: yellowed, olive, dim and low in contrast, with noise
+    const id = cg.getImageData(0, 0, W, H), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const y = (i >> 2) / W | 0, light = 1.02 - y / H * .25;           // a little darker towards the bottom
+      const n = (Math.random() < .04 ? .84 : 1 + Util.rand(-.06, .06)) * light;
+      const l = d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11;
+      const mix = (v, k) => v * .55 + l * .45 * k;                    // colours partly washed out
+      d[i] = Util.clamp((mix(d[i], 1) * .7 + 10) * n, 0, 255);
+      d[i + 1] = Util.clamp((mix(d[i + 1], 1) * .74 + 12) * n, 0, 255);
+      d[i + 2] = Util.clamp((mix(d[i + 2], .75) * .5 + 6) * n, 0, 255);
+    }
+    cg.putImageData(id, 0, 0);
+    FLYER = c;
+  };
+  bottle.src = VODKA_BOTTLE_IMAGE;
+
+  // the flyer on the wall (x = SHOP.x0, facing the road), in perspective: its left
+  // edge, as seen from the road, is at the far end on the right-hand side
+  function drawFlyer(ctx, dist, side, wz) {
+    if (!FLYER) return;
+    const F = FLYER_AT, x = side * (SHOP.x0 - .004);
+    const zAt = k => wz + (side > 0 ? F.d1 - k * (F.d1 - F.d0) : F.d0 + k * (F.d1 - F.d0)) - dist;
+    if (Math.min(zAt(0), zAt(1)) < NEAR) return;
+    ctx.globalAlpha = 1 - Fog.amount(zAt(.5));
+    Util.wallImage(ctx, FLYER, k => { const z = zAt(k); return [View.x(x, z), View.y(F.y1, z), View.y(F.y0, z)]; });
+    ctx.globalAlpha = 1;
+  }
+
+  const NPC_W = 26, PHOTO_H = 56, NPC_H = 66, SMOKE_EVERY = 4.2;   // the photo is 56 px tall, the feet are added below it
+  const NPC = { x: 3.55, d: 5.08, height: .8 * NPC_H / PHOTO_H };   // by the shop's back door, in front of the flyer (road x, depth from wz, height)
   const MOUTH = [12, 13], TIP = [8, 35];                             // sprite px
   let NPC_IMG = null;
   const npcImg = new Image();
   npcImg.onload = () => {
     const c = Util.canvas(NPC_W, NPC_H), g = c.getContext('2d');
     g.drawImage(npcImg, 0, 0);
+    addFeet(g);
     Util.rect(g, 9, 35, 2, 1, '#eeeee0');                            // the cigarette in his hands
-    NPC_IMG = Util.neonTint(c, .06, .15);                            // a touch of the green city light
+    NPC_IMG = c;                                                     // the photo's own colours
   };
+
+  // The photo is cut off below the knees, so he looked as if he had no legs:
+  // the robe is carried on down to the ground – its folds mirrored from the
+  // rows above, a little wider and darker towards the hem – two dark shoes
+  // peek out from under it and a soft shadow on the ground holds him there.
+  function addFeet(g) {
+    const W = NPC_W, HEM = PHOTO_H + 6, CX = 12;                      // the robe's last row; the middle of the figure
+    const src = g.getImageData(0, 0, W, PHOTO_H).data, id = g.getImageData(0, 0, W, NPC_H), d = id.data;
+    const put = (x, y, rgb, a = 255) => { const i = (y * W + x) * 4; d.set([...rgb, a], i); };
+    const opaque = (x, y) => x >= 0 && x < W && src[(y * W + x) * 4 + 3] > 0;
+    // the shadow on the ground first (the robe and the shoes cover it)
+    for (let y = HEM - 1; y < NPC_H; y++) for (let x = 0; x < W; x++) {
+      const v = ((x + .5 - CX) / 12) ** 2 + ((y + .5 - (NPC_H - 1.5)) / 2.4) ** 2;
+      if (v < 1) put(x, y, [8, 8, 6], Math.round(160 * (1 - v)));
+    }
+    // the robe: the new rows mirror the rows above, so the folds run on down
+    for (let y = PHOTO_H; y <= HEM; y++) {
+      const k = y - PHOTO_H, sy = PHOTO_H - 2 - k, wider = k >= 3 && y < HEM;   // the hem row is narrower again: rounded corners
+      const dark = 1 - k * .06 - (y === HEM ? .22 : 0);                         // darker towards the ground
+      for (let x = 0; x < W; x++) {
+        let sx = x, edge = 1;
+        if (!opaque(x, sy)) {
+          if (!wider) continue;
+          sx = opaque(x + 1, sy) ? x + 1 : opaque(x - 1, sy) ? x - 1 : -1;     // flares out by a pixel on each side
+          if (sx < 0) continue;
+          edge = .8;
+        }
+        const i = (sy * W + sx) * 4, n = dark * edge * (1 + Util.rand(-.05, .05));
+        put(x, y, [src[i] * n, src[i + 1] * n, src[i + 2] * n]);
+      }
+    }
+    // two shoes under the hem, the toes turned a little outwards
+    const shoe = '1c1711', lit = '4f4633';
+    const rgb = hex => [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+    for (const [x0, x1, toe] of [[CX - 5, CX - 2, CX - 6], [CX + 1, CX + 4, CX + 5]]) {
+      for (let x = x0; x <= x1; x++) put(x, HEM + 1, rgb(x === x0 + 1 || x === x1 - 1 ? lit : shoe));
+      for (let x = Math.min(x0, toe); x <= Math.max(x1, toe); x++) put(x, HEM + 2, rgb(shoe));
+    }
+    g.putImageData(id, 0, 0);
+  }
   npcImg.src = SMOKER_IMAGE;
   const puffs = [];                                                    // exhaled smoke, in sprite pixels
   let lastPuff = 0;
@@ -89,7 +230,7 @@ const Station = (() => {
     ctx.drawImage(NPC_IMG, Math.round(left), Math.round(top), Math.round(NPC_W * s), Math.round(NPC_H * s));
     // glowing tip: bright while he inhales
     const tip = TIP, glow = up ? .8 + .2 * Math.sin(t * 20) : .35;
-    Util.rect(ctx, left + tip[0] * s, top + tip[1] * s, Math.max(1, s), Math.max(1, s), `rgba(255,${Math.round(90 + 80 * glow)},40,${glow})`);
+    Util.rect(ctx, left + tip[0] * s, top + tip[1] * s, Math.max(1, s), Math.max(1, s), `rgba(255,${Math.round(40 + 30 * glow)},${Math.round(40 + 30 * glow)},${glow})`);
     // smoke: a thin wisp from the tip, and the exhaled puffs from the mouth
     const smoke = (sx, sy, size, a) => {
       ctx.fillStyle = `rgba(190,205,180,${(a * (1 - fog)).toFixed(3)})`;
@@ -106,101 +247,6 @@ const Station = (() => {
       if (age < 0) continue;
       smoke(MOUTH[0] + p.dx * age * 4 + age * 3, MOUTH[1] - age * 9, 2 + age * 2.2, .45 * (1 - age / 2.6));
     }
-    ctx.globalAlpha = 1;
-  }
-
-  // ---------- NPC 2: a homeless guy sitting against the shop wall ----------
-  // San Andreas style: bandana, white T-shirt, purple shorts, white socks;
-  // one leg stretched out towards the road, the other knee up, an open pizza
-  // box, a couple of slices and green cups around him. Now and then he nods off.
-  const HOBO = { x: 3.64, d: 6.3, height: .53 };  // back against the wall, past the smoker
-  const HOBO_W = 64, HOBO_H = 32, HOBO_BACK = 51; // sprite px of his back (sits at HOBO.x)
-  const HOBO_COL = {
-    band: '#b88ab8', bandDk: '#8a5a8e', bandHi: '#e8d0e8', skin: '#7a5238', skinDk: '#4e3222', skinHi: '#9a6c4c',
-    shirt: '#e8e8e2', shirtMid: '#c4c4bc', shirtDk: '#96968e', shorts: '#5e2a4c', shortsDk: '#3e1a32', shortsHi: '#78406a',
-    sock: '#e4e4dc', shoe: '#141418', shoeHi: '#3c3c44', box: '#e8e0c8', boxDk: '#b4a88c', boxRed: '#9a2418',
-    cheese: '#e8b050', pep: '#c43820', crust: '#d09048', cup: '#5ac83a', cupDk: '#3a8a26', lid: '#e8e8e0',
-  };
-  function hoboSprite(nod) {
-    const c = Util.canvas(HOBO_W, HOBO_H), g = c.getContext('2d'), K = HOBO_COL;
-    const px = (x, y, col) => Util.rect(g, x, y, 1, 1, col);
-    const fill = (x0, y0, x1, y1, col) => Util.rect(g, x0, y0, x1 - x0 + 1, y1 - y0 + 1, col);
-    const limb = (x0, y0, x1, y1, w, col) => {
-      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
-      for (let i = 0; i <= n; i++) fill(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), Math.round(x0 + (x1 - x0) * i / n) + w - 1, Math.round(y0 + (y1 - y0) * i / n) + w - 1, col);
-    };
-    Util.rect(g, 8, 30, 54, 2, 'rgba(0,0,0,.45)');                     // shadow on the ground
-    // green cups behind him, one fallen over
-    fill(57, 21, 59, 26, K.cup); fill(57, 21, 59, 21, K.lid); px(59, 23, K.cupDk);
-    fill(3, 28, 7, 30, K.cup); fill(7, 28, 7, 30, K.lid); fill(3, 30, 7, 30, K.cupDk);
-    // shorts: seat and both thighs
-    fill(39, 21, 54, 27, K.shorts); fill(50, 21, 54, 27, K.shortsDk);
-    limb(41, 23, 27, 25, 4, K.shortsDk);                               // stretched leg (lower, darker)
-    limb(43, 19, 31, 13, 5, K.shorts);                                 // knee up
-    limb(42, 19, 31, 13, 1, K.shortsHi);
-    // stretched leg: calf, sock, shoe
-    limb(28, 25, 17, 26, 3, K.skin); fill(18, 25, 27, 25, K.skinHi);
-    fill(13, 25, 17, 28, K.sock);
-    fill(6, 25, 13, 30, K.shoe); fill(7, 25, 12, 25, K.shoeHi); fill(5, 29, 13, 30, K.shoeHi);
-    // raised leg: shin down to the foot
-    limb(31, 17, 24, 25, 4, K.skin); limb(31, 17, 24, 25, 1, K.skinHi); limb(34, 18, 28, 25, 1, K.skinDk);
-    fill(22, 25, 26, 27, K.sock);
-    fill(17, 27, 25, 30, K.shoe); fill(18, 27, 23, 27, K.shoeHi); fill(16, 30, 25, 30, K.shoeHi);
-    // white T-shirt, back against the wall
-    for (let y = 10; y <= 22; y++) {
-      const x0 = y < 12 ? 42 : 40, x1 = 53;
-      fill(x0, y, x1, y, K.shirt); fill(x1 - 2, y, x1, y, K.shirtMid); px(x1, y, K.shirtDk); px(x0, y, K.shirtMid);
-    }
-    fill(44, 15, 48, 15, K.shirtMid); fill(45, 19, 50, 19, K.shirtMid);   // folds
-    // head (nods forward when dozing): skin, bandana, face looking to the left
-    const hx = nod ? -1 : 0, hy = nod ? 2 : 0;
-    fill(45 + hx, 9 + hy, 48 + hx, 11 + hy, K.skinDk);                  // neck
-    for (let y = 1; y <= 10; y++) for (let x = 41; x <= 52; x++)
-      if (((x + .5 - 47) / 4.3) ** 2 + ((y + .5 - 5.6) / 4.6) ** 2 <= 1) px(x + hx, y + hy, x > 49 ? K.skinDk : K.skin);
-    for (let y = 1; y <= 4; y++) for (let x = 42; x <= 52; x++)          // bandana with a paisley-ish pattern
-      if (((x + .5 - 47) / 4.6) ** 2 + ((y + .5 - 5.6) / 4.9) ** 2 <= 1) px(x + hx, y + hy, (x + y) % 3 ? K.band : K.bandHi);
-    fill(51 + hx, 3 + hy, 53 + hx, 5 + hy, K.bandDk);                   // knot at the back
-    px(44 + hx, 6 + hy, K.skinDk); px(42 + hx, 7 + hy, K.skinHi);       // eye, nose
-    fill(43 + hx, 9 + hy, 45 + hx, 9 + hy, K.skinDk);                   // mouth
-    // arm: sleeve, forearm resting on the knee, hand hanging
-    fill(41, 11, 45, 15, K.shirtMid); fill(42, 11, 44, 13, K.shirt);
-    limb(42, 16, 34, 18, 2, K.skin); fill(35, 16, 41, 16, K.skinHi);
-    fill(31, 18, 34, 21, K.skin); px(31, 21, K.skinDk);
-    // open pizza box in front of him, a slice still in it
-    fill(40, 27, 58, 31, K.box); fill(40, 27, 58, 27, K.boxRed); fill(40, 31, 58, 31, K.boxRed);
-    fill(40, 27, 40, 31, K.boxRed); fill(49, 27, 49, 31, K.boxDk); fill(58, 27, 58, 31, K.boxRed);
-    fill(52, 28, 56, 28, K.crust); fill(53, 29, 55, 29, K.cheese); px(54, 30, K.cheese); px(53, 28, K.pep); px(54, 29, K.pep);
-    // two loose slices on the ground
-    fill(29, 29, 35, 29, K.crust); fill(30, 30, 34, 30, K.cheese); px(32, 31, K.cheese); px(31, 30, K.pep); px(33, 29, K.pep);
-    fill(35, 30, 38, 30, K.crust); fill(36, 31, 38, 31, K.cheese); px(37, 31, K.pep);
-    // muddy PS1 texture, a bit of the green city light
-    const id = g.getImageData(0, 0, HOBO_W, HOBO_H), d = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-      if (!d[i + 3]) continue;
-      const n = 1 + Util.rand(-.1, .1);
-      for (let k = 0; k < 3; k++) d[i + k] = Util.clamp(d[i + k] * n, 0, 255);
-    }
-    g.putImageData(id, 0, 0);
-    return Util.neonTint(c, .06, .15);
-  }
-  const mirror = img => {
-    const c = Util.canvas(img.width, img.height), g = c.getContext('2d');
-    g.translate(img.width, 0); g.scale(-1, 1); g.drawImage(img, 0, 0);
-    return c;
-  };
-  // [side][nod]: legs always point towards the road
-  const HOBO_IMG = { 1: [hoboSprite(false), hoboSprite(true)] };
-  HOBO_IMG[-1] = HOBO_IMG[1].map(mirror);
-  const hoboNod = () => (performance.now() / 1000 % 7 > 4.8 ? 1 : 0);
-  // the sprite with its anchor (sprite px that sits on the ground at HOBO.x)
-  const hobo = side => ({ img: HOBO_IMG[side][hoboNod()], anchorX: side > 0 ? HOBO_BACK : HOBO_W - HOBO_BACK });
-
-  function drawHobo(ctx, dist, side, wz) {
-    const z = wz + HOBO.d - dist;
-    if (z < .5 || z > CONFIG.city.drawZ) return;
-    const { img, anchorX } = hobo(side), s = HOBO.height * View.K / z / HOBO_H;
-    ctx.globalAlpha = 1 - Fog.amount(z);
-    ctx.drawImage(img, Math.round(View.x(side * HOBO.x, z) - anchorX * s), Math.round(View.y(0, z) - HOBO_H * s), Math.round(HOBO_W * s), Math.round(HOBO_H * s));
     ctx.globalAlpha = 1;
   }
 
@@ -245,14 +291,14 @@ const Station = (() => {
     // shop: dark building with a big lit window and a door on the road side, neon roof edge
     const shop = box(ctx, dist, side, wz, SHOP, { front: C.shop, side: C.shopSide, top: C.shop });
     if (shop && shop.sx !== null) {
-      sideStrip(ctx, shop, shop.sx, .35, 1.2, 1.4, L - 2.2, C.window, dist, wz);
-      for (let d = 1.6; d < L - 2.4; d += .8) sideStrip(ctx, shop, shop.sx, .75, .85, d, d + .45, C.shelf, dist, wz);
-      sideStrip(ctx, shop, shop.sx, 0, 1.1, L - 1.8, L - 1.2, C.door, dist, wz);
+      litStrip(ctx, shop, .35, 1.2, 1.4, L - 2.2, dist, wz, .12);       // the lit window…
+      Style.keep(ctx, () => { for (let d = 1.6; d < L - 2.4; d += .8) sideStrip(ctx, shop, shop.sx, .75, .85, d, d + .45, C.shelf, dist, wz); });   // …shelves against the light
+      litStrip(ctx, shop, 0, 1.1, L - 1.8, L - 1.2, dist, wz, .2);      // the door
+      Style.keep(ctx, () => drawFlyer(ctx, dist, side, wz));            // the vodka flyer next to the door (own colours)
       sideStrip(ctx, shop, shop.sx, 1.8, 1.9, SHOP.d0, SHOP.d1, C.neon, dist, wz);
     }
 
-    drawHobo(ctx, dist, side, wz);                                    // the homeless guy (further back)
-    drawNpc(ctx, dist, side, wz);                                     // the smoker by the shop
+    Style.keep(ctx, () => drawNpc(ctx, dist, side, wz));              // the smoker by the shop (own colours)
 
     // islands and pumps, far to near
     for (let i = PUMPS.length - 1; i >= 0; i--) {
@@ -305,7 +351,8 @@ const Station = (() => {
 
   // raw data for the dev 3D view
   const dev = () => ({
-    CANOPY, SHOP, PUMPS, ISLANDS, POSTS, PANELS, NPC, HOBO, HOBO_H, C, panelOn, hobo,
+    CANOPY, SHOP, PUMPS, ISLANDS, POSTS, PANELS, NPC, MOUTH, TIP, SMOKE_EVERY, C, panelOn,
+    flyer: () => FLYER, FLYER_AT,
     npc: () => NPC_IMG,
   });
 

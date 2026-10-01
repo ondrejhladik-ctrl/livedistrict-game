@@ -1,6 +1,6 @@
 // Cutscene at the petrol station: when the car parks, the picture cuts to a
-// shot from the forecourt (drawn by the Dev3D renderer) of the two guys by the
-// shop – the homeless one sitting against the wall and the smoker at the door.
+// shot from the forecourt (drawn by the Dev3D renderer) of the man smoking at
+// the shop's back door – he takes a drag and blows the smoke out during the shot.
 // (The parked car is the photo from the loading screen, if it is in view.)
 // Space / tap skips it. Afterwards the normal driving view comes back.
 //
@@ -10,7 +10,7 @@
 // station. Everything is mirrored when the station is on the left.
 const Cutscene = (() => {
   const SHOTS = [
-    { time: 5, from: { x: 2.69, d: 6, h: .75, yaw: 80 }, to: { x: 2.85, d: 5.98, h: .75, yaw: 82 } },   // the smoker and the homeless guy by the shop
+    { time: 5, from: { x: 2.5, d: 4.55, h: .75, yaw: 64 }, to: { x: 2.6, d: 4.6, h: .75, yaw: 65 } },   // the smoker at the shop's back door
   ];
   const hud = document.getElementById('hud');
   let shot = -1, t = 0;
@@ -53,5 +53,5 @@ const Cutscene = (() => {
     return cam;
   }
 
-  return { start, stop, update, camera, active: () => shot >= 0, car: () => car };
+  return { start, stop, update, camera, active: () => shot >= 0, time: () => t, car: () => car };   // time: seconds into the shot
 })();

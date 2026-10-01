@@ -11,6 +11,7 @@ const Dev = (() => {
   const cam = { dist: 0, x: 0, h: 1, yaw: 0 };     // yaw: radians, 0 = down the road, + = right
 
   addEventListener('keydown', e => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLButtonElement) return;                                           // typing into the sign-up form
     if (e.code === 'KeyO') {
       if (typeof Loading !== 'undefined' && !Loading.isDone()) return;   // not over the loading screen
       on = !on;

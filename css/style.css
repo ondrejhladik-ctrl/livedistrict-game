@@ -35,10 +35,15 @@ html, body {
     position: fixed; inset: 0; z-index: 100; background: #000; color: var(--neon);
     font-size: 28px; text-align: center;
   }
-  #rotate .rotate-icon { font-size: 64px; animation: turn 1.6s ease-in-out infinite; }
+  #rotate .rotate-icon { height: 64px; width: auto; fill: #6cb820; animation: turn 1.6s ease-in-out infinite; }
+  #rotate .rotate-icon .screen { fill: #000; }
+  #rotate .rotate-icon .dim { fill: #2f5a12; }
 }
 @keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
 canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+/* dot raster (js/ui/raster.js): laid over the normal picture at 20 % */
+.dots { position: absolute; inset: 0; display: none; image-rendering: auto; opacity: .2; pointer-events: none; }
+body.raster .dots { display: block; }
 #scanlines {                       /* retro CRT lines over everything, the loading screen too */
   position: absolute; inset: 0; pointer-events: none; z-index: 30;
   background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.18) 2px 3px);
@@ -54,6 +59,18 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
 #hud .label + div + .label { margin-top: 1em; }
 #hud .right { text-align: right; }
 
+/* dev: jump buttons at the left side */
+#devjump {
+  position: absolute; left: 1%; top: 50%; transform: translateY(-50%); z-index: 36;
+  display: flex; flex-direction: column; gap: .3em; font-size: clamp(10px, 1.4vw, 15px);
+}
+#devjump button {                  /* plain white text, no frame (a dark shadow keeps it readable) */
+  font: inherit; color: #fff; background: none; border: 0; text-shadow: 1px 1px 0 #000, 0 0 4px #000;
+  padding: .1em 0; cursor: pointer; text-align: left; touch-action: manipulation;
+}
+#devjump button:hover { text-decoration: underline; }
+
+
 /* ---------- overlays (title, game over, checkpoint) ---------- */
 .overlay {
   position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -62,14 +79,13 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
 }
 .hidden { display: none !important; }
 
-.neon {
-  font-size: clamp(40px, 11vw, 120px); letter-spacing: .04em; line-height: .9;
-  color: transparent; -webkit-text-stroke: 2px #d4ff7a;
-  filter: drop-shadow(0 0 4px var(--neon2)) drop-shadow(0 0 12px var(--neon2)) drop-shadow(0 0 24px #3a9a10);
-}
-.neon.red {
-  -webkit-text-stroke-color: #ff8a8a;
-  filter: drop-shadow(0 0 4px #ff3030) drop-shadow(0 0 14px #ff2020) drop-shadow(0 0 26px #a00000);
+/* GAME OVER in the lettering of CHECKPOINT (.lettering: Anton, the thin dark cut,
+   the grain), but white; a soft dark shadow keeps it readable over the picture */
+#gameover-info { white-space: nowrap; }       /* distance and score stay on one line, even on small screens */
+#gameover .lettering {
+  font-size: clamp(36px, 8.45vw, 96px);
+  background-image: var(--grain, none), linear-gradient(to bottom, #fff 66.7%, #0a0806 66.7% 69.3%, #fff 69.3%);
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, .7));
 }
 .sub {
   font-size: clamp(16px, 2.8vw, 30px); line-height: 1.2;
@@ -78,6 +94,44 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
 .blink { animation: blink 1s steps(2, start) infinite; }
 @keyframes blink { to { visibility: hidden; } }
 @keyframes pop { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ---------- leaderboard sign-up ---------- */
+.account { background: rgba(0, 0, 0, .88); pointer-events: auto; z-index: 25; }
+#acc-skip { font: inherit; font-size: .85em; color: #8fd42a; background: none; border: 0; cursor: pointer; padding: 0; }
+#acc-form {
+  display: flex; flex-direction: column; align-items: stretch; gap: .45em;
+  width: min(80%, 26em); font-size: clamp(14px, 2.4vw, 26px); color: #fff;
+}
+#acc-form input[type=text], #acc-form input:not([type]), #acc-form input[type=email] {
+  font: inherit; color: var(--neon); background: #000; border: 2px solid #3f8a1e; padding: .15em .4em;
+  outline: none; user-select: text; -webkit-user-select: text; touch-action: auto; border-radius: 0;
+}
+#acc-form input:focus { border-color: var(--neon); box-shadow: 0 0 8px #3a9a10; }
+#acc-form input::placeholder { color: #2f6a18; }
+.acc-consent { font-size: .72em; line-height: 1.1; display: flex; gap: .4em; align-items: flex-start; text-align: left; }
+.acc-consent input { accent-color: #6cb820; width: 1.2em; height: 1.2em; margin: .1em 0 0; flex: none; }
+.acc-error { color: #ff7a7a; min-height: 1.1em; font-size: .8em; text-align: center; line-height: 1.1; }
+#acc-submit {
+  font: inherit; font-size: 1.3em; color: #000; background: var(--neon); border: 0; padding: .1em 0; cursor: pointer;
+}
+#acc-submit:disabled { opacity: .5; }
+.acc-offline { color: #8fd42a; font-size: .75em; text-align: center; }
+
+/* leaderboard table (title / game over) */
+.board {
+  font-size: clamp(12px, 2vw, 22px); line-height: 1.05; min-width: min(60%, 18em);
+  background: rgba(0, 0, 0, .55); padding: .3em .6em; text-shadow: 1px 1px 0 #000;
+}
+.board-title { color: var(--neon); text-align: center; margin-bottom: .15em; }
+.board-row { display: flex; gap: .6em; }
+.board-row .rank { width: 2.2em; text-align: right; color: #8fd42a; }
+.board-row .nick { flex: 1; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.board-row .pts { text-align: right; }
+.board-row.mine { color: var(--neon); }
+.board-note { text-align: center; color: #8fd42a; font-size: .85em; }
+.who { font-size: clamp(12px, 1.8vw, 20px); pointer-events: auto; text-shadow: 1px 1px 0 #000; }
+.who b { color: var(--neon); font-weight: normal; }
+.who a { color: #8fd42a; }
 
 /* ---------- dev mode ---------- */
 #dev {
@@ -90,6 +144,49 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
 .loading { background: #000; pointer-events: auto; z-index: 20; transition: opacity .5s; }
 .loading.fadeout { opacity: 0; }
 #loading-canvas { position: absolute; inset: 0; }
+/* The lettering of the title sequence (js/ui/intro.js), for the page's titles:
+   Anton in the game's neon green, spaced like there (7 % of the capital height), a
+   thin dark cut across the letters (at 30 % of the capital height above the
+   baseline – Anton's capitals fill .065–.925em of the line here) and the printed
+   grain boiling on it (--grain: the intro's own grain, set on the page by intro.js).
+   .solid: the same without the cut (for small text, where the cut would vanish).
+   The text only shows where its box is: room above the line for the accents
+   (Í, Ž, Ů), taken back by the margin – the cut stays measured on the line. */
+.lettering {
+  font-family: Anton, Impact, 'Arial Narrow', sans-serif; font-weight: normal; line-height: 1;
+  letter-spacing: .06em; padding-left: .06em;  /* (the spacing comes after the last letter too: balanced on the left) */
+  padding-top: .3em; margin-top: -.3em; background-origin: content-box;
+  color: transparent; text-shadow: none;
+  background-image: var(--grain, none), linear-gradient(to bottom, #6cb820 66.7%, #0a0806 66.7% 69.3%, #6cb820 69.3%);
+  background-size: calc(min(100vw, 177.78vh) * .4), auto;   /* the grain as big as in the intro */
+  -webkit-background-clip: text; background-clip: text;
+  image-rendering: pixelated;                  /* (chunky grain pixels, as in the intro) */
+  animation: grain .4s steps(1) infinite;
+}
+.lettering.solid { background-image: var(--grain, none), linear-gradient(#6cb820, #6cb820); }
+@keyframes grain {
+  0% { background-position: 0 0, 0 0; }
+  25% { background-position: -113px -57px, 0 0; }
+  50% { background-position: -41px -171px, 0 0; }
+  75% { background-position: -187px -89px, 0 0; }
+}
+/* the title sequence waits for the player with what to press above the word
+   (--word-top: where the word's top stands then, set by js/ui/loading.js) */
+#loading .load-prompt {
+  position: absolute; left: 0; right: 0; margin-left: auto; margin-right: auto; width: max-content;
+  bottom: calc(100% - var(--word-top, 52%) + .55em);
+  font-size: calc(min(100vw, 177.78vh) * .028); letter-spacing: .12em; padding-left: .12em;
+  visibility: hidden; animation: none;
+}
+#loading.hold .load-prompt { visibility: visible; animation: grain .4s steps(1) infinite, blink 1s steps(2, start) infinite; }
+/* LOADING… / CLICK TO START disappears the moment the title sequence (js/ui/intro.js) starts */
+#loading.intro .load-start { visibility: hidden; animation: none; }
+.load-start {                      /* in the middle of the skyline, like the subtitles on the Drive title card */
+  position: absolute; top: calc(50% - .6em); left: 0; right: 0; text-align: center; line-height: 1.2;
+  color: #f3e27a; font-size: clamp(16px, 3.4vw, 38px);
+  letter-spacing: .14em; padding-left: .14em;   /* (the spacing comes after the last letter too: balanced on the left) */
+  text-shadow: 2px 2px 0 #000, 0 0 8px rgba(243, 226, 122, .35);
+}
 
 /* ---------- checkpoint: black screen + chunky pixel title ---------- */
 .blackout { background: #000; animation: fadein .15s ease-out; }
@@ -113,3 +210,26 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
     #d6ffae 0%, #b4f07c 38%, #ffffff 38%, #ffffff 47%,
     #6fd23e 47%, #4cb82c 78%, #2f8f1f 78%, #2f8f1f 100%);
 }
+
+/* ---------- the intro: only road-sign chevrons, towards where to steer ----------
+   flat green on black like the title sequence, no neon glow, they appear and go at once */
+#tutorial {
+  justify-content: flex-start; padding-top: 9%; box-sizing: border-box;
+  /* a soft dark band behind the chevrons, so they read over the grey street */
+  background: linear-gradient(to bottom, transparent 2%, rgba(10,8,6,.5) 7%, rgba(10,8,6,.5) 24%, transparent 32%);
+}
+.tut-card { display: flex; flex-direction: column; align-items: center; font-size: clamp(14px, 2.4vw, 26px); }   /* (sets the gaps between the chevrons) */
+
+/* three chevrons lighting up one after another, towards where to steer */
+.tut-chevrons { display: flex; gap: .45em; height: clamp(40px, 8vw, 90px); }
+.tut-chevrons svg { height: 100%; width: auto; fill: #6cb820; opacity: .18; animation: chev 1.1s steps(1) infinite; }
+.tut-chevrons svg:nth-child(2) { animation-delay: .22s; }
+.tut-chevrons svg:nth-child(3) { animation-delay: .44s; }
+@keyframes chev { 0% { opacity: 1; } 40%, 100% { opacity: .18; } }
+#tutorial.left .tut-chevrons { transform: scaleX(-1); }      /* mirrored: points and runs to the left */
+
+/* done: all the chevrons light up for a moment, then the card is gone */
+.tut-card.leave .tut-chevrons svg { animation: none; opacity: 1; }
+.tut-card.leave { animation: tut-out .42s linear forwards; }
+@keyframes tut-out { 0%, 99% { opacity: 1; } 100% { opacity: 0; } }
+#game, #game-dots { transition: filter .1s linear; }
