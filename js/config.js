@@ -128,7 +128,7 @@ const CONFIG = {
   biome: { bridgeStart: 1400, bridgeEnd: 2000 },   // metres
 
   // dev: buttons at the side to jump to places on the track (false = hidden)
-  devButtons: false,            // (switched off for now)
+  devButtons: true,
 
   // the simple 8-bit look (js/ui/style.js): a small palette, fog in steps, a drifting car
   style: { simple: true, fogSteps: 5, drift: 8 },   // drift: px the car's tail swings out in a hard turn
