@@ -12,13 +12,13 @@
 <title>CHECKPOINT demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261004eg">
+<link rel="stylesheet" href="css/style.css?v=20261004opt">
 </head>
 <body>
 <div id="wrap">
   <div id="stage">
     <canvas id="game" width="320" height="180"></canvas>
-    <canvas id="game-dots" class="dots"></canvas>
+    <div id="game-dots" class="dots"><canvas></canvas><canvas class="soft"></canvas></div>
     <canvas id="game-boards"></canvas>
     <div id="scanlines"></div>
 
@@ -78,7 +78,7 @@
          title sequence in its canvas, which waits with what to press above the word, then the game -->
     <div id="loading" class="overlay loading">
       <canvas id="loading-canvas" width="640" height="360"></canvas>
-      <canvas id="loading-dots" class="dots"></canvas>
+      <div id="loading-dots" class="dots"><canvas></canvas><canvas class="soft"></canvas></div>
       <div id="loading-prompt" class="load-prompt lettering solid">MEZERNÍK / KLEPNI PRO START</div>
       <div id="loading-start" class="load-start">LOADING…</div>
     </div>
@@ -128,15 +128,15 @@
 <script src="js/world/biome.js?v=20261004hw"></script>
 <script src="js/world/track.js?v=20261004hw"></script>
 <script src="js/world/sky.js?v=20260930d"></script>
-<script src="js/world/road.js?v=20261004hw"></script>
+<script src="js/world/road.js?v=20261004opt"></script>
 <script src="js/assets/gasoline-shield-image.js?v=20261002zd"></script>
 <script src="js/assets/billboard-images.js?v=20261004hg"></script>
-<script src="js/world/city.js?v=20261004sb"></script>
+<script src="js/world/city.js?v=20261004opt"></script>
 <script src="js/world/rain.js?v=20261004sb"></script>
 <script src="js/world/lamps.js?v=20261003c"></script>
 <script src="js/assets/tour-sign-image.js?v=20261002d"></script>
 <script src="js/world/tour-sign.js?v=20261002d"></script>
-<script src="js/world/exit.js?v=20261004hw"></script>
+<script src="js/world/exit.js?v=20261004opt"></script>
 <script src="js/world/station.js?v=20261003perf"></script>
 <script src="js/world/props.js?v=20261003perf"></script>
 <script src="js/world/bridge.js?v=20260930c"></script>
@@ -147,9 +147,9 @@
 <script src="js/sprites/traffic-cars.js?v=20260930c"></script>
 
 <script src="js/ui/hud.js?v=20261004sb"></script>
-<script src="js/ui/raster.js?v=20261003perf"></script>
-<script src="js/ui/billboards.js?v=20261004eh"></script>
-<script src="js/ui/intro.js?v=20261003go"></script>
+<script src="js/ui/raster.js?v=20261004opt"></script>
+<script src="js/ui/billboards.js?v=20261004opt"></script>
+<script src="js/ui/intro.js?v=20261004d"></script>
 <script src="js/ui/gameover.js?v=20261004nb"></script>
 <script src="js/ui/loading.js?v=20261003a"></script>
 <script src="js/ui/account.js?v=20261004b"></script>

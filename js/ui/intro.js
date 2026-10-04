@@ -28,7 +28,7 @@ const Intro = (() => {
   const RAISE = 40;
   const VP = [-70, HORIZON - RAISE], TOP = [66, HORIZON + 10 - RAISE];
   // the opening card before it all: the date, big, in the same lettering
-  const DATE = { text: '19. 3.', cap: 96, show: [.15, 1.55], len: 1.85 };   // cap: letter height (px); show: from, to (seconds); len: the whole card
+  const DATE = { text: '23. 10.', cap: 96, show: [.15, 1.55], len: 1.85 };   // cap: letter height (px); show: from, to (seconds); len: the whole card
   DATE.base = (H + DATE.cap) / 2;                                    // its baseline: in the middle of the screen
   const T = {                            // the timeline (seconds, after the date card)
     gap: .13,                            // one letter after another, each popping up at once with its bars

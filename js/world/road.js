@@ -37,6 +37,48 @@ const Road = (() => {
   const WATER = [[8, 26, 32], [58, 160, 112]], GLINT = [[46, 88, 98], [196, 244, 200]], EDGE = [[40, 44, 56], [140, 168, 132]];
   const hash = n => { const s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); };
 
+  // The rows' rectangles are not filled one by one: they are collected by layer (their
+  // order within a row) and colour, and filled layer by layer – one path per colour.
+  // The same pixels (whole-pixel rectangles, Util.rect; rows never overlap), with far
+  // fewer canvas calls. A layer is a pen: Util.rect(pen, …) as onto a canvas.
+  // Layers: 0 ground / grass / water, 1 pavement / shoulder / glints, 2 pavement joints /
+  // deck edge, 3 walkway, 4 kerb, 5 kerb top, 6 asphalt, 7 lane dashes, 8 edge lines,
+  // 9–10 the side road to a petrol station (asphalt, its edge line); then the fog.
+  const layers = [], pens = [];
+  for (let i = 0; i < 11; i++) {
+    const m = new Map();
+    let cur = null;
+    layers.push(m);
+    pens.push({
+      set fillStyle(c) { cur = m.get(c); if (!cur) m.set(c, cur = []); },
+      fillRect(x, y, w, h) {
+        if (w < 0) { x += w; w = -w; }
+        if (h < 0) { y += h; h = -h; }
+        if (w && h) cur.push(x, y, w, h);
+      },
+    });
+  }
+  const fogRows = new Map();                                        // fog colour → its rows
+  const fog = (z, y) => { const c = Fog.groundColor(z); let a = fogRows.get(c); if (!a) fogRows.set(c, a = []); a.push(y); };
+  function paint(ctx) {
+    for (const m of layers) {
+      for (const [col, a] of m) {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        for (let i = 0; i < a.length; i += 4) ctx.rect(a[i], a[i + 1], a[i + 2], a[i + 3]);
+        ctx.fill();
+      }
+      m.clear();
+    }
+    for (const [col, a] of fogRows) {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      for (const y of a) ctx.rect(0, y, W, 1);
+      ctx.fill();
+    }
+    fogRows.clear();
+  }
+
   // With hills (View.hilly) the rows are found by walking the depth outwards from
   // the near end: a stretch of road shows on the rows above everything nearer
   // (behind a crest it is hidden). top: the topmost row drawn; crest(z): the
@@ -64,6 +106,7 @@ const Road = (() => {
         const z = View.depthOfRow(y);
         row(ctx, env, y, z, z - View.depthOfRow(y + 1));
       }
+      paint(ctx);
       return;
     }
     // the hills: depth by depth from just below the screen's bottom edge outwards
@@ -82,6 +125,7 @@ const Road = (() => {
       crestZ.push(z2); crestY.push(edge);
       z = z2; y = y2;
     }
+    paint(ctx);
     if (edge > HORIZON + 1) {                                          // (the ground dips away: the far meadow down to the horizon)
       ctx.fillStyle = Fog.groundColor(140);
       ctx.fillRect(0, HORIZON + 1, W, edge - HORIZON - 1);
@@ -100,54 +144,52 @@ const Road = (() => {
     if (zone === 'highway') {
       // the motorway: meadow up to a narrow pale shoulder, grey asphalt, white lines
       const P2 = HIGHWAY;
-      Util.rect(ctx, 0, y, W, 1, P2.grass[band]);
-      Util.rect(ctx, cx - hw * 1.08, y, hw * 2.16, 1, P2.shoulder);
-      Util.rect(ctx, cx - hw, y, hw * 2, 1, P2.asphalt[band]);
-      if (worldZ % 4 < 2) for (const lx of [-1 / 3, 1 / 3]) Util.rect(ctx, cx + lx * hw - lineW / 2, y, lineW, 1, P2.dash);
-      Util.rect(ctx, cx - hw * .96 - lineW / 2, y, lineW, 1, P2.edge);
-      Util.rect(ctx, cx + hw * .96 - lineW / 2, y, lineW, 1, P2.edge);
-      Exit.drawRow(ctx, y, worldZ, hw, cx, P2.asphalt[band], P2.edge);   // the side road to the petrol station
-      ctx.fillStyle = Fog.groundColor(z);
-      ctx.fillRect(0, y, W, 1);
+      Util.rect(pens[0], 0, y, W, 1, P2.grass[band]);
+      Util.rect(pens[1], cx - hw * 1.08, y, hw * 2.16, 1, P2.shoulder);
+      Util.rect(pens[6], cx - hw, y, hw * 2, 1, P2.asphalt[band]);
+      if (worldZ % 4 < 2) for (const lx of [-1 / 3, 1 / 3]) Util.rect(pens[7], cx + lx * hw - lineW / 2, y, lineW, 1, P2.dash);
+      Util.rect(pens[8], cx - hw * .96 - lineW / 2, y, lineW, 1, P2.edge);
+      Util.rect(pens[8], cx + hw * .96 - lineW / 2, y, lineW, 1, P2.edge);
+      Exit.drawRow(pens[9], y, worldZ, hw, cx, P2.asphalt[band], P2.edge, pens[10]);   // the side road to the petrol station
+      fog(z, y);
       return;
     }
     if (zone === 'bridge') {
       // the water below, with glints drifting along it
-      Util.rect(ctx, 0, y, W, 1, water);
+      Util.rect(pens[0], 0, y, W, 1, water);
       const rw = Math.floor(worldZ * 4);
       for (let k = 0; k < 5; k++) {
         const h = hash(rw * 7 + k);
         if (h > .55) continue;
         const len = Math.max(1, hw * (.15 + hash(rw + k * 3) * .35)), off = (hash(rw * 3 + k) * 30 - 15 + time * (k % 2 ? .6 : -.4)) % 15;
         const side = k % 2 ? 1 : -1, gx = cx + side * hw * (DECK + 1 + Math.abs(off));
-        Util.rect(ctx, gx - len / 2, y, len, 1, glint);
+        Util.rect(pens[1], gx - len / 2, y, len, 1, glint);
       }
       // the deck: a dark concrete edge, a narrow walkway, the kerb, the road
-      Util.rect(ctx, cx - hw * DECK, y, hw * DECK * 2, 1, deckEdge);
-      Util.rect(ctx, cx - hw * (DECK - .06), y, hw * (DECK - .06) * 2, 1, C.paving[band]);
+      Util.rect(pens[2], cx - hw * DECK, y, hw * DECK * 2, 1, deckEdge);
+      Util.rect(pens[3], cx - hw * (DECK - .06), y, hw * (DECK - .06) * 2, 1, C.paving[band]);
     } else {
-      Util.rect(ctx, 0, y, W, 1, P.ground);
+      Util.rect(pens[0], 0, y, W, 1, P.ground);
       // pavement: tile rows (a joint where a row ends, when rows are big enough to see)
       const tile = Math.floor(worldZ / TILE);
       const joint = span < TILE * .4 && worldZ - tile * TILE < Math.max(.04, span);
-      Util.rect(ctx, cx - hw * R.pavement, y, hw * R.pavement * 2, 1, joint ? P.joint : P.paving[tile % 2]);
+      Util.rect(pens[1], cx - hw * R.pavement, y, hw * R.pavement * 2, 1, joint ? P.joint : P.paving[tile % 2]);
       if (hw > 25) for (const jx of R.pavementJoints)                // joints along the pavement
-        for (const s of [-1, 1]) Util.rect(ctx, cx + s * jx * hw - lineW / 3, y, Math.max(1, lineW * .66), 1, P.joint);
+        for (const s of [-1, 1]) Util.rect(pens[2], cx + s * jx * hw - lineW / 3, y, Math.max(1, lineW * .66), 1, P.joint);
     }
     // kerb stone: light top towards the road
-    Util.rect(ctx, cx - hw * R.kerb, y, hw * R.kerb * 2, 1, P.kerb[band]);
-    for (const s of [-1, 1]) Util.rect(ctx, cx + s * hw * (R.kerb - .025) - (s > 0 ? 0 : hw * .025), y, hw * .025, 1, P.kerbTop);
-    Util.rect(ctx, cx - hw, y, hw * 2, 1, P.asphalt[band]);
+    Util.rect(pens[4], cx - hw * R.kerb, y, hw * R.kerb * 2, 1, P.kerb[band]);
+    for (const s of [-1, 1]) Util.rect(pens[5], cx + s * hw * (R.kerb - .025) - (s > 0 ? 0 : hw * .025), y, hw * .025, 1, P.kerbTop);
+    Util.rect(pens[6], cx - hw, y, hw * 2, 1, P.asphalt[band]);
 
     if (worldZ % 4 < 2)                                   // dashed lane lines
-      for (const lx of [-1 / 3, 1 / 3]) Util.rect(ctx, cx + lx * hw - lineW / 2, y, lineW, 1, P.dash);
-    Util.rect(ctx, cx - hw * .96 - lineW / 2, y, lineW, 1, P.edge);
-    Util.rect(ctx, cx + hw * .96 - lineW / 2, y, lineW, 1, P.edge);
+      for (const lx of [-1 / 3, 1 / 3]) Util.rect(pens[7], cx + lx * hw - lineW / 2, y, lineW, 1, P.dash);
+    Util.rect(pens[8], cx - hw * .96 - lineW / 2, y, lineW, 1, P.edge);
+    Util.rect(pens[8], cx + hw * .96 - lineW / 2, y, lineW, 1, P.edge);
 
-    Exit.drawRow(ctx, y, worldZ, hw, cx, P.asphalt[band], P.edge);   // the side road to the petrol station
+    Exit.drawRow(pens[9], y, worldZ, hw, cx, P.asphalt[band], P.edge, pens[10]);   // the side road to the petrol station
 
-    ctx.fillStyle = Fog.groundColor(z);
-    ctx.fillRect(0, y, W, 1);
+    fog(z, y);
   }
 
   return { draw, crest, top: () => top };

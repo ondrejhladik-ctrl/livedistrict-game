@@ -31,14 +31,15 @@ const Exit = (() => {
   }
 
   // called by Road for every row: paint the branch over pavement and verge
-  function drawRow(ctx, y, worldZ, hw, cx, asphalt, edgeCol) {       // cx: the road's middle on this row
+  // (edgeCtx: where its edge line goes – drawn after the asphalt; the road collects them in layers)
+  function drawRow(ctx, y, worldZ, hw, cx, asphalt, edgeCol, edgeCtx = ctx) {   // cx: the road's middle on this row
     const r = reach(worldZ);
     if (!r) return;
     const inner = cx + ex.side * hw * .96;
     const outer = r > 50 ? (ex.side > 0 ? CONFIG.screen.W : 0) : cx + ex.side * hw * r;
     const x0 = Math.min(inner, outer), x1 = Math.max(inner, outer);
     Util.rect(ctx, x0, y, x1 - x0, 1, asphalt);
-    if (r < 50) Util.rect(ctx, outer - ex.side * Math.max(1, .03 * hw), y, Math.max(1, .03 * hw), 1, edgeCol);
+    if (r < 50) Util.rect(edgeCtx, outer - ex.side * Math.max(1, .03 * hw), y, Math.max(1, .03 * hw), 1, edgeCol);
   }
 
   // the Checkpoint Tour pylon on the pavement at the start of the turn-off: its

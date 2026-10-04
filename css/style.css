@@ -43,6 +43,7 @@ html, body {
 canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
 /* dot raster (js/ui/raster.js): laid over the normal picture at 20 % */
 .dots { position: absolute; inset: 0; display: none; image-rendering: auto; opacity: .2; pointer-events: none; }
+.dots canvas { position: absolute; inset: 0; image-rendering: auto; }   /* the sharp dots and the soft spots over them (stretched smoothly) */
 body.raster .dots { display: block; }
 #scanlines {                       /* retro CRT lines over everything, the loading screen too */
   position: absolute; inset: 0; pointer-events: none; z-index: 30;

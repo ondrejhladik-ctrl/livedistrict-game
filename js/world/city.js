@@ -412,13 +412,25 @@ const City = (() => {
     const poly = (pts, col) => {
       ctx.fillStyle = col;
       ctx.beginPath();
-      pts.forEach(([x, y, z], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, X(x, z), View.y(y, z)));
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i], sx = X(p[0], p[2]), sy = View.y(p[1], p[2]);
+        if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy);
+      }
       ctx.fill();
     };
     // a rectangle on a wall parallel to the road (at distance x), from depth za to zb
+    // (the same path as poly() would make of its four corners – without the arrays)
     const strip = (za, zb, ya, yb, col, x = b.inner) => {
       za = Math.max(za, NEAR);
-      if (zb > za) poly([[x, ya, za], [x, ya, zb], [x, yb, zb], [x, yb, za]], col);
+      if (zb <= za) return;
+      const xa = X(x, za), xb = X(x, zb);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(xa, View.y(ya, za));
+      ctx.lineTo(xb, View.y(ya, zb));
+      ctx.lineTo(xb, View.y(yb, zb));
+      ctx.lineTo(xa, View.y(yb, za));
+      ctx.fill();
     };
     const floorH = FLOOR * View.K / zn;
     if (b.type === 'tower') { drawTower(ctx, b, z0, z1, zn, X); return; }
@@ -499,10 +511,19 @@ const City = (() => {
     Util.rect(ctx, left, top, w, bottom - top, b.front);
     Util.rect(ctx, left, top, w, 1, '#8fd42a');
     const floorH = FLOOR * View.K / z0, colW = w / COLS;
-    if (floorH >= 2.5 && colW >= 2) {
+    if (floorH >= 2.5 && colW >= 2) {                                   // (whole-pixel windows that never overlap: one path per colour)
+      const byCol = new Map();
       for (let f = 0; f < b.floors; f++) for (let c = 0; c < COLS; c++) {
-        const wy = bottom - (f + 1) * floorH + floorH * .3, wx = left + c * colW + colW * .25;
-        Util.rect(ctx, wx, wy, Math.max(1, colW * .5), Math.max(1, floorH * .45), b.windows[f * COLS + c]);
+        const wy = bottom - (f + 1) * floorH + floorH * .3, wx = left + c * colW + colW * .25, col = b.windows[f * COLS + c];
+        let a = byCol.get(col);
+        if (!a) byCol.set(col, a = []);
+        a.push(Math.round(wx), Math.round(wy), Math.round(Math.max(1, colW * .5)), Math.round(Math.max(1, floorH * .45)));
+      }
+      for (const [col, a] of byCol) {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        for (let i = 0; i < a.length; i += 4) ctx.rect(a[i], a[i + 1], a[i + 2], a[i + 3]);
+        ctx.fill();
       }
     }
     Util.rect(ctx, left, top, w, bottom - top, Fog.color(z0));
