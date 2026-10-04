@@ -70,6 +70,20 @@ body.raster .dots { display: block; }
 }
 #devjump button:hover { text-decoration: underline; }
 
+/* sound on / off – a pixel speaker in the bottom right corner */
+#mute {
+  position: absolute; right: 2.5%; bottom: 3%; z-index: 35;
+  width: clamp(28px, 4.2vw, 48px); aspect-ratio: 4 / 3; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--neon); filter: drop-shadow(1px 1px 0 #000) drop-shadow(0 0 4px #000); opacity: .85;
+  touch-action: manipulation;
+}
+#mute:hover { opacity: 1; }
+#mute svg { width: 100%; height: 100%; display: block; fill: currentColor; }
+#mute .cross { display: none; }
+#mute[aria-pressed="true"] { color: #8a8e98; }
+#mute[aria-pressed="true"] .waves { display: none; }
+#mute[aria-pressed="true"] .cross { display: inline; }
+
 
 /* ---------- overlays (title, game over, checkpoint) ---------- */
 .overlay {
@@ -79,14 +93,6 @@ body.raster .dots { display: block; }
 }
 .hidden { display: none !important; }
 
-/* GAME OVER in the lettering of CHECKPOINT (.lettering: Anton, the thin dark cut,
-   the grain), but white; a soft dark shadow keeps it readable over the picture */
-#gameover-info { white-space: nowrap; }       /* distance and score stay on one line, even on small screens */
-#gameover .lettering {
-  font-size: clamp(36px, 8.45vw, 96px);
-  background-image: var(--grain, none), linear-gradient(to bottom, #fff 66.7%, #0a0806 66.7% 69.3%, #fff 69.3%);
-  filter: drop-shadow(0 0 6px rgba(0, 0, 0, .7));
-}
 .sub {
   font-size: clamp(16px, 2.8vw, 30px); line-height: 1.2;
   text-shadow: 2px 2px 0 #000, 0 0 8px #000;
@@ -97,38 +103,73 @@ body.raster .dots { display: block; }
 
 /* ---------- leaderboard sign-up ---------- */
 .account { background: rgba(0, 0, 0, .88); pointer-events: auto; z-index: 25; }
-#acc-skip { font: inherit; font-size: .85em; color: #8fd42a; background: none; border: 0; cursor: pointer; padding: 0; }
+#acc-skip {                        /* white, in the bottom right corner of the screen */
+  position: absolute; right: 2.5%; bottom: 3%;
+  font: inherit; font-size: .85em; color: #fff; background: none; border: 0; cursor: pointer; padding: 0;
+}
 #acc-form {
   display: flex; flex-direction: column; align-items: stretch; gap: .45em;
-  width: min(80%, 26em); font-size: clamp(14px, 2.4vw, 26px); color: #fff;
+  width: max-content; max-width: 92%; font-size: clamp(14px, 2.4vw, 26px); color: #fff;   /* as wide as the heading */
 }
 #acc-form input[type=text], #acc-form input:not([type]), #acc-form input[type=email] {
-  font: inherit; color: var(--neon); background: #000; border: 2px solid #3f8a1e; padding: .15em .4em;
+  font: inherit; color: var(--neon); background: #000; border: 0; padding: calc(.15em + 2px) calc(.4em + 2px);   /* no frame (the same size as with it) */
   outline: none; user-select: text; -webkit-user-select: text; touch-action: auto; border-radius: 0;
 }
-#acc-form input:focus { border-color: var(--neon); box-shadow: 0 0 8px #3a9a10; }
 #acc-form input::placeholder { color: #2f6a18; }
-.acc-consent { font-size: .72em; line-height: 1.1; display: flex; gap: .4em; align-items: flex-start; text-align: left; }
-.acc-consent input { accent-color: #6cb820; width: 1.2em; height: 1.2em; margin: .1em 0 0; flex: none; }
-.acc-error { color: #ff7a7a; min-height: 1.1em; font-size: .8em; text-align: center; line-height: 1.1; }
-#acc-submit {
-  font: inherit; font-size: 1.3em; color: #000; background: var(--neon); border: 0; padding: .1em 0; cursor: pointer;
+.acc-title {                       /* the form's heading, in the lettering of CHECKPOINT */
+  align-self: flex-start; font-size: 2.4em; margin-bottom: .35em; white-space: nowrap;
+  background-image: var(--grain-soft, none), linear-gradient(to bottom, #6cb820 66.7%, #0a0806 66.7% 69.3%, #6cb820 69.3%);   /* (the softer grain) */
+  /* its left edge on the fields' text: their padding (.4em + 2px of the form = .4 / 2.4 em
+     here) minus the lettering's own .06em in front */
+  margin-left: calc(.4em / 2.4 - .06em + 2px);
 }
+.acc-consent {                     /* like the fields' labels: the same dim green, size and left edge */
+  color: #2f6a18; line-height: 1.2; display: flex; gap: .4em; align-items: center; text-align: left;
+  padding: 0 calc(.4em + 2px); cursor: pointer;
+}
+.acc-consent input {                /* a plain square, no frame: dim green, bright green when ticked */
+  appearance: none; -webkit-appearance: none; width: .7em; height: .7em; margin: 0; flex: none;
+  background: #2f6a18; border: 0; border-radius: 0; cursor: pointer;
+}
+.acc-consent input:checked { background: var(--neon); box-shadow: 0 0 6px #3a9a10; }
+.acc-consent:has(input:checked) { color: var(--neon); }
+.acc-error { color: #ff7a7a; min-height: 1.1em; font-size: .8em; text-align: center; line-height: 1.1; }
+#acc-submit {                      /* a small box on the right, ending where the heading ends */
+  align-self: flex-end; font: inherit; color: #000; border: 0;   /* (the same size as the fields' text) */
+  background: #6cb820 var(--grain-soft, none); background-size: calc(min(100vw, 177.78vh) * .4); image-rendering: pixelated;   /* the heading's green and grain… */
+  animation: grain .4s steps(1) infinite;                    /* …boiling like on the heading */
+  padding: .2em 1.1em; cursor: pointer; margin-right: .31em;   /* (the heading's last letter ends a little inside its box) */
+}
+#acc-submit:hover, #acc-submit:focus-visible { background-color: var(--neon); }   /* the lighter green (like the ticked consent) */
 #acc-submit:disabled { opacity: .5; }
 .acc-offline { color: #8fd42a; font-size: .75em; text-align: center; }
 
-/* leaderboard table (title / game over) */
+#gameover-info { white-space: nowrap; }       /* distance and score stay on one line, even on small screens */
+/* game over (js/ui/gameover.js): GAME OVER and HIGH SCORES are drawn into a canvas
+   over the picture; the table comes up under HIGH SCORES (.scores – as wide as the
+   word, its rows one after another), then the distance, the score and what to
+   press (.done); without a table those stay under GAME OVER (.plain). All sized by
+   the stage (min(100vw, 177.78vh) is its width; the padding's % too), so the table
+   always fits under the heading and its bars. */
+#gameover { justify-content: flex-start; padding-top: 15%; gap: calc(min(100vw, 177.78vh) * .0156); box-sizing: border-box; }
+#gameover.plain { padding-top: 35%; }
+#gameover-fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+#gameover > .board, #gameover > .sub { position: relative; visibility: hidden; font-size: calc(min(100vw, 177.78vh) * .0205); }   /* (over the canvas) */
+#gameover.scores > .board, #gameover.done > .sub { visibility: visible; }
+/* leaderboard: an arcade HIGH SCORES table (game over) – every rank in its own colour */
 .board {
-  font-size: clamp(12px, 2vw, 22px); line-height: 1.05; min-width: min(60%, 18em);
-  background: rgba(0, 0, 0, .55); padding: .3em .6em; text-shadow: 1px 1px 0 #000;
+  font-size: clamp(13px, 2.7vw, 30px); line-height: 1.12; width: min(84%, 19em); letter-spacing: .08em;
+  padding: .2em .9em .5em; text-shadow: 2px 2px 0 #000, 0 0 6px #000;   /* no box: a dark shadow keeps it readable */
 }
-.board-title { color: var(--neon); text-align: center; margin-bottom: .15em; }
-.board-row { display: flex; gap: .6em; }
-.board-row .rank { width: 2.2em; text-align: right; color: #8fd42a; }
+.board-row { display: flex; gap: .9em; }
+.board-row .rank { width: 3em; text-align: left; }
 .board-row .nick { flex: 1; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .board-row .pts { text-align: right; }
-.board-row.mine { color: var(--neon); }
-.board-note { text-align: center; color: #8fd42a; font-size: .85em; }
+.board-row { color: #6cb820; }                      /* the green of the form… */
+.board-row.r2, .board-row.r3 { color: var(--neon); }   /* …the second and third in the lighter one… */
+.board-row.r1 { color: #fff; }                        /* …and the winner in white */
+.board-row.mine { animation: blink 1s steps(2, start) infinite; }
+.board-note { text-align: center; color: #ff8a8a; font-size: .8em; }
 .who { font-size: clamp(12px, 1.8vw, 20px); pointer-events: auto; text-shadow: 1px 1px 0 #000; }
 .who b { color: var(--neon); font-weight: normal; }
 .who a { color: #8fd42a; }
@@ -232,4 +273,14 @@ body.raster .dots { display: block; }
 .tut-card.leave .tut-chevrons svg { animation: none; opacity: 1; }
 .tut-card.leave { animation: tut-out .42s linear forwards; }
 @keyframes tut-out { 0%, 99% { opacity: 1; } 100% { opacity: 0; } }
-#game, #game-dots { transition: filter .1s linear; }
+#game, #game-dots, #game-boards { transition: filter .1s linear; }
+/* the car radio: the song whose sign was just passed, bottom left (js/world/highway.js) */
+.radio {
+  position: absolute; left: 3%; bottom: 4%; z-index: 6; pointer-events: none;
+  font-size: clamp(14px, 2.2vw, 24px); color: var(--neon); letter-spacing: .06em;
+  text-shadow: 0 0 6px #000, 2px 2px 0 #000; animation: radio-in .35s steps(4) both;
+}
+@keyframes radio-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+/* the billboards' pictures, sharp (js/ui/billboards.js): over the dots, at the screen's own resolution */
+#game-boards { position: absolute; inset: 0; pointer-events: none; image-rendering: auto; }
+

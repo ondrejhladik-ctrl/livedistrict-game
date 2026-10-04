@@ -1,13 +1,13 @@
 // Street lamps (from CONFIG.lamps.startAt metres on): a row of Prague-style
 // lamps with greenish light on both pavements. Each one lights up the fog, casts a
 // cone of light and a bright pool on the road – and cars passing under a lamp
-// light up for a moment (see lightAt + Renderer). None on the bridge (Biome 'bridge').
+// light up for a moment (see lightAt + Renderer). Only in Prague (Biome 'city').
 const Lamps = (() => {
   const L = CONFIG.lamps;
   let firstWz = Infinity;                 // world depth of the first lamp (Infinity = no lamps yet)
 
   function reset() { firstWz = Infinity; }
-  const onBridge = wz => Biome.zone(wz) === 'bridge';
+  const onBridge = wz => Biome.zone(wz) !== 'city';             // lamps only in Prague: none on the bridge, in Pattaya or on the motorway
 
   // switch the lamps on: the first ones appear far ahead, in the fog
   function activate(dist) {

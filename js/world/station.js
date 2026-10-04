@@ -49,6 +49,31 @@ const Station = (() => {
     return { z0, P, sx };
   }
 
+  // Where things are drawn on screen ([x, y, w, h], generous), for Style.keep:
+  // a part of a face of a box (heights ya…yb, depths da…db from wz)…
+  function faceRect(s, x, ya, yb, da, db, dist, wz) {
+    const za = Math.max(wz + da - dist, NEAR), zb = wz + db - dist;
+    if (zb <= za) return [0, 0, 0, 0];
+    const pts = [s.P(x, ya, za), s.P(x, ya, zb), s.P(x, yb, zb), s.P(x, yb, za)], xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)];
+  }
+  // …the vodka flyer (as drawFlyer places it)…
+  function flyerRect(dist, side, wz) {
+    const F = FLYER_AT, x = side * (SHOP.x0 - .004);
+    const zAt = k => wz + (side > 0 ? F.d1 - k * (F.d1 - F.d0) : F.d0 + k * (F.d1 - F.d0)) - dist;
+    if (!FLYER || Math.min(zAt(0), zAt(1)) < NEAR) return [0, 0, 0, 0];
+    const xs = [View.x(x, zAt(0)), View.x(x, zAt(1))], ys = [0, 1].flatMap(k => [View.y(F.y1, zAt(k)), View.y(F.y0, zAt(k))]);
+    return [Math.min(...xs) - 2, Math.min(...ys) - 2, Math.max(...xs) - Math.min(...xs) + 4, Math.max(...ys) - Math.min(...ys) + 4];
+  }
+  // …and the smoker with his cigarette smoke and puffs (they drift up to 44 sprite px
+  // right of him and 11 above his head – see drawNpc)
+  function npcRect(dist, side, wz) {
+    const z = wz + NPC.d - dist;
+    if (z < .5 || z > CONFIG.city.drawZ || !NPC_IMG) return [0, 0, 0, 0];
+    const s = NPC.height * View.K / z / NPC_H, left = View.x(side * NPC.x, z) - NPC_W / 2 * s, top = View.y(0, z) - NPC_H * s;
+    return [left - 2 * s - 2, top - 12 * s - 2, 47 * s + 4, (NPC_H + 12) * s + 4];
+  }
+
   // a strip on the camera-facing side of a part (windows, neon lines…)
   function sideStrip(ctx, s, x, ya, yb, da, db, col, dist, wz) {
     const za = Math.max(wz + da - dist, NEAR), zb = wz + db - dist;
@@ -67,12 +92,13 @@ const Station = (() => {
     const ys = pts.map(p => p[1]), gr = ctx.createLinearGradient(0, Math.min(...ys), 0, Math.max(...ys));
     C.glass.forEach(([at, col]) => gr.addColorStop(at, col));
     const zm = (za + zb) / 2, k = 1 - Fog.amount(zm) * .6;
+    const xs = pts.map(p => p[0]);
     const seen = Style.keep(ctx, () => {                               // own colours: the soft light stays smooth
       poly(ctx, pts, gr);
       ctx.globalAlpha = .5;
       poly(ctx, pts, Fog.color(zm));
       ctx.globalAlpha = 1;
-    });
+    }, [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)]);
     // the glows fade with how much of the glass is really to be seen (not through the houses in front)
     Style.after(g => Util.softGlow(g, pts, k * seen.shown()));
     const a = s.P(x, 0, za), b = s.P(x, 0, zb), foot = s.P(x, 0, zm), c = s.P(x - .25, 0, zm), e = s.P(x - .6, 0, zm);
@@ -292,13 +318,14 @@ const Station = (() => {
     const shop = box(ctx, dist, side, wz, SHOP, { front: C.shop, side: C.shopSide, top: C.shop });
     if (shop && shop.sx !== null) {
       litStrip(ctx, shop, .35, 1.2, 1.4, L - 2.2, dist, wz, .12);       // the lit window…
-      Style.keep(ctx, () => { for (let d = 1.6; d < L - 2.4; d += .8) sideStrip(ctx, shop, shop.sx, .75, .85, d, d + .45, C.shelf, dist, wz); });   // …shelves against the light
+      Style.keep(ctx, () => { for (let d = 1.6; d < L - 2.4; d += .8) sideStrip(ctx, shop, shop.sx, .75, .85, d, d + .45, C.shelf, dist, wz); },
+        faceRect(shop, shop.sx, .75, .85, 1.6, L - 2.4 + .45, dist, wz));   // …shelves against the light
       litStrip(ctx, shop, 0, 1.1, L - 1.8, L - 1.2, dist, wz, .2);      // the door
-      Style.keep(ctx, () => drawFlyer(ctx, dist, side, wz));            // the vodka flyer next to the door (own colours)
+      Style.keep(ctx, () => drawFlyer(ctx, dist, side, wz), flyerRect(dist, side, wz));   // the vodka flyer next to the door (own colours)
       sideStrip(ctx, shop, shop.sx, 1.8, 1.9, SHOP.d0, SHOP.d1, C.neon, dist, wz);
     }
 
-    Style.keep(ctx, () => drawNpc(ctx, dist, side, wz));              // the smoker by the shop (own colours)
+    Style.keep(ctx, () => drawNpc(ctx, dist, side, wz), npcRect(dist, side, wz));   // the smoker by the shop (own colours)
 
     // islands and pumps, far to near
     for (let i = PUMPS.length - 1; i >= 0; i--) {

@@ -27,6 +27,7 @@
     Renderer.draw(Game.state);
     Style.apply(document.getElementById('game'), Biome.mix(Game.state.dist));   // the simple 8-bit palette
     Raster.game.render();                                          // the dot raster over the picture
+    Billboards.render(Game.state.fade);                            // the billboards' pictures, sharp, over it
 
     const s = Game.state;
     Hud.update(s.score, Math.round(s.speed * CONFIG.speed.toKmh), s.best);

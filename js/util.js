@@ -157,18 +157,37 @@ const View = (() => {
   // shifted sideways by how far the road has bent away from straight ahead
   let curved = false, dist = 0, base = 0, head = 0;
   const bend = z => (curved ? Track.offset(dist + z) - base - z * head : 0);
+  // the hills (Track.elev): how much higher than under the player's car the ground is at
+  // depth z – a table every 1/4 depth unit, made in setCurve (none: flat)
+  const RISE_STEP = 4, RISE_N = 130 * RISE_STEP;
+  let hilly = false;
+  const riseTab = new Float64Array(RISE_N + 2);
+  const rise = z => {
+    if (!hilly || z <= 0) return 0;
+    const f = Math.min(z * RISE_STEP, RISE_N), i = f | 0;
+    return riseTab[i] + (riseTab[i + 1] - riseTab[i]) * (f - i);
+  };
   return {
     W, H, HORIZON, K, RW,
     get CX() { return W / 2 + look; },             // screen x of the vanishing point
     x: (roadX, z) => W / 2 + look + (roadX - camX + bend(z)) * RW / z,   // road x → screen x
-    // follow the curves from depth d on (off: a straight road, e.g. for the dev camera)
-    setCurve: d => { curved = d !== null; if (curved) { dist = d; base = Track.offset(d); head = Track.heading(d); } },
+    // follow the curves (and the hills) from depth d on (off: a straight, flat road, e.g. for the dev camera)
+    setCurve: d => {
+      curved = d !== null;
+      hilly = false;
+      if (!curved) return;
+      dist = d; base = Track.offset(d); head = Track.heading(d);
+      const e0 = Track.elev(d + CONFIG.player.z);                    // (from the ground under the car: it stays put on screen)
+      for (let i = 0; i <= RISE_N + 1; i++) { riseTab[i] = Track.elev(d + i / RISE_STEP) - e0; if (riseTab[i]) hilly = true; }
+    },
+    hilly: () => hilly,
+    rise,
     setLook: px => { look = px; },
     look: () => look,
     setCam: (x, h = 1) => { camX = x; camH = h; },
     cam: () => camX,
     camH: () => camH,
-    y: (height, z) => HORIZON + K * (camH - height) / z, // height in camera heights (0 = ground)
+    y: (height, z) => HORIZON + K * (camH - height - rise(z)) / z, // height in camera heights (0 = ground; on the hills: above the ground there)
     depthOfRow: row => K * camH / (row - HORIZON),   // screen row → depth of the ground seen there
   };
 })();

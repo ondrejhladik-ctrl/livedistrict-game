@@ -31,7 +31,9 @@ const Track = (() => {
   function nearStop(z0, z1) {
     const X = CONFIG.exit;
     if (hold) return true;
-    return X.at.some(m => { const w = Biome.origin() + m / CONFIG.metersPerUnit; return z0 < w + X.ahead + X.length + 25 && z1 > w - 15; })
+    const MU = CONFIG.metersPerUnit, o = Biome.origin();
+    return Biome.stops((z0 - o - X.ahead - X.length - 25) * MU, (z1 - o + 15) * MU)
+      .some(m => { const w = o + m / MU; return z0 < w + X.ahead + X.length + 25 && z1 > w - 15; })
       || (z0 < Biome.end() + 5 && z1 > Biome.start() - 12);          // and over the bridge
   }
 
@@ -82,5 +84,22 @@ const Track = (() => {
   }
 
   reset();
-  return { reset, offset, heading, curvature, bend, hold: on => { hold = on; } };
+  // The motorway's hills (CONFIG.track.hills): the road's height at world depth wz.
+  // None before the motorway (they rise slowly after its start); flat around the
+  // petrol stations (their forecourts, the cutscene's 3D view).
+  function elev(wz) {
+    const Hl = T.hills, h0 = Biome.highway();
+    if (!Hl || wz <= h0) return 0;
+    const d = wz - h0, s = u => u * u * (3 - 2 * u);
+    let k = s(Util.clamp(d / Hl.rampIn, 0, 1));
+    const MU = CONFIG.metersPerUnit, o = Biome.origin(), reach = Hl.flat + Hl.ease + 20;
+    for (const m of Biome.stops((wz - o - reach) * MU - 200, (wz - o + reach) * MU + 200)) {
+      const far = Math.abs(wz - Biome.stopWz(m));
+      k *= s(Util.clamp((far - Hl.flat) / Hl.ease, 0, 1));
+    }
+    if (!k) return 0;
+    return Hl.amp * k * (Math.sin(d * 2 * Math.PI / Hl.length[0]) * .62 + Math.sin(d * 2 * Math.PI / Hl.length[1] + 1.3) * .38);
+  }
+
+  return { reset, offset, heading, curvature, bend, elev, hold: on => { hold = on; } };
 })();

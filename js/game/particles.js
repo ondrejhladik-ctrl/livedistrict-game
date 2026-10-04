@@ -44,16 +44,27 @@ const Particles = (() => {
     });
   }
 
-  // a puff of dark smoke: rises slowly, grows and drifts
+  // a puff of green smoke (like the rest of the picture): rises slowly, grows and drifts
   function smoke(x, y) {
     list.push({
       x: x + Util.rand(-3, 3), y, vx: Util.rand(-5, 5), vy: Util.rand(-20, -12),
-      life: Util.rand(1.2, 2), color: Util.pick(['#2a2d33', '#3a3e46', '#4a4e56']),
+      life: Util.rand(1.2, 2), color: Util.pick(['#1f8f45', '#24a04c', '#2fb556']),
       size: 2, grow: Util.rand(3, 6), gravity: -6, soft: true,
     });
     for (let i = 0; i < 2; i++) list.push({                         // tiny specks rising with it
       x: x + Util.rand(-4, 4), y: y - Util.rand(0, 3), vx: Util.rand(-8, 8), vy: Util.rand(-28, -14),
-      life: Util.rand(.8, 1.5), color: Util.pick(['#5a5e66', '#7a7e86', '#a8acb4']), size: 1, gravity: -4,
+      life: Util.rand(.8, 1.5), color: Util.pick(['#4fd36b', '#86ec8e', '#c4f7c0']), size: 1, gravity: -4,
+    });
+  }
+
+  // a little puff from the exhaust: faint pale grey-green, it grows and is blown
+  // back towards the camera (down on screen) – faster when the car goes faster;
+  // day: darker grey-green (on the light Pattaya road)
+  function exhaust(x, y, speed, day) {
+    list.push({
+      x: x + Util.rand(-1, 1), y, vx: Util.rand(-8, 8), vy: Util.rand(3, 7) + speed * .55,
+      life: Util.rand(.45, .8), color: Util.pick(day ? ['#3c4a42', '#4a5a50', '#56665a'] : ['#9ab8a4', '#b4cdb8', '#c8dcc8']),
+      size: 1.5, grow: Util.rand(7, 12), gravity: -10, soft: true, a: day ? .8 : .5,
     });
   }
 
@@ -86,7 +97,7 @@ const Particles = (() => {
     for (const p of list) {
       if (!p.soft) continue;
       const s = Math.max(1, (p.size || 2) * .6), life = p.maxLife || p.life;
-      hg.globalAlpha = Math.min(1, p.life / (life * .6)) * .85;         // fade out over the last part of its life
+      hg.globalAlpha = Math.min(1, p.life / (life * .6)) * .85 * (p.a ?? 1);   // fade out over the last part of its life (a: fainter ones, the exhaust)
       hg.fillStyle = p.color;
       hg.fillRect(p.x / 2 - s / 2, p.y / 2 - s / 2, s, s);
     }
@@ -103,5 +114,20 @@ const Particles = (() => {
     ctx.restore();
   }
 
-  return { burst, spray, puff, smoke, update, draw, reset: () => { list.length = 0; } };
+  // where draw() can change the picture, [x, y, w, h] (generous: the soft ones are blurred
+  // over a few quarter-size pixels), or null when there is nothing to draw
+  function area() {
+    if (!list.length) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of list) {
+      const r = p.soft ? Math.max(1, (p.size || 2) * .6) + 16 : 4;
+      if (p.x - r < x0) x0 = p.x - r;
+      if (p.x + r > x1) x1 = p.x + r;
+      if (p.y - r < y0) y0 = p.y - r;
+      if (p.y + r > y1) y1 = p.y + r;
+    }
+    return [x0, y0, x1 - x0, y1 - y0];
+  }
+
+  return { burst, spray, puff, smoke, exhaust, update, draw, area, reset: () => { list.length = 0; } };
 })();

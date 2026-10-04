@@ -130,23 +130,37 @@ const Account = (() => {
   }
 
   // ---------- leaderboard ----------
-  // built with textContent only: nicknames come from players
+  // An arcade high score table: ten rows "1ST NAME  SCORE" (the heading HIGH SCORES
+  // over it is drawn by js/ui/gameover.js), each row in the form's green (the top
+  // three lighter, css), the
+  // empty places shown as dashes; your own row blinks.
+  // Built with textContent only: nicknames come from players.
+  const DEMO = [5689, 4120, 3718, 3445, 2980, 2410, 1920, 1505, 980, 412].map(s => ['-', s]);   // (no names: just a dash)
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', 'RD'][n % 10] || 'TH');
   function render(board, data, result) {
     board.textContent = '';
     if (!data) { board.classList.add('hidden'); return; }
     const row = (rank, nick, score, mine) => {
       const r = document.createElement('div');
-      r.className = 'board-row' + (mine ? ' mine' : '');
-      for (const [cls, text] of [['rank', rank], ['nick', nick], ['pts', score]])
+      r.className = `board-row r${Math.min(rank, 10)}` + (mine ? ' mine' : '');
+      for (const [cls, text] of [['rank', ordinal(rank)], ['nick', String(nick).toUpperCase()], ['pts', score]])
         r.append(Object.assign(document.createElement('span'), { className: cls, textContent: text }));
       board.append(r);
     };
-    board.append(Object.assign(document.createElement('div'), { className: 'board-title', textContent: 'ŽEBŘÍČEK' }));
     if (result && result.error) board.append(Object.assign(document.createElement('div'), { className: 'board-note', textContent: result.error }));
-    data.top.forEach(p => row(p.rank + '.', p.nickname, p.score, nickname && p.nickname.toLowerCase() === nickname.toLowerCase()));
-    if (!data.top.length) board.append(Object.assign(document.createElement('div'), { className: 'board-note', textContent: 'zatím nikdo – buď první!' }));
+    const mine = p => nickname && p.nickname.toLowerCase() === nickname.toLowerCase();
+    // demo (CONFIG.leaderboard.demo): made-up players merged in, to see the table full
+    let list = data.top.map(p => ({ ...p }));
+    if (CONFIG.leaderboard.demo) {
+      list = list.concat(DEMO.map(([n, s]) => ({ nickname: n, score: s, demo: true })))
+        .sort((a, b) => b.score - a.score).slice(0, TOP()).map((p, i) => ({ ...p, rank: i + 1 }));
+    }
+    for (let rank = 1; rank <= TOP(); rank++) {
+      const p = list.find(q => q.rank === rank);
+      if (p) row(rank, p.nickname, p.score, !p.demo && mine(p)); else row(rank, '---', '-', false);
+    }
     const me = data.me;
-    if (me && me.rank && !data.top.some(p => p.rank === me.rank)) row(me.rank + '.', me.nickname, me.best, true);
+    if (me && me.rank && !data.top.some(p => p.rank === me.rank)) row(me.rank, me.nickname, me.best, true);
     board.classList.remove('hidden');
   }
 
@@ -189,7 +203,7 @@ const Account = (() => {
   return {
     // may the game start? (not while the form is open – signing up is optional)
     ready: () => !formOpen,
-    // after the loading screen's title sequence: offer the sign-up
+    // after the click on the loading screen (before the title sequence): offer the sign-up
     // (unless already signed up), then continue with done()
     offerSignUp(done) {
       if (!enabled() || token) { done(); return; }

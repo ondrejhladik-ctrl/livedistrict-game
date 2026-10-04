@@ -114,7 +114,7 @@ const Dev3D = (() => {
   function drawBuilding(ctx, b, city) {
     if (b.type === 'modern') { drawModern(ctx, b, city); return; }
     if (b.type === 'classic') { drawClassic(ctx, b, city); return; }
-    if (b.type === 'thai') {                                          // (Pattaya: a plain box here)
+    if (b.type === 'thai' || b.type === 'tower') {                    // (Pattaya: a plain box here)
       const xa = b.side > 0 ? b.inner : -(b.inner + b.width), xb = b.side > 0 ? b.inner + b.width : -b.inner;
       box(ctx, xa, xb, 0, b.height, b.wz, b.wz + b.depth, { front: b.front, back: b.front, left: b.wall, right: b.wall, top: '#1a3a1e' });
       return;
@@ -155,7 +155,7 @@ const Dev3D = (() => {
       poly(ctx, [P(b.inner, b.height, z), P(ur, top, z), P(uo, top, z), P(uo, b.height, z)], b.front);
       if (z === z0) {                                                  // neon roof line and the sign on the front gable
         poly(ctx, [P(b.inner, b.height - .04, z - .002), P(ur, top - .04, z - .002), P(uo, top - .04, z - .002), P(uo, top, z - .002), P(ur, top, z - .002), P(b.inner, b.height, z - .002)], '#8fd42a');
-        if (b.sign && detail) drawSign(ctx, city.SIGN, xa, xb, b.height, z - .003);
+        if (b.sign && detail) drawSign(ctx, city.boardOf(b), xa, xb, b.height, z - .003);
       }
     }
     if (slopeSeen && R.dormers && detail && camU < b.inner + R.run * .45) {
@@ -188,7 +188,7 @@ const Dev3D = (() => {
         poly(ctx, [[wx, wy, z0 - .001], [wx + cw * .5, wy, z0 - .001], [wx + cw * .5, wy + .22, z0 - .001], [wx, wy + .22, z0 - .001]], b.windows[f * city.COLS + c]);
       }
       poly(ctx, [[xa, b.height - .05, z0 - .001], [xb, b.height - .05, z0 - .001], [xb, b.height, z0 - .001], [xa, b.height, z0 - .001]], '#8fd42a');
-      if (b.sign) drawSign(ctx, city.SIGN, xa, xb, b.height, z0);
+      if (b.sign) drawSign(ctx, city.boardOf(b), xa, xb, b.height, z0);
     }
     if (faces[roadSide] && detail) {
       const x = roadSide === 'left' ? xa - .001 : xb + .001;
@@ -235,13 +235,15 @@ const Dev3D = (() => {
       const z = z0 - .002, face = (ya, yb, c) => poly(ctx, [[xa, ya, z], [xb, ya, z], [xb, yb, z], [xa, yb, z]], c);
       for (let f = 1; f < b.floors; f++) face(f * FL - .025, f * FL + .025, L);
       face(b.height - .04, b.height, L);
-      if (b.sign) drawSign(ctx, city.SIGN, xa, xb, b.height, z - .001);
+      if (b.sign) drawSign(ctx, city.boardOf(b), xa, xb, b.height, z - .001);
     }
   }
 
-  // the green "19. 3." sign high on a facade (the image stretched over its projected box)
+  // the green sign (the date or the logo) high on a facade (the image stretched over its projected box)
   function drawSign(ctx, img, xa, xb, height, z) {
-    const w = (xb - xa) * .7, h = w * img.height / img.width, x0 = (xa + xb) / 2 - w / 2, y1 = height - (height * .1), y0 = y1 - h;
+    let h = Math.abs(xb - xa) * .44 * img.height / 96;
+    if (h * img.width / img.height > Math.abs(xb - xa) * .88) h = Math.abs(xb - xa) * .88 * img.height / img.width;   // (as in City)
+    const w = Math.sign(xb - xa) * h * img.width / img.height, x0 = (xa + xb) / 2 - w / 2, y1 = height - (height * .1), y0 = y1 - h;
     const cp = [[x0, y0, z], [x0 + w, y0, z], [x0 + w, y1, z], [x0, y1, z]].map(p => toCam(...p));
     if (cp.some(p => p[2] < NEAR)) return;
     const sp = cp.map(proj), xs = sp.map(p => p[0]), ys = sp.map(p => p[1]);

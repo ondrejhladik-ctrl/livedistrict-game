@@ -5,6 +5,8 @@
 //              gradually while driving over the bridge (fog, sky, light, rain)
 // The Pattaya sky: flat green bands with a bank of heaped clouds, and instead of the
 // Žižkov tower the hill with the PATTAYA city sign (cut out of the postcard).
+// On the motorway (from CONFIG.biome.highway) the hill sinks and low green
+// meadows roll along the horizon under the same clouds.
 const Biome = (() => {
   const B = CONFIG.biome, MU = CONFIG.metersPerUnit, { W, HORIZON } = CONFIG.screen;
   // origin: the world depth where the counted ride starts (moved on by the intro
@@ -13,7 +15,14 @@ const Biome = (() => {
   let origin = 0;
   const setOrigin = wz => { origin = wz; };
   const start = () => origin + B.bridgeStart / MU, end = () => origin + B.bridgeEnd / MU;
-  const zone = wz => (wz < start() ? 'city' : wz < end() ? 'bridge' : 'thai');
+  const highway = () => origin + B.highway / MU;
+  const zone = wz => (wz < start() ? 'city' : wz < end() ? 'bridge' : wz < highway() ? 'thai' : 'highway');
+  // 0 … 1: how far the motorway has taken over at the camera (the town hill sinks,
+  // the meadows rise at the horizon) – over the first stretch of it
+  function meadow(dist) {
+    const u = Util.clamp((dist + 30 - highway()) / 50, 0, 1);
+    return u * u * (3 - 2 * u);
+  }
   function mix(dist) {
     const u = Util.clamp((dist - start() + 6) / (end() - start() - 12), 0, 1);
     return u * u * (3 - 2 * u);
@@ -22,17 +31,17 @@ const Biome = (() => {
   const hex = a => `rgb(${a[0]},${a[1]},${a[2]})`;
 
   // ---------- the Pattaya sky (the postcard's colours, abstract) ----------
-  // Flat horizontal bands of green, lighter towards the horizon, and a bank of
-  // heaped pixel clouds behind the hill.
-  const BANDS = ['#16dc58', '#22e262', '#34e86c', '#4aec74', '#60f07c', '#76f284', '#8cf48e', '#a2f69a'];
+  // Green, going lighter towards the horizon – from one colour of the palette to
+  // the next, so the halftone (Style) lays it out as dots: a few light ones at the
+  // top, thicker and thicker down to the horizon – and a bank of heaped pixel
+  // clouds behind the hill.
+  const SKY = [[0, '#4fd36b'], [.85, '#86ec8e'], [1, '#86ec8e']];
   const sky = Util.canvas(W, HORIZON + 1);
   (function buildSky() {
-    const g = sky.getContext('2d'), n = BANDS.length;
-    let y = 0;
-    BANDS.forEach((c, i) => {                                          // bands getting thinner towards the horizon
-      const h = Math.round((HORIZON + 1) * (n - i) / (n * (n + 1) / 2));
-      Util.rect(g, 0, y, W, i === n - 1 ? HORIZON + 1 - y : h, c); y += h;
-    });
+    const g = sky.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, HORIZON + 1);
+    SKY.forEach(([at, c]) => gr.addColorStop(at, c));
+    g.fillStyle = gr;
+    g.fillRect(0, 0, W, HORIZON + 1);
     // a bank of heaped clouds (cumulus, like a pixel-art summer sky) behind the
     // hill: lots of round puffs – a low row across the whole width and two tall
     // heaps rising out of it. Every puff is lit from the upper left (nearly white,
@@ -104,14 +113,32 @@ const Biome = (() => {
   // hill is never see-through (that looked broken): it rises from behind the
   // horizon while driving over the bridge.
   const skyCover = m => Math.min(1, m * 2.5);                      // how much the day sky covers the night one
-  function drawSky(ctx, m, shift) {
+  // the meadows at the horizon on the motorway: two rows of low rolling hills
+  // (a far pale one, a nearer darker one), as wide as the sky slides in bends
+  const MEADOW_W = W + 340;
+  const meadows = (() => {
+    const c = Util.canvas(MEADOW_W, 40), g = c.getContext('2d');
+    const row = (top, amp, cols, seed) => {
+      for (let x = 0; x < MEADOW_W; x++) {
+        const h = top + amp * (.55 * Math.sin(x * .021 + seed) + .3 * Math.sin(x * .053 + seed * 2) + .15 * Math.sin(x * .13 + seed * 3));
+        const y = Math.round(40 - h);
+        Util.rect(g, x, y, 1, 40 - y, cols[0]);
+        Util.rect(g, x, y, 1, 1, cols[1]);                                 // a lighter rim along the top
+        if (Math.random() < .06) Util.rect(g, x, y + 2 + Math.floor(Math.random() * 6), 1, 1, cols[2]);   // a few speckles of grass
+      }
+    };
+    row(22, 7, ['#86ec8e', '#a8f2a6', '#6fd67c'], 1.3);
+    row(13, 5, ['#4fd36b', '#6fe082', '#3cbc5a'], 4.1);
+    return c;
+  })();
+  function drawSky(ctx, m, shift, mead = 0) {
     if (m <= .001) return;
     ctx.globalAlpha = skyCover(m);
     ctx.drawImage(sky, 0, 0);
     ctx.globalAlpha = 1;
-    if (hill) {
+    if (hill && mead < 1) {
       const w = Math.round(hill.width * HILL_SCALE), h = Math.round(hill.height * HILL_SCALE);
-      const u = Util.clamp((m - .1) / .65, 0, 1), rise = 1 - u * u * (3 - 2 * u);   // 1 = still below the horizon
+      const u = Util.clamp((m - .1) / .65, 0, 1), rise = Math.max(1 - u * u * (3 - 2 * u), mead);   // 1 = still below the horizon (it sinks again on the motorway)
       const x = Math.round(W / 2 - w / 2 + shift), y = HORIZON - 3 - h + Math.round(rise * (h + 6));
       ctx.save();
       ctx.beginPath(); ctx.rect(0, 0, W, HORIZON + 2); ctx.clip();          // nothing below the horizon
@@ -119,7 +146,27 @@ const Biome = (() => {
       ctx.drawImage(hill, 0, hill.height - 1, hill.width, 1, x, y + h - 1, w, Math.max(0, HORIZON + 2 - (y + h - 1)));   // its foot down to the horizon
       ctx.restore();
     }
+    if (mead > 0) {                                                    // the meadows rise at the horizon
+      const y = HORIZON + 2 - Math.round(meadows.height * mead);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, W, HORIZON + 2); ctx.clip();
+      ctx.drawImage(meadows, Math.round(-170 + shift), y);
+      ctx.restore();
+    }
   }
 
-  return { zone, mix, start, end, origin: () => origin, setOrigin, lerpRgb, hex, drawSky, skyCover };
+  // the petrol stations' metres: CONFIG.exit.at, then on the motorway one every
+  // CONFIG.exit.every metres from CONFIG.exit.from on, for ever (i: which one)
+  const X = CONFIG.exit;
+  const stop = i => (i < X.at.length ? X.at[i] : X.from + (i - X.at.length) * X.every);
+  function stops(m0, m1) {                                           // those from m0 to m1 metres
+    const out = [], n = X.at.length;
+    for (let i = 0; i < n; i++) if (X.at[i] >= m0 && X.at[i] <= m1) out.push(X.at[i]);
+    for (let i = n + Math.max(0, Math.ceil((m0 - X.from) / X.every)); stop(i) <= m1; i++) out.push(stop(i));
+    return out;
+  }
+  // where a stop's forecourt is (world depth of its middle; the turn-off opens CONFIG.exit.ahead past its metres)
+  const stopWz = m => origin + m / MU + X.ahead + X.length / 2;
+
+  return { zone, mix, meadow, start, end, highway, origin: () => origin, setOrigin, lerpRgb, hex, drawSky, skyCover, stop, stops, stopWz };
 })();

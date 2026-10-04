@@ -1,7 +1,7 @@
 // Draws one frame: sky → road → fog wisps → city → puddles → rain mood →
 // cars (far to near) → sparks → raindrops.
 const Renderer = (() => {
-  const { W, H } = CONFIG.screen;
+  const { W, H, HORIZON } = CONFIG.screen;
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });   // (the palette and Style.keep read it every frame)
   ctx.imageSmoothingEnabled = false;
@@ -79,6 +79,12 @@ const Renderer = (() => {
   }
 
   function drawTrafficCar(car, dist) {
+    const crest = Road.crest(car.z);                                   // behind a crest of the hills: only what shows above it
+    if (crest < H) { ctx.save(); ctx.beginPath(); ctx.rect(-20, -20, W + 40, crest + 20); ctx.clip(); }
+    drawCar(car, dist);
+    if (crest < H) ctx.restore();
+  }
+  function drawCar(car, dist) {
     const s = CONFIG.spriteScale / car.z;
     const w = TrafficCars.width * s, h = TrafficCars.height * s;
     const left = Math.round(View.x(car.x, car.z) - w / 2), top = Math.round(View.y(0, car.z) - h);
@@ -149,6 +155,7 @@ const Renderer = (() => {
 
   function draw(state) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    Billboards.begin();
     if (Dev.active()) {                                              // dev mode: free-flying camera
       View.setLook(0);
       Dev3D.draw(ctx, state, Dev.camera());                          // real 3D camera, turns all the way round
@@ -167,6 +174,7 @@ const Renderer = (() => {
     }
     drawStreet(state, state.dist);
     drawFade(state);
+    Billboards.check(ctx, Rain.mood());                              // (the sharp billboards: where they can be seen)
   }
 
   // The street scene seen from depth `dist` (the car's own depth, or the dev
@@ -182,9 +190,39 @@ const Renderer = (() => {
     const T = CONFIG.track, skyShift = Util.clamp(-Track.heading(dist) * T.skyShift, -150, 150);
 
     Sky.draw(ctx, state.time, View.look() + Math.round(skyShift));
-    Biome.drawSky(ctx, biome, Math.round(skyShift));                 // the green day sky and the PATTAYA city hill
-    Road.draw(ctx, dist, state.time);
-    Fog.drawWisps(ctx, state.time, 1 - biome * .85);   // behind the buildings (faint in the Pattaya day)
+    Biome.drawSky(ctx, biome, Math.round(skyShift), Biome.meadow(dist));   // the green day sky and the PATTAYA city hill (the meadows on the motorway)
+    // The road keeps its own colours (not the 8-bit palette): its even fade into the
+    // distance would break into hard dark and light bands. Everything drawn after it
+    // goes through Style.over: where it only tints the road (shadows, the rain's mood,
+    // lamp light, tail lights) the road stays smooth; what really covers it (cars,
+    // houses, litter) is repainted in the palette as before. The pale hazes (fog
+    // wisps, smoke, rain drops) leave no grey on the road.
+    // (the fog wisps go behind the buildings – faint in the Pattaya day – and never on the
+    // road at night: then they are drawn first and the road, covering its rows, hides them)
+    // By day the road stays clean as at night: in Pattaya and on the motorway it
+    // takes the palette's colours like the rest, but not the halftone's dots (its
+    // faint wisps with it); the bridge's road keeps its own colours, as in Prague –
+    // the rows nearer than the bridge's end (split: the screen row where it ends)
+    if (Fog.isDay()) {
+      const zEnd = Biome.end() - dist;
+      const split = zEnd <= 0 ? H : Math.min(H, Math.max(HORIZON + 1, Math.ceil(HORIZON + View.K * View.camH() / zEnd)));
+      Road.draw(ctx, dist, state.time);
+      Fog.drawWisps(ctx, state.time, 1 - biome * .85);
+      const top = Math.min(Road.top(), split);                        // (the hills may lift the road above the horizon)
+      Style.keep(ctx, () => {}, [0, top, W, split - top], true, true);
+      if (split < H) Style.keep(ctx, () => {}, [0, split, W, H - split], true);
+    } else {
+      Fog.drawWisps(ctx, state.time, 1 - biome * .85);
+      Style.keep(ctx, () => Road.draw(ctx, dist, state.time), [0, HORIZON + 1, W, H - HORIZON - 1], true);
+    }
+    Style.over(ctx, () => drawOverRoad(state, dist, shift), false, true);   // (nested: the signs, the smokers, the station keep their colours in it)
+    // sparks and smoke, the rain on the glass – looked at only where they are (the rain
+    // and its flashes: everywhere), and not at all when there is nothing of them
+    const rainy = Rain.active(), smoke = Particles.area();
+    if (rainy || smoke) Style.over(ctx, () => { Particles.draw(ctx); Rain.drawDrops(ctx); }, true, false, rainy ? null : smoke);
+  }
+
+  function drawOverRoad(state, dist, shift) {
     City.draw(ctx, dist, Exit.state.active ? [Station.item()] : []);   // petrol station among the houses
     Bridge.draw(ctx, dist);            // the bridge: boats below, railings, pylons and cables
     Props.draw(ctx, dist);             // litter and smokers on the pavements
@@ -192,6 +230,7 @@ const Renderer = (() => {
     Rain.drawMood(ctx);                // darker, wetter night when it rains
     Lamps.draw(ctx, dist);             // street lamps light up the rainy night
     Exit.draw(ctx, dist);              // petrol station sign at the turn-off
+    Highway.draw(ctx, dist);           // the motorway's signs
 
     // cars far → near, the player slotted in at its own depth
     // (after a crash the car flies on ahead: further down the road, drawn smaller)
@@ -200,9 +239,6 @@ const Renderer = (() => {
     for (const car of byDepth) if (car.z >= pz && car.z < CONFIG.traffic.drawZ) drawTrafficCar(car, dist);
     if (pz > .3) drawPlayer(state, pz, dist);
     for (const car of byDepth) if (car.z < pz) drawTrafficCar(car, dist);
-
-    Particles.draw(ctx);
-    Rain.drawDrops(ctx);
   }
 
   return { draw };

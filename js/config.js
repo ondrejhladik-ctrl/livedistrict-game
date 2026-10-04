@@ -56,7 +56,7 @@ const CONFIG = {
   checkpoint: {
     enabled: false,               // checkpoints are switched off for now
     first: 500,                   // metres to the first checkpoint
-    every: 2000,                  // then one every … metres
+    every: 2000,                  // then one every … metres (0 = only the first one)
     bonus: 500,                   // score for each checkpoint
     screenTime: 2.2,              // seconds of the black checkpoint screen
   },
@@ -87,7 +87,8 @@ const CONFIG = {
 
   // petrol station: at 'at' metres the car turns onto the forecourt by itself and parks
   exit: {
-    at: [300, 1200],              // metres: a petrol station stop at each of these
+    at: [300, 1200, 2100],        // metres: a petrol station stop at each of these (the last one in Pattaya)…
+    from: 6000, every: 1000,      // …and on the motorway one every `every` metres from `from` on, for ever
     ahead: 26,                    // depth ahead of the car where the forecourt starts
     length: 7,                    // depth of the forecourt
     taper: 3,                     // lane widening before the forecourt
@@ -97,8 +98,9 @@ const CONFIG = {
 
   // leaderboard server (server/ folder): its address, e.g. 'https://api.example.cz'.
   // Empty = local mode: sign-up form and leaderboard work, but only on this device.
-  // enabled: false = switched off for now – no sign-up (nickname, e-mail), no leaderboard.
-  leaderboard: { enabled: false, api: '', top: 5 },
+  // enabled: false = no sign-up (nickname, e-mail) and no leaderboard.
+  // demo: the table's empty places filled with made-up players (to see how it looks; false = dashes)
+  leaderboard: { enabled: true, api: '', top: 10, demo: true },
 
   // dot raster over the picture (the klauzury website's effect, js/ui/raster.js)
   raster: {
@@ -122,16 +124,26 @@ const CONFIG = {
     maxHeading: .6,               // bends turn back when the road has turned this far
     drift: .1,                    // how much a bend pushes the car outwards (× curvature × speed²)
     skyShift: 140,                // px the sky (and the tower) move per unit of the road's heading
+    // the motorway's hills: height (camera heights), two waves' lengths (world depth),
+    // how long they take to rise after the motorway starts, how far around a petrol
+    // station the road is flat (and how long it takes to flatten out)
+    hills: { amp: 3.4, length: [96, 61], rampIn: 80, flat: 40, ease: 35 },
   },
 
   // biomes: Prague → a bridge over the water (the environment changes) → Pattaya
-  biome: { bridgeStart: 1400, bridgeEnd: 2000 },   // metres
+  // …and from highway on: only the motorway through meadows, for ever
+  // towers: from here on Pattaya's second row of tall towers stands behind the shophouses
+  biome: { bridgeStart: 1400, bridgeEnd: 2000, towers: 2250, highway: 5000 },   // metres
 
   // dev: buttons at the side to jump to places on the track (false = hidden)
   devButtons: true,
 
-  // the simple 8-bit look (js/ui/style.js): a small palette, fog in steps, a drifting car
-  style: { simple: true, fogSteps: 5, drift: 8 },   // drift: px the car's tail swings out in a hard turn
+  // the simple 8-bit look (js/ui/style.js): a small palette, a drifting car
+  // drift: px the car's tail swings out in a hard turn; dither: the halftone – every
+  // fade and in-between colour laid out as dots of two palette colours (like a
+  // halftone print; edges and thin lines stay clean); fogSteps: the fog in that many
+  // steps (0: smooth – with the halftone the dots make the steps)
+  style: { simple: true, fogSteps: 0, drift: 8, dither: true },
 
   metersPerUnit: 4,
   spriteScale: 1.1,              // on-screen scale of car sprites at z = 1

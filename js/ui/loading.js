@@ -6,11 +6,12 @@
 // dark): dark blue blocks with a neon edge, Prague tenements with mansard
 // roofs, lime-green modern blocks and tall teal glass towers
 // and blinking red warning lights on top. Drawn at the game's 320×180, scaled up.
-// After a short load the player clicks (or presses a key): the title sequence
-// runs (Intro – CHECKPOINT stands up letter by letter, the car, the road) and
-// waits with MEZERNÍK / KLEPNI PRO START above the word. On the press the word
-// backs off into the distance, then the (optional, now switched off) leaderboard
-// sign-up opens (Account.offerSignUp). Then the first ride starts at once.
+// After a short load the player clicks (or presses a key): the
+// (optional) leaderboard sign-up opens over the skyline (Account.offerSignUp),
+// then the title sequence runs (Intro – the date, CHECKPOINT stands up letter by
+// letter, the car, the road) and waits with MEZERNÍK / KLEPNI PRO START above the
+// word. On the press the word backs off into the distance and the first ride
+// starts at once.
 const Loading = (() => {
   const W = 320, H = 180;
   const DURATION = 3.2;                        // seconds before a click can continue
@@ -96,15 +97,26 @@ const Loading = (() => {
   // smog: how grey and washed-out the grey smog makes it, dusk: how much it sinks into the dark.
   const LAYERS = [
     { speed: 6, width: 520, base: 150, h: [12, 32], fog: .72, dusk: .35, kinds: [classic, prague, tower] },
-    { speed: 14, width: 600, base: 168, h: [22, 52], fog: .28, smog: .85, dusk: .5, kinds: [classic, prague, modern, tower, tower] },
+    { speed: 14, width: 600, base: 168, h: [22, 52], fog: .28, smog: .85, dusk: .5, kinds: [classic, prague, modern, tower, tower], signs: true },
     { speed: 30, width: 680, base: 186, h: [12, 30], fog: 0, smog: .75, dusk: .3, kinds: [dark] },
   ].map(L => {
-    const strip = Util.canvas(L.width, H), sg = strip.getContext('2d'), lights = [];
+    const strip = Util.canvas(L.width, H), sg = strip.getContext('2d'), lights = [], boards = [];
+    let lastSign = -999;
     for (let x = 0; x < L.width;) {
-      const kind = Util.pick(L.kinds), w = kind === tower ? ri(14, 24) : ri(16, 34);
-      const pic = kind(w, ri(...L.h) + (kind === tower ? 10 : 0));
+      // now and then (at least every ~110 px) a wide dark house carrying a billboard
+      // on its facade: the date with the horse, or the shield
+      const sign = L.signs && x - lastSign > Util.rand(70, 110) && x < L.width - 40;
+      const kind = sign ? Util.pick([classic, tower]) : Util.pick(L.kinds);
+      const w = sign ? ri(30, 36) : kind === tower ? ri(14, 24) : ri(16, 34);
+      const pic = kind(w, sign ? ri(40, 52) : ri(...L.h) + (kind === tower ? 10 : 0));
       const y = L.base - pic.height;
       for (const dx of [0, -L.width]) sg.drawImage(pic, x + dx, y);
+      if (sign) {
+        lastSign = x;
+        const what = City.devData().pickKind();
+        boards.push({ x, w, y: y + 4, kind: what, dim: Util.pick([0, 0, 0, .3, .5]),
+          dead: what !== 'logo' && Math.random() < .3 ? Array.from({ length: ri(2, 4) }, () => [ri(2, w - 6), ri(8, 16)]) : [] });
+      }
       if (pic.height > 48 && Math.random() < .7) lights.push({ x: x + Math.floor(w / 2), y: y - 1, phase: Math.random() * 2 });   // warning light on top
       x += w + (Math.random() < .25 ? ri(1, 4) : 0);
     }
@@ -129,12 +141,12 @@ const Loading = (() => {
     sg.fillStyle = `rgba(0,0,0,${L.dusk})`;
     sg.fillRect(0, 0, L.width, H);
     sg.globalCompositeOperation = 'source-over';
-    return { ...L, strip, lights };
+    return { ...L, strip, lights, boards };
   });
 
-  // ---------- the street by the middle houses: lamps, "19. 3." billboards, trees ----------
+  // ---------- the street by the middle houses: lamps and trees ----------
   // Standing at the foot of the middle houses and moving with them; the dark
-  // outlines of the front houses pass in front. The lamps' and billboards' glow
+  // outlines of the front houses pass in front. The lamps' glow
   // is added every frame, so it shines through the smog.
   const GROUND = LAYERS[1].base;
   const LAMP_COLORS = [CONFIG.lamps.rgb, CONFIG.lamps.rgb, '220,235,255', '120,180,255', '100,225,200', '200,255,190'];   // green (as in the game), cold white, blue, teal, warm
@@ -147,7 +159,6 @@ const Loading = (() => {
   }
   const STREET = (() => {
     const width = 760, strip = Util.canvas(width, H), sg = strip.getContext('2d'), glows = [];
-    const sign = City.devData().SIGN;
     const put = (fn, x) => { for (const dx of [0, -width]) fn(x + dx); };   // seamless loop
     // Street lamp: a pole of any height with one head or a cross arm with two,
     // in one of several light colours; some flicker like a dying tube. The
@@ -164,30 +175,6 @@ const Loading = (() => {
       for (const hx of heads) glows.push({ x: hx, y: top + 1, r: ri(6, 9), a: .5, rgb, light, head: true });
       glows.push({ x, y: GROUND, r: ri(8, 13), a: .2, rgb, light, flat: true });   // light pool on the pavement
     }
-    // every billboard a bit different: the neon "19. 3." sign bright, dimmed or
-    // nearly dead (with a few dead letters now and then), on one or two legs of any height
-    function billboard(x) {
-      const dim = Util.pick([0, 0, .3, .5, .72]);
-      const pw = sign.width, ph = sign.height;
-      const pic = Util.canvas(pw, ph), pg = pic.getContext('2d');
-      pg.drawImage(sign, 0, 0);
-      const broken = Math.random() < .3;
-      if (broken) for (let i = 0; i < ri(2, 5); i++)                   // dead bits of the neon
-        r(pg, ri(2, pw - 4), ri(2, ph - 3), 1, 1, '#0b2410');
-      if (dim) {
-        pg.globalCompositeOperation = 'source-atop';
-        pg.fillStyle = `rgba(0,0,0,${dim})`;
-        pg.fillRect(0, 0, pw, ph);
-      }
-      const legH = ri(3, 8), top = GROUND - legH - ph, twoLegs = Math.random() < .6;
-      put(px => {
-        if (twoLegs) { r(sg, px + 3, top + ph, 1, legH, '#1b1b2e'); r(sg, px + pw - 4, top + ph, 1, legH, '#1b1b2e'); }
-        else r(sg, px + Math.floor(pw / 2), top + ph, 1, legH, '#1b1b2e');
-        sg.drawImage(pic, px, top);
-      }, x);
-      if (dim < .7) glows.push({ x: x + pw / 2, y: top + ph / 2, r: pw * .9, a: .3 * (1 - dim), rgb: '150,235,70' });
-      return pw;
-    }
     function tree(x) {                                                 // dark round crown of blobs on a thin trunk
       const cw = ri(7, 11), ch = ri(7, 10), top = GROUND - 4 - ch;
       const blobs = Array.from({ length: 5 }, () => ({ x: Util.rand(cw * .25, cw * .75), y: Util.rand(ch * .3, ch * .7), rad: Util.rand(cw * .25, cw * .42) }));
@@ -202,13 +189,9 @@ const Loading = (() => {
       }, x);
       return cw;
     }
-    // a billboard at least every ~110 px, so there are always a couple on screen
-    let lastBoard = false, lastBoardX = -200;
     for (let x = 6; x < width - 30;) {
-      const p = Math.random(), due = x - lastBoardX > 110;
-      if (!due && p < .36) { lamp(x); x += Math.random() < .3 ? ri(5, 9) : ri(12, 34); lastBoard = false; }   // irregular: sometimes close, sometimes far apart
-      else if (due || (p < .6 && !lastBoard)) { lastBoardX = x; x += billboard(x) + ri(10, 18); lastBoard = true; }
-      else { x += tree(x) + ri(2, 10); lastBoard = false; }
+      if (Math.random() < .5) { lamp(x); x += Math.random() < .3 ? ri(5, 9) : ri(12, 34); }   // irregular: sometimes close, sometimes far apart
+      else x += tree(x) + ri(2, 10);
     }
     return { speed: LAYERS[1].speed, width, strip, glows };             // moves with the middle houses
   })();
@@ -290,10 +273,57 @@ const Loading = (() => {
   const blit = () => ctx.drawImage(buf, 0, 0, canvas.width, canvas.height);
 
   // one layer of houses, moved to the left in a loop, with its blinking warning lights
+  // a board shrunk to a width (cached; the boards are rebuilt once the font and
+  // the pictures have loaded, then shrunk again)
+  const shrunk = new Map();
+  function boardPic(kind, w) {
+    const src = kind === 'logo' ? City.devData().smallBoards.logo : City.devData().bigBoards[kind];   // (the shield bare, the rest as boards)
+    const key = kind + w, hit = shrunk.get(key);
+    if (hit && hit.src === src) return hit.pic;
+    const h = Math.round(w * src.height / src.width);
+    let c = src;
+    while (c.width / 2 >= w) {
+      const n = Util.canvas(Math.round(c.width / 2), Math.round(c.height / 2)), ng = n.getContext('2d');
+      ng.imageSmoothingQuality = 'high'; ng.drawImage(c, 0, 0, n.width, n.height); c = n;
+    }
+    const pic = Util.canvas(w, h), pg = pic.getContext('2d');
+    pg.imageSmoothingQuality = 'high'; pg.drawImage(c, 0, 0, w, h);
+    shrunk.set(key, { src, pic });
+    return pic;
+  }
+  const dimC = Util.canvas(64, 64), dimG = dimC.getContext('2d');      // (for dimming a board)
+  // the billboards on the middle houses' facades, glowing into the haze
+  function drawBoards(L, off) {
+    for (const bd of L.boards) for (const dx of [0, L.width]) {
+      const pic = boardPic(bd.kind, bd.kind === 'logo' ? Math.min(26, bd.w - 6) : bd.w - 4);
+      const x = Math.round(bd.x - off + dx + (bd.w - pic.width) / 2), y = bd.y;
+      if (x > W || x + pic.width < 0) continue;
+      if (bd.dim) {                                                    // dimmed: only the picture itself goes darker
+        dimG.clearRect(0, 0, dimC.width, dimC.height);
+        dimG.globalCompositeOperation = 'source-over';
+        dimG.drawImage(pic, 0, 0);
+        dimG.globalCompositeOperation = 'source-atop';
+        dimG.fillStyle = `rgba(0,0,0,${bd.dim})`;
+        dimG.fillRect(0, 0, pic.width, pic.height);
+        g.drawImage(dimC, 0, 0, pic.width, pic.height, x, y, pic.width, pic.height);
+      } else g.drawImage(pic, x, y);
+      for (const [px, py] of bd.dead) r(g, x + px, y + py, 1, 1, '#0b2410');   // dead bits of the neon
+      const cx = x + pic.width / 2, cy = y + pic.height / 2, R = pic.width * .9;   // the glow
+      const gr = g.createRadialGradient(cx, cy, 0, cx, cy, R);
+      gr.addColorStop(0, `rgba(150,235,70,${((bd.kind === 'logo' ? .16 : .3) * (1 - bd.dim)).toFixed(3)})`);   // (the shield glows less: its horse stays clear)
+      gr.addColorStop(1, 'rgba(150,235,70,0)');
+      g.globalCompositeOperation = 'lighter';
+      g.fillStyle = gr;
+      g.fillRect(cx - R, cy - R, R * 2, R * 2);
+      g.globalCompositeOperation = 'source-over';
+    }
+  }
+
   function drawLayer(L, t) {
     const off = (t * L.speed) % L.width;
     g.drawImage(L.strip, -off, 0);
     g.drawImage(L.strip, L.width - off, 0);
+    if (L.boards.length) drawBoards(L, off);
     for (const lt of L.lights) {
       if (Math.floor(t * 1.4 + lt.phase) % 2) continue;
       const x = Math.round(((lt.x - off) % L.width + L.width) % L.width);
@@ -323,7 +353,7 @@ const Loading = (() => {
       Intro.draw(ctx, t);
       el.classList.toggle('hold', Intro.waiting());                    // waiting for the press: what to press shows
       Raster.loading.render();
-    } else if (!intro && t - lastDraw >= 1 / 30) {                   // ~30 fps is plenty for the slow skyline – saves battery on phones
+    } else if ((!intro || intro === 'form') && t - lastDraw >= 1 / 30) {   // ~30 fps is plenty for the slow skyline (behind the sign-up too) – saves battery on phones
       lastDraw = t;
       draw(t);
       blit();
@@ -332,11 +362,11 @@ const Loading = (() => {
     requestAnimationFrame(frame);
   }
 
-  // the click (only once loaded): the title sequence. It waits for the press that
-  // starts the game (start: Space, Enter, a click or a tap – see Intro.press), then
-  // the (optional) leaderboard sign-up, then the game.
+  // the click (only once loaded): the (optional) leaderboard sign-up over the
+  // skyline, then the title sequence. It waits for the press that starts the game
+  // (start: Space, Enter, a click or a tap – see Intro.press), then the game.
   const doneFns = [];
-  let intro = null;                                                    // null → 'font' (the title font loading) → 'running'
+  let intro = null;                                                    // null → 'form' (the sign-up) → 'font' (the title font loading) → 'running'
   function proceed(start) {
     if (!loaded || done) return;
     if (intro === 'running' && !Intro.ended()) {
@@ -344,12 +374,16 @@ const Loading = (() => {
       return;
     }
     if (intro) return;
+    intro = 'form';
+    el.classList.add('intro');                                         // CLICK TO START disappears
+    if (typeof Account !== 'undefined') Account.offerSignUp(startIntro); else startIntro();   // (no form when signed up already)
+  }
+  function startIntro() {
     intro = 'font';
-    el.classList.add('intro');                                         // the titles disappear
     const font = document.fonts ? document.fonts.load(`74px ${Intro.font}`) : Promise.resolve();
     Promise.race([font, new Promise(ok => setTimeout(ok, 1500))]).catch(() => {}).then(() => {
       intro = 'running';
-      Intro.start(elapsed(), () => { if (typeof Account !== 'undefined') Account.offerSignUp(finish); else finish(); });
+      Intro.start(elapsed(), finish);
     });
   }
   // into the game
@@ -364,7 +398,7 @@ const Loading = (() => {
   // while the screen is up, keys and taps belong to it (the game is started from
   // here: by the press in the title sequence)
   addEventListener('keydown', e => {
-    if (done || (intro === 'running' && Intro.ended())) return;        // (after the sequence: typing into the sign-up)
+    if (done || intro === 'form') return;                              // (typing into the sign-up)
     e.stopImmediatePropagation(); e.preventDefault();
     if (!e.repeat) proceed(e.code === 'Space' || e.code === 'Enter');   // (a held key does not skip the word backing off)
   }, true);

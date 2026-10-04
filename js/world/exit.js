@@ -1,61 +1,10 @@
 // The turn-off to a petrol station (at each of CONFIG.exit.at metres): a gap in the
 // buildings on one side of the street, the forecourt asphalt reaching out from
-// the road, and a green neon highway-shield sign (a running horse) at its start. The station itself
+// the road, and the Checkpoint Tour sign (a tall pylon, TourSign) at its start. The station itself
 // (canopy, pumps, shop) is Station.
 const Exit = (() => {
   const X = CONFIG.exit;
   const ex = { active: false, side: 1, wz: 0 };
-
-  // green neon sign: an American highway shield (the "U.S. route" kind) with a
-  // running horse in it – a pixel map traced from the reference pictures.
-  //   . see-through   K the dark board   g dim glow   G neon   L bright neon
-  const SHIELD = [
-    '...................GG...................',
-    '.....GGGG.........GLLG.........GGGG.....',
-    '....GLLLLGGGGGGGGGLggLGGGGGGGGGLLLLG....',
-    '...GLggggLLLLLLLLLgKKgLLLLLLLLLggggLG...',
-    '..GLgKKKKgggggggggKKKKgggggggggKKKKgLG..',
-    '.GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG.',
-    'GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG',
-    '.GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG.',
-    '..GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG..',
-    '...GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG...',
-    '...GLggggggggggggggggggggggggggggggLG...',
-    '...GLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLG...',
-    '....GLggggggggggggggggggggggggggggLG....',
-    '....GLgKKKKKKKKKKKKKKKKKKKKKKKKKKgLG....',
-    '....GLgKKKKKKKKKKKKKKKKKKKKKKKKKKgLG....',
-    '....GLgKKKKKKKKKKKKKKKKKKKKKKKKKKgLG....',
-    '...GLgKKKKKKKKKKKKKKKKKKKKKKKKKKKKgLG...',
-    '...GLgKKKKKKKKKKKKKKKKKKKKKLGKKKKKgLG...',
-    '...GLgKKKKKKKKKKKKKKKKKKKLLLLKKKKKgLG...',
-    '..GLgKKKKKKKKKKKKKKKKKKKLLLLLGKKKKKgLG..',
-    '..GLgKKKKKKKKKKKKKKKKKKGLLLKGLKKKKKgLG..',
-    '..GLgKKKKKKKKKKKKKKKKKKLLLLKKKKKKKKgLG..',
-    '.GLgKKKKKKKKKKKKKKKKKKLLLLLKKKKKKKKKgLG.',
-    '.GLgKKKKKKKLLGKKKKKKKKLLLLLKKKKKKKKKgLG.',
-    '.GLgKKKKKLLLKGLLLLLLLLLLLLLKKKKKKKKKgLG.',
-    '.GLgKKKLLLKKKLLLLLLLLLLLLLLLGLLgKKKKgLG.',
-    '.GLgKKKKKKKKKLLLLLLLLLLLLLLLLLLLGKKKgLG.',
-    '.GLgKKKKKgLLLLLLLLLLLLLLLLKgKKKKLLKKgLG.',
-    '.GLgKKKKGLLLLLLLLLKKKKKGLLKKKKKKKGLKgLG.',
-    '.GLgKKKLLKKKKKKKLKKKKKKKGLGKKKKKKKgKgLG.',
-    '..GLgLLGKKKKKKKLLLLgKKKgLGKKKKKKKKKgLG..',
-    '..GLggKKKKKKKKKKKKKgKLLLKKKKKKKKKKggLG..',
-    '...GLLggKKKKKKKKKKKKKKKKKKKKKKKKggLLG...',
-    '....GGLLggggggKKKKKKKKKKKKggggggLLGG....',
-    '......GGLLLLLLggggKKKKggggLLLLLLGG......',
-    '........GGGGGGLLLLgKKgLLLLGGGGGG........',
-    '..............GGGGLggLGGGG..............',
-    '..................GLLG..................',
-    '...................GG...................',
-  ];
-  const SIGN = (function () {
-    const COL = { K: '#0b2410', g: '#3f7a16', G: '#6cb820', L: '#c8ff5a' };
-    const c = Util.canvas(SHIELD[0].length, SHIELD.length), g = c.getContext('2d');
-    SHIELD.forEach((row, y) => [...row].forEach((ch, x) => { if (COL[ch]) Util.rect(g, x, y, 1, 1, COL[ch]); }));
-    return c;
-  })();
 
   function reset() { ex.active = false; }
 
@@ -65,7 +14,7 @@ const Exit = (() => {
     ex.side = side;
     ex.wz = dist + X.ahead;
     City.clearZone(side, ex.wz - 1, ex.wz + X.length + 1);   // room for the station between the houses
-    City.addBehind(side, ex.wz - 1, ex.wz + X.length + 1, 6.6);   // and houses behind it
+    if (Biome.zone(ex.wz) !== 'highway') City.addBehind(side, ex.wz - 1, ex.wz + X.length + 1, 6.6);   // and houses behind it (not on the motorway: meadows)
     Props.clearZone(side, ex.wz - 2, ex.wz + X.length + 2);        // nothing lying on the forecourt
   }
 
@@ -92,31 +41,23 @@ const Exit = (() => {
     if (r < 50) Util.rect(ctx, outer - ex.side * Math.max(1, .03 * hw), y, Math.max(1, .03 * hw), 1, edgeCol);
   }
 
-  // the sign on a pole at the start of the turn-off
+  // the Checkpoint Tour pylon on the pavement at the start of the turn-off: its
+  // feet on the ground, as tall as SIGN_H camera heights; near by its pixels are
+  // shown as chunky blocks (the light pixel look), further off it is averaged down
+  const SIGN_H = 3.4, SIGN_X = 1.6;                               // height; where it stands (road half-widths from the middle)
   function draw(ctx, dist) {
     if (!ex.active) return;
     const z = ex.wz - X.taper - dist;
     if (z < .4 || z > CONFIG.city.drawZ) return;
-    const fog = Fog.amount(z), px = View.RW / z;
-    const x = View.x(ex.side * 1.3, z), yGround = View.y(0, z), yTop = View.y(2.2, z);
-    const pw = Math.max(1, .03 * px);
-    ctx.globalAlpha = 1 - fog;
-    Util.rect(ctx, x - pw / 2, yTop, pw, yGround - yTop, '#23252f');
-    const sw = Math.max(4, .5 * px), sh = sw * SIGN.height / SIGN.width;
-    // the glow first, behind the sign – so the board stays dark and the horse stands out
-    ctx.globalAlpha = 1;
-    const R = sw * 1.1, cx = x, cy = yTop - sh / 2;
-    const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    halo.addColorStop(0, `rgba(150,235,70,${(.25 * (1 - fog * .7)).toFixed(3)})`);
-    halo.addColorStop(1, 'rgba(150,235,70,0)');
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = halo;
-    ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1 - fog * .7;                               // neon cuts through the fog a little
+    const sign = TourSign.canvas, fog = Fog.amount(z);
+    if (!sign) return;                                            // (the picture still loading)
+    const yGround = View.y(0, z), sh = yGround - View.y(SIGN_H, z), sw = sh * sign.width / sign.height;
+    const x = View.x(ex.side * SIGN_X, z);
+    ctx.globalAlpha = 1 - fog * .85;                              // (a lit board: it cuts through the fog a little)
     const smooth = ctx.imageSmoothingEnabled;
-    ctx.imageSmoothingEnabled = sw < SIGN.width;                  // far away: averaged down, so the horse stays readable
-    Style.keep(ctx, () => ctx.drawImage(SIGN, Math.round(x - sw / 2), Math.round(yTop - sh), Math.round(sw), Math.round(sh)));   // its own greens (the palette turned the soft edges grey)
+    ctx.imageSmoothingEnabled = sw < sign.width;
+    const L = Math.round(x - sw / 2), T = Math.round(yGround - sh), RW = Math.round(sw), RH = Math.round(sh);
+    Style.keep(ctx, () => ctx.drawImage(sign, L, T, RW, RH), [L, T, RW, RH]);   // its own colours
     ctx.imageSmoothingEnabled = smooth;
     ctx.globalAlpha = 1;
   }

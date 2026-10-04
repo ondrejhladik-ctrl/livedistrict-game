@@ -94,15 +94,19 @@ const Game = (() => {
   }
 
   // ---------- levels ----------
+  // the next checkpoint after the one at `at` metres (CP.every 0: there is none)
+  const afterCheckpoint = at => (CP.every ? at + CP.every : Infinity);
+  // does it rain here? From RAIN.startAt (level 2) until the car leaves the
+  // petrol station RAIN.endAfterStop, and never in Pattaya
+  const raining = () => state.level >= 2 && state.nextStop < RAIN.endAfterStop && Biome.mix(state.dist) < .3;
   function reachCheckpoint() {
     state.bonus += CP.bonus;
-    state.nextCheckpoint += CP.every;
+    state.nextCheckpoint = afterCheckpoint(state.nextCheckpoint);
     state.level++;
-    state.levelTime = 0;
-    Rain.set(state.level >= 2);
+    state.levelTime = 0;                                     // (the rain itself follows raining(), every frame)
     state.mode = 'checkpoint';
     state.checkpointTimer = CP.screenTime;
-    Hud.showCheckpoint(true, state.level);
+    Hud.showCheckpoint(true, state.level, raining());
   }
 
   // rain sets in without a checkpoint screen (while checkpoints are switched off)
@@ -115,7 +119,9 @@ const Game = (() => {
     const d = meters / CONFIG.metersPerUnit;
     Object.assign(state, { mode: 'play', dist: d, devRun: true, elapsed: Math.min(60, meters / 25) });
     state.speed = Math.min(SP.max, SP.start + state.elapsed * SP.accel);
-    state.nextStop = EX.at.filter(m => m <= meters).length;
+    state.nextStop = 0;
+    while (Biome.stop(state.nextStop) <= meters) state.nextStop++;
+    while (state.nextCheckpoint <= meters) state.nextCheckpoint = afterCheckpoint(state.nextCheckpoint);   // the ones passed already
     if (meters >= RAIN.startAt) { state.level = 2; state.levelTime = 30; Rain.set(state.nextStop < RAIN.endAfterStop && Biome.mix(d) < .3); }
     if (meters >= CONFIG.lamps.startAt) Lamps.activate(d);
     City.reset(); City.update(d); Props.reset(); Props.update(d);
@@ -200,6 +206,17 @@ const Game = (() => {
     }
     const count = 1 + Math.min(3, Math.floor(swerve / 2)) + (state.skid > 0 ? 2 : 0);
     for (const side of [-1, 1]) Particles.spray(cx + side * 22.5 * s, y, side, count, SPRAY_COLORS);   // each wheel sprays outwards
+  }
+
+  // exhaust smoke: little puffs from the two pipes under the bumper, now one now
+  // the other (Corvair's pipes: 9 sprite px either side of the middle, 4 px up)
+  function exhaustSmoke(dt) {
+    state.exhaustTimer = (state.exhaustTimer || 0) - dt;
+    if (state.exhaustTimer > 0 || state.crashed) return;
+    state.exhaustTimer = .06;
+    state.exhaustPipe = -(state.exhaustPipe || 1);
+    const z = P.z, s = CONFIG.spriteScale / z, cx = View.x(state.px, z) + (state.drift || 0);
+    Particles.exhaust(cx + state.exhaustPipe * 9 * s, View.y(0, z) - 4 * s, state.speed, Biome.mix(state.dist) > .5);
   }
 
   // ---------- petrol station ----------
@@ -315,6 +332,7 @@ const Game = (() => {
     steer(dt, want);
     pavement(dt);
     wheelSpray(dt);
+    exhaustSmoke(dt);
   }
 
   // ---------- per-mode updates ----------
@@ -337,6 +355,7 @@ const Game = (() => {
     // a bend pushes the car outwards (the faster, the more)
     state.px -= Track.curvature(state.dist + P.z) * state.speed * state.speed * CONFIG.track.drift * dt;
     wheelSpray(dt);
+    exhaustSmoke(dt);
     if (Puddles.hit(state.px, state.dist) && state.skid <= 0) startSkid();
 
     const meters = (state.dist - Biome.origin()) * CONFIG.metersPerUnit;
@@ -344,7 +363,7 @@ const Game = (() => {
     if (CP.enabled && meters >= state.nextCheckpoint) reachCheckpoint();
     if (state.level < 2 && meters >= RAIN.startAt) startRain();
     if (meters >= CONFIG.lamps.startAt) Lamps.activate(state.dist);   // lamps from CONFIG.lamps.startAt metres on
-    if (state.nextStop < EX.at.length && meters >= EX.at[state.nextStop]) { beginExit(); return; }
+    if (meters >= Biome.stop(state.nextStop)) { beginExit(); return; }
 
     const car = Traffic.hit(state.px);
     if (car) crash(car);
@@ -449,9 +468,9 @@ const Game = (() => {
       state.dist += state.speed * dt;
       Traffic.update(dt, state.speed, state.elapsed, state.mode === 'play' && !introSteering(), state.dist);
       // it rains from RAIN.startAt until the car is back on the road after the petrol station RAIN.endAfterStop
-      const raining = state.level >= 2 && state.nextStop < RAIN.endAfterStop && Biome.mix(state.dist) < .3;
-      Puddles.update(dt, state.dist, state.levelTime, state.mode === 'play' && raining);
-      if (state.level >= 2) Rain.set(raining);
+      const rain = raining();
+      Puddles.update(dt, state.dist, state.levelTime, state.mode === 'play' && rain);
+      if (state.level >= 2) Rain.set(rain);
     }
 
     City.update(state.dist);

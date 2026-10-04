@@ -12,13 +12,14 @@
 <title>CHECKPOINT demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261001v">
+<link rel="stylesheet" href="css/style.css?v=20261004eg">
 </head>
 <body>
 <div id="wrap">
   <div id="stage">
     <canvas id="game" width="320" height="180"></canvas>
     <canvas id="game-dots" class="dots"></canvas>
+    <canvas id="game-boards"></canvas>
     <div id="scanlines"></div>
 
     <div id="hud">
@@ -36,23 +37,38 @@
       <button data-m="1160">BENZÍNKA 2</button>
       <button data-m="1380">MOST</button>
       <button data-m="2000">PATTAYA</button>
+      <button data-m="2060">BENZÍNKA 3</button>
+      <button data-m="4950">DÁLNICE</button>
     </div>
 
+    <!-- the car radio (js/world/highway.js): the song whose sign was just passed -->
+    <div id="radio" class="radio hidden"></div>
+
+    <!-- sound on / off (also the M key) -->
+    <button id="mute" type="button" aria-label="Ztlumit zvuk" aria-pressed="false">
+      <svg viewBox="0 0 16 12" shape-rendering="crispEdges" aria-hidden="true">
+        <path d="M1 4h3v4H1zM4 4h1V3h1V2h1V1h1v10H7v-1H6V9H5V8H4z"/>
+        <path class="waves" d="M10 5h1v2h-1zM11 3h1v1h-1zM11 8h1v1h-1zM12 4h1v4h-1zM13 2h1v1h-1zM13 9h1v1h-1zM14 3h1v6h-1z"/>
+        <path class="cross" d="M10 3h1v1h-1zM11 4h1v1h-1zM12 5h1v2h-1zM13 4h1v1h-1zM14 3h1v1h-1zM11 7h1v1h-1zM10 8h1v1h-1zM13 7h1v1h-1zM14 8h1v1h-1z"/>
+      </svg>
+    </button>
+
     <div id="gameover" class="overlay hidden">
-      <div class="lettering">GAME OVER</div>
-      <div class="sub" id="gameover-info"></div>
+      <canvas id="gameover-fx" role="img" aria-label="GAME OVER – HIGH SCORES"></canvas>
       <div class="board hidden" id="board-over"></div>
+      <div class="sub" id="gameover-info"></div>
       <div class="sub blink">MEZERNÍK / KLEPNI PRO NOVOU JÍZDU</div>
     </div>
 
     <!-- leaderboard sign-up: nickname + e-mail (for contacting the winners) -->
     <div id="account" class="overlay account hidden">
       <form id="acc-form" autocomplete="on" novalidate>
-        <input id="acc-nick" name="nickname" maxlength="16" placeholder="PŘEZDÍVKA" autocomplete="nickname" spellcheck="false">
-        <input id="acc-email" name="email" type="email" maxlength="254" placeholder="E-MAIL" autocomplete="email" spellcheck="false">
-        <label class="acc-consent"><input id="acc-consent" type="checkbox"> Souhlasím se zpracováním osobních údajů.</label>
+        <div class="acc-title lettering">LEADERBOARD SIGNUP</div>
+        <input id="acc-nick" name="nickname" maxlength="16" placeholder="přezdívka" autocomplete="nickname" spellcheck="false">
+        <input id="acc-email" name="email" type="email" maxlength="254" placeholder="e-mail" autocomplete="email" spellcheck="false">
+        <label class="acc-consent"><input id="acc-consent" type="checkbox"> souhlasím se zpracováním osobních údajů</label>
         <div id="acc-error" class="acc-error"></div>
-        <button id="acc-submit" type="submit">HRÁT</button>
+        <button id="acc-submit" type="submit">hrát</button>
         <button id="acc-skip" type="button">PŘESKOČIT</button>
         <a href="#" id="acc-offline" class="acc-offline hidden">HRÁT BEZ ŽEBŘÍČKU</a>
       </form>
@@ -100,47 +116,55 @@
 
 <!-- Load order matters: each file only uses what is loaded above it
      (or calls it later, at runtime). -->
-<script src="js/config.js?v=20261001x"></script>
-<script src="js/util.js?v=20260930h"></script>
+<script src="js/config.js?v=20261004hw"></script>
+<script src="js/util.js?v=20261004hw"></script>
 <script src="js/assets/loading-car-image.js?v=20260930c"></script>
 <script src="js/assets/tower-image.js?v=20260930c"></script>
 <script src="js/assets/smoker-image.js?v=20260930c"></script>
 <script src="js/assets/vodka-image.js?v=20260930c"></script>
 <script src="js/assets/pattaya-images.js?v=20260930c"></script>
 
-<script src="js/world/fog.js?v=20260930c"></script>
-<script src="js/world/biome.js?v=20261001k"></script>
-<script src="js/world/track.js?v=20260930e"></script>
+<script src="js/world/fog.js?v=20261004tw"></script>
+<script src="js/world/biome.js?v=20261004hw"></script>
+<script src="js/world/track.js?v=20261004hw"></script>
 <script src="js/world/sky.js?v=20260930d"></script>
-<script src="js/world/road.js?v=20260930c"></script>
-<script src="js/world/city.js?v=20260930c"></script>
-<script src="js/world/rain.js?v=20260930c"></script>
-<script src="js/world/lamps.js?v=20261001d"></script>
-<script src="js/world/exit.js?v=20260930g"></script>
-<script src="js/world/station.js?v=20260930h"></script>
-<script src="js/world/props.js?v=20260930d"></script>
+<script src="js/world/road.js?v=20261004hw"></script>
+<script src="js/assets/gasoline-shield-image.js?v=20261002zd"></script>
+<script src="js/assets/billboard-images.js?v=20261004hg"></script>
+<script src="js/world/city.js?v=20261004sb"></script>
+<script src="js/world/rain.js?v=20261004sb"></script>
+<script src="js/world/lamps.js?v=20261003c"></script>
+<script src="js/assets/tour-sign-image.js?v=20261002d"></script>
+<script src="js/world/tour-sign.js?v=20261002d"></script>
+<script src="js/world/exit.js?v=20261004hw"></script>
+<script src="js/world/station.js?v=20261003perf"></script>
+<script src="js/world/props.js?v=20261003perf"></script>
 <script src="js/world/bridge.js?v=20260930c"></script>
+<script src="js/assets/gasoline-sign-image.js?v=20261004gs"></script>
+<script src="js/world/highway.js?v=20261004bc"></script>
 
 <script src="js/sprites/corvair.js?v=20261001s"></script>
 <script src="js/sprites/traffic-cars.js?v=20260930c"></script>
 
-<script src="js/ui/hud.js?v=20261001w"></script>
-<script src="js/ui/raster.js?v=20260930c"></script>
-<script src="js/ui/intro.js?v=20261001p"></script>
-<script src="js/ui/loading.js?v=20261001g"></script>
-<script src="js/ui/account.js?v=20261001b"></script>
-<script src="js/ui/input.js?v=20261001o"></script>
-<script src="js/ui/audio.js?v=20261001o"></script>
+<script src="js/ui/hud.js?v=20261004sb"></script>
+<script src="js/ui/raster.js?v=20261003perf"></script>
+<script src="js/ui/billboards.js?v=20261004eh"></script>
+<script src="js/ui/intro.js?v=20261003go"></script>
+<script src="js/ui/gameover.js?v=20261004nb"></script>
+<script src="js/ui/loading.js?v=20261003a"></script>
+<script src="js/ui/account.js?v=20261004b"></script>
+<script src="js/ui/input.js?v=20261003l"></script>
+<script src="js/ui/audio.js?v=20261003l"></script>
 
 <script src="js/game/traffic.js?v=20260930c"></script>
-<script src="js/game/particles.js?v=20260930c"></script>
+<script src="js/game/particles.js?v=20261003perf"></script>
 <script src="js/game/puddles.js?v=20260930c"></script>
 <script src="js/ui/cutscene.js?v=20260930c"></script>
-<script src="js/game/game.js?v=20261001o"></script>
+<script src="js/game/game.js?v=20261004hw"></script>
 <script src="js/ui/devmode.js?v=20260930c"></script>
-<script src="js/ui/dev3d.js?v=20260930h"></script>
-<script src="js/ui/style.js?v=20260930h"></script>
-<script src="js/render.js?v=20260930h"></script>
-<script src="js/main.js?v=20260930c"></script>
+<script src="js/ui/dev3d.js?v=20261004tw"></script>
+<script src="js/ui/style.js?v=20261004cr"></script>
+<script src="js/render.js?v=20261004eh"></script>
+<script src="js/main.js?v=20261004sb"></script>
 </body>
 </html>

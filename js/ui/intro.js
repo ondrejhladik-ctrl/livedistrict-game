@@ -1,6 +1,7 @@
 // The title sequence after the click on the loading screen, in the style of a
-// film poster (green and black, printed grain): CHECKPOINT appears letter by
-// letter, every letter drawn out towards the viewer in perspective – long bars
+// film poster (green and black, printed grain): first the date (DATE, alone in
+// the dark for a moment), then CHECKPOINT appears letter by
+// letter (as big as the date at first), every letter drawn out towards the viewer in perspective – long bars
 // spreading from a vanishing point above the word, sharp near it and more and
 // more out of focus towards the viewer. Then the camera tilts down to the game's
 // horizon, the black silhouette of the car rolls in and the road draws itself
@@ -26,14 +27,19 @@ const Intro = (() => {
   // the middle of the screen; the road and the car go up with it)
   const RAISE = 40;
   const VP = [-70, HORIZON - RAISE], TOP = [66, HORIZON + 10 - RAISE];
-  const T = {                            // the timeline (seconds)
+  // the opening card before it all: the date, big, in the same lettering
+  const DATE = { text: '19. 3.', cap: 96, show: [.15, 1.55], len: 1.85 };   // cap: letter height (px); show: from, to (seconds); len: the whole card
+  DATE.base = (H + DATE.cap) / 2;                                    // its baseline: in the middle of the screen
+  const T = {                            // the timeline (seconds, after the date card)
     gap: .13,                            // one letter after another, each popping up at once with its bars
     tilt: [2.0, 3.1],                    // …then the camera tilts down to the game's horizon, the word moves off to the end of the road
+    barsIn: .7,                          // (the bars light up only once the word has shrunk into its place: this many seconds after the tilt)
     car: [3.0, 3.7], road: [3.6, 4.4],   // the car rolls in, the road draws itself
     hold: 4.6,                           // …then the timeline stops until the player presses (the road keeps moving)
     back: [4.6, 6.2],                    // …on the press the word backs off into the distance (the bars and the road stretching after it), into darkness
     end: 6.6,                            // (a moment of darkness, then the game)
   };
+  const SHOW_CAR = false;                // the car's black silhouette rolling in (switched off for now – true brings it back)
   const SPEED = 8;                       // the road moves like the game's title cruise (depth units a second)
   const REACH = 3.2;                     // how far out the bars reach (times the distance of the word from the vanishing point)
   const GAPS = .35;                      // how much of the light shows in the gaps between the bars (0 = black gaps, 1 = none)
@@ -65,6 +71,13 @@ const Intro = (() => {
   })();
   // the page's lettering in this style wears the same grain (css: .lettering)
   if (grain.toBlob) grain.toBlob(b => { if (b) document.documentElement.style.setProperty('--grain', `url(${URL.createObjectURL(b)})`); });
+  // …and a softer one (the specks at 60 %) for the sign-up form (css: --grain-soft)
+  (() => {
+    const [c, g] = layer(256, 256);
+    g.globalAlpha = .6;
+    g.drawImage(grain, 0, 0);
+    if (c.toBlob) c.toBlob(b => { if (b) document.documentElement.style.setProperty('--grain-soft', `url(${URL.createObjectURL(b)})`); });
+  })();
 
   // the car from behind (the game's own sprite), as a black silhouette
   const car = (() => {
@@ -123,8 +136,61 @@ const Intro = (() => {
     g.fill();
   };
 
+  // the date card: the date in the middle, lettered like the word (green, the thin
+  // cut, the glow), popping up at once and cut to black before CHECKPOINT
+  function drawDate(ctx, s) {                                          // s: seconds into the card
+    ctx.save();
+    ctx.fillStyle = INK;
+    ctx.fillRect(0, 0, W, H);
+    if (s >= DATE.show[0] && s < DATE.show[1]) {
+      if (!DATE.px) {                                                  // the font size for the letter height (measured once)
+        const [, g] = layer(4, 4);
+        g.font = `100px ${FONT}`;
+        DATE.px = 100 * DATE.cap / (g.measureText('1').actualBoundingBoxAscent || 73);
+      }
+      const px = DATE.px;
+      fg.clearRect(0, 0, W, H);
+      fg.save();
+      fg.font = `${px}px ${FONT}`;
+      const gap = DATE.cap * .07, chars = [...DATE.text], ws = chars.map(ch => fg.measureText(ch).width);
+      let x = (W - ws.reduce((a, b) => a + b, 0) - gap * (chars.length - 1)) / 2;
+      const base = DATE.base;
+      fg.fillStyle = GREEN;
+      chars.forEach((ch, i) => { fg.fillText(ch, x, base); x += ws[i] + gap; });
+      fg.globalCompositeOperation = 'source-atop';                     // the thin cut across, as on CHECKPOINT
+      fg.fillStyle = INK;
+      fg.fillRect(0, base - DATE.cap * .3, W, 2.6);
+      fg.restore();
+      ctx.drawImage(face, 0, 0);
+      if (BLUR) {                                                      // the glow
+        gg.clearRect(0, 0, W / 2, H / 2);
+        gg.filter = 'blur(5px)';
+        gg.drawImage(face, 0, 0, W / 2, H / 2);
+        gg.filter = 'none';
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = .6;
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(glow, 0, 0, W, H);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+    // grain and a dark vignette, as in the rest of the sequence
+    ctx.translate(-Math.random() * 256, -Math.random() * 256);
+    ctx.fillStyle = ctx.createPattern(grain, 'repeat');
+    ctx.fillRect(0, 0, W + 256, H + 256);
+    ctx.restore();
+    const vig = ctx.createRadialGradient(W / 2, H * .55, H * .3, W / 2, H * .55, W * .62);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,.6)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = false;
+  }
+
   function draw(ctx, now) {
     const t = now - t0;                                                // (the road keeps moving all the time: while it waits, under the fade)
+    if (t < 0) { drawDate(ctx, t + DATE.len); return; }               // (t0 is where CHECKPOINT starts: the date card comes before it)
     // the timeline (tl): it stops at T.hold until the player presses, then goes on from there
     const tl = pressed === null ? Math.min(t, T.hold) : T.hold + t - pressed;
     waits = pressed === null && t >= T.hold;
@@ -140,15 +206,24 @@ const Intro = (() => {
     // were 1/q times further away) – slowly at first, then faster and faster. The
     // bars and the road stay glued to it at the far end and to the bottom of the
     // screen at the near end, so they stretch after it; the car stays where it is.
-    const back = part(tl, T.back), q = 1 / (1 + 20 * back ** 2.5);
+    // At first the word is as big as the date before it (as if nearer: scaled
+    // towards the vanishing point the other way), shrinking to its size as the
+    // camera tilts down.
+    const grow = 1 + (DATE.cap / CAP - 1) * (1 - tilt);
+    const back = part(tl, T.back), q = grow / (1 + 20 * back ** 2.5);
     const base = vy + (base0 - vy) * q;                                // the word's baseline, backed off
+    // while it is big the word stands where the date stood (moved down onto the
+    // date's baseline), sliding into its place as it shrinks; the bars are still
+    // dark then, so they need not follow
+    const atDate = DATE.base - (VP[0] + (TOP[0] + CAP - VP[0]) * DATE.cap / CAP);
+    const lift = atDate * (1 - tilt);
     const shown = i => tl >= i * T.gap;
     // 1) the letters, one after another
     fg.clearRect(0, 0, W, H);
     letters.forEach((l, i) => {
       if (!shown(i)) return;
       fg.save();
-      fg.translate(vx + (l.x - vx) * q, base);
+      fg.translate(vx + (l.x - vx) * q, base + lift);
       fg.scale(q, q);
       fg.font = `${fontPx}px ${FONT}`;
       fg.fillStyle = GREEN;
@@ -232,6 +307,9 @@ const Intro = (() => {
     ctx.fillStyle = INK;
     ctx.fillRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true;
+    // the bars light up only once the word has shrunk into its place – while it
+    // is big and near there is only the green word in the dark
+    ctx.globalAlpha = smooth(part(tl, [T.tilt[1], T.tilt[1] + T.barsIn]));
     ctx.drawImage(sharp, 0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
     ctx.drawImage(mid, 0, 0, W, H);
@@ -271,7 +349,7 @@ const Intro = (() => {
     }
     // 5) the car rolls in from below, to where it stands in the game – as big as
     // there; it stays put while the rest backs off (and is lost in the dark)
-    const c = part(tl, T.car);
+    const c = SHOW_CAR ? part(tl, T.car) : 0;
     if (c > 0) {
       const z = CONFIG.player.z, s = 2 * CONFIG.spriteScale / z;
       const w = Corvair.width * s, h = Corvair.height * s, up = (1 - (1 - c) ** 3) * (H * .45);
@@ -300,10 +378,10 @@ const Intro = (() => {
   return {
     font: FONT,
     // now: the loading screen's clock (seconds); done: called once, at the end
-    start(now, done) { layout(); t0 = now; onEnd = done; ended = false; pressed = null; waits = false; },
+    start(now, done) { layout(); t0 = now + DATE.len; onEnd = done; ended = false; pressed = null; waits = false; },
     draw,
     // the player's press – start: may it start the game (Space, Enter, a click or a
-    // tap; not just any key)? While it builds up it skips straight to the wait; while
+    // tap; not just any key)? While it builds up (the date card too) it skips straight to the wait; while
     // waiting it sends the word off (→ true); while backing off it skips to the end.
     press(now, start) {
       const t = now - t0;
@@ -314,6 +392,7 @@ const Intro = (() => {
     },
     waiting: () => waits,                                              // (then the loading screen shows what to press)
     wordTop: TOP[1] / H,                                               // where the word's top stands meanwhile (share of the height)
+    grain,                                                             // the printed grain (js/ui/gameover.js wears it too)
     ended: () => ended,
   };
 })();

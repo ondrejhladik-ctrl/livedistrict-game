@@ -58,7 +58,7 @@ const Props = (() => {
   const blocked = (side, wz) => clear.some(c => c.side === side && wz > c.z0 && wz < c.z1);
 
   function place(side, wz) {
-    if (Biome.zone(wz) === 'bridge') return;                         // nothing on the bridge
+    if (Biome.zone(wz) === 'bridge' || Biome.zone(wz) === 'highway') return;   // nothing on the bridge, nor on the motorway
     const p = Math.random(), atWall = 1.85 + Util.rand(0, .12);
     if (p < .58) {                                                 // litter, often a little pile by the wall
       const n = Math.random() < .4 ? Util.pick([2, 3]) : 1, wall = Math.random() < .6;
@@ -129,7 +129,7 @@ const Props = (() => {
           Util.rect(ctx, left + tx * s, top + 35 * s, Math.max(1, s), Math.max(1, s), `rgba(255,${Math.round(40 + 30 * a)},${Math.round(40 + 30 * a)},${(a * (1 - Fog.amount(z))).toFixed(3)})`);
         }
       };
-      if (p.kind === 'smoker') Style.keep(ctx, sprite);            // the smoker keeps his own colours
+      if (p.kind === 'smoker') Style.keep(ctx, sprite, [left, top, w, h]);   // the smoker keeps his own colours
       else sprite();
       ctx.globalAlpha = 1;
     }

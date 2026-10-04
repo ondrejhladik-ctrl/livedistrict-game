@@ -11,6 +11,7 @@ const Input = (() => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLButtonElement) return;                                           // typing into the sign-up form
     keys[e.code] = true;
     if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); startHandler(); }
+    if (e.code === 'KeyM') Sound.toggleMute();
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
   addEventListener('keyup', e => { keys[e.code] = false; });

@@ -12,9 +12,19 @@ const Fog = (() => {
   const amount = z => { const a = smooth(z); return simple() && STEPS ? Math.min(F.max, Math.round(a * STEPS) / STEPS) : a; };
   // the fog's colour changes with the biome: night green → bright Pattaya haze
   const NIGHT = F.rgb.split(',').map(Number), DAY = [150, 210, 110];
-  let rgb = F.rgb;
-  const setMix = m => { rgb = NIGHT.map((v, i) => Math.round(v + (DAY[i] - v) * m)).join(','); };
+  // the ground (road, pavements) fades evenly, without steps – at night into the
+  // dark of the asphalt rather than into the grey-green haze, by day into the haze
+  const GROUND_NIGHT = [21, 21, 30];
+  let rgb = F.rgb, groundRgb = GROUND_NIGHT.join(','), day = false;
+  const setMix = m => {
+    day = m >= .5;
+    rgb = NIGHT.map((v, i) => Math.round(v + (DAY[i] - v) * m)).join(',');
+    groundRgb = GROUND_NIGHT.map((v, i) => Math.round(v + (DAY[i] - v) * m)).join(',');
+  };
   const color = z => `rgba(${rgb},${amount(z).toFixed(3)})`;
+  // (by day – Pattaya, the motorway – the ground is fogged in steps like the rest, in the palette)
+  const groundColor = z => (day ? color(z) : `rgba(${groundRgb},${smooth(z).toFixed(3)})`);
+  const isDay = () => day;
 
   // vertical haze gradient ending at the horizon (used on the sky layer)
   function band(g, fromY, alpha, width) {
@@ -66,5 +76,7 @@ const Fog = (() => {
     ctx.globalAlpha = 1;
   }
 
-  return { amount, color, band, drawWisps, setMix };
+  const haze = () => rgb.split(',').map(Number);                   // the fog's colour now, [r, g, b]
+
+  return { amount, color, haze, groundColor, isDay, band, drawWisps, setMix };
 })();

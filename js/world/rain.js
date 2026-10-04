@@ -9,7 +9,7 @@ const Rain = (() => {
   const { W, H } = CONFIG.screen;
   const R = CONFIG.rain;
   const streaks = [], incoming = [], splashes = [], beads = [];
-  let intensity = 0, target = 0, flash = 0, spawn = 0;
+  let intensity = 0, target = 0, flash = 0, spawn = 0, restrike = 0;
 
   const newStreak = anywhere => ({
     x: Util.rand(-20, W + 20),
@@ -21,7 +21,7 @@ const Rain = (() => {
 
   function set(on) { target = on ? 1 : 0; }
   function reset() {
-    intensity = target = flash = 0;
+    intensity = target = flash = restrike = 0;
     incoming.length = splashes.length = beads.length = 0;
   }
 
@@ -76,12 +76,15 @@ const Rain = (() => {
 
     flash = Math.max(0, flash - dt * 3);
     if (intensity > .5 && Math.random() < dt * R.lightning) flash = 1;
+    if (restrike > 0 && (restrike -= dt) <= 0) flash = Math.max(flash, 1.7);   // the strike's second flicker
   }
 
   // darker, wetter night – drawn under the cars
+  const MOOD = [4, 10, 20];
+  const mood = () => (intensity < .02 ? 0 : +(.22 * intensity).toFixed(3));   // how strong the darkening is (0: none)
   function drawMood(ctx) {
-    if (intensity < .02) return;
-    ctx.fillStyle = `rgba(4,10,20,${(.22 * intensity).toFixed(3)})`;
+    if (!mood()) return;
+    ctx.fillStyle = `rgba(${MOOD.join(',')},${mood()})`;
     ctx.fillRect(0, 0, W, H);
   }
 
@@ -95,8 +98,16 @@ const Rain = (() => {
   const quarter = Util.canvas(W / 4, H / 4), qg = quarter.getContext('2d');
 
   // the rain itself + lightning – drawn over everything
+  // a strike of lightning (the crash): a hard white flash, then a second flicker
+  function strike() { flash = 2.3; restrike = .2; }
+  function drawFlash(out) {
+    if (flash <= 0) return;
+    out.fillStyle = `rgba(225,235,255,${Math.min(.85, .35 * flash).toFixed(3)})`;
+    out.fillRect(0, 0, W, H);
+  }
+
   function drawDrops(out) {
-    if (intensity < .02 && !beads.length) return;
+    if (intensity < .02 && !beads.length) { drawFlash(out); return; }
     const ctx = lg;
     ctx.clearRect(0, 0, W, H);
 
@@ -156,11 +167,10 @@ const Rain = (() => {
     out.globalAlpha = .22; out.drawImage(layer, 0, 0);                 // a faint crisp trace
     out.restore();
 
-    if (flash > 0) {
-      out.fillStyle = `rgba(210,230,255,${(.35 * flash).toFixed(3)})`;
-      out.fillRect(0, 0, W, H);
-    }
+    drawFlash(out);
   }
 
-  return { set, reset, update, drawMood, drawDrops };
+  const active = () => intensity >= .02 || beads.length > 0 || flash > 0;   // (drawDrops draws something: the rain or a flash)
+
+  return { set, reset, update, drawMood, drawDrops, strike, active, mood: () => (mood() ? [...MOOD, mood()] : null) };
 })();

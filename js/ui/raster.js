@@ -23,16 +23,39 @@ const Raster = (() => {
     const dots = document.createElement('canvas'), dctx = dots.getContext('2d');   // the dots, 1 px = 1 cell
     const soft = document.createElement('canvas'), fctx = soft.getContext('2d');   // blurred version of the dots
     const mask = document.createElement('canvas'), mctx = mask.getContext('2d');   // where the dots melt
-    let cols = 0, rows = 0, cssW = 0, cssH = 0, grid = null, out = null;
+    let cols = 0, rows = 0, cssW = 0, cssH = 0, grid = null, out = null, out32 = null;
     const blobs = [0, 1, 2].map(() => ({
       px: Math.random() * 6.28, py: Math.random() * 6.28,
       sx: .05 + Math.random() * .05, sy: .04 + Math.random() * .05, r: .3 + Math.random() * .18,
     }));
     const ink = R.ink ? hexRgb(R.ink) : null, ink2 = R.ink2 ? hexRgb(R.ink2) : null;
+    // Tables for the loop over the cells (rebuilt if the settings change):
+    // brightness → dot strength (black … white and the gamma curve), every 1/16 of a
+    // brightness step, read with linear interpolation – no Math.pow per cell (the same
+    // as computing it, far below the dots' flicker); the lift by the brightest channel;
+    // the Bayer thresholds
+    let curve = null, lifts = null, lifted = null, tables = '';
+    const TH = BAYER4.map(row => row.map(v => (v + .5) / 16));
+    function makeTables(black, white, gamma, lift) {
+      const id = [black, white, gamma, lift].join();
+      if (id === tables) return;
+      curve = new Float64Array(256 * 16 + 2);
+      for (let i = 0; i < curve.length; i++) {
+        const l = (i / 16 / 255 - black) / (white - black);
+        curve[i] = l <= 0 ? 0 : l >= 1 ? 1 : Math.pow(l, gamma);
+      }
+      lifts = new Float64Array(256);
+      for (let m = 1; m < 256; m++) lifts[m] = Math.min(lift, 235 / m);
+      // a channel v lifted, for a cell whose brightest channel is m: lifted[m * 256 + v]
+      // (stored through a Uint8ClampedArray – rounded exactly as writing v * k into the
+      // picture's bytes is)
+      lifted = new Uint8ClampedArray(256 * 256);
+      for (let m = 0; m < 256; m++) { const k = lifts[m || 1]; for (let v = 0; v <= m; v++) lifted[m * 256 + v] = v * k; }
+      tables = id;
+    }
 
-    function layout() {
-      const rect = target.getBoundingClientRect();
-      cssW = rect.width; cssH = rect.height;
+    function layout(width, height) {
+      cssW = width; cssH = height;
       if (!cssW || !cssH) return false;
       const dpr = Math.min(devicePixelRatio || 1, 2);
       const cell = Math.max(2, Math.round(R.cell * dpr));               // device px per cell (fine: 2 CSS px on sharp screens)
@@ -41,6 +64,7 @@ const Raster = (() => {
       target.width = cols * cell; target.height = rows * cell;
       low.width = dots.width = cols; low.height = dots.height = rows;
       out = dctx.createImageData(cols, rows);
+      out32 = new Uint32Array(out.data.buffer);
       soft.width = Math.max(1, Math.round(cols / R.blur)); soft.height = Math.max(1, Math.round(rows / R.blur));
       mask.width = Math.max(2, Math.round(cols / 4)); mask.height = Math.max(2, Math.round(rows / 4));
       // the gap between the dots, cut out of every cell (right and bottom edge)
@@ -56,28 +80,38 @@ const Raster = (() => {
 
     function render(t = performance.now() / 1000) {
       const rect = target.getBoundingClientRect();
-      if (!cols || rect.width !== cssW || rect.height !== cssH) if (!layout()) return;
+      if (!cols || rect.width !== cssW || rect.height !== cssH) if (!layout(rect.width, rect.height)) return;
       // brightness of every cell (the source, smoothly resampled to the grid)
       lctx.imageSmoothingEnabled = true;
       lctx.drawImage(source, 0, 0, cols, rows);
       const s = lctx.getImageData(0, 0, cols, rows).data, d = out.data;
       const { black, white, gamma, flicker } = R;
-      for (let y = 0, j = 0; y < rows; y++) {
-        const by = BAYER4[y & 3];
-        for (let x = 0; x < cols; x++, j += 4) {
-          const r = s[j], g = s[j + 1], b = s[j + 2];
-          let l = (.2126 * r + .7152 * g + .0722 * b) / 255;
-          l = (l - black) / (white - black);
-          l = l <= 0 ? 0 : l >= 1 ? 1 : Math.pow(l, gamma);
-          const th = (by[x & 3] + .5) / 16;
+      makeTables(black, white, gamma, R.lift);
+      const span = white - black, s32 = new Uint32Array(s.buffer, s.byteOffset, s.length >> 2), d32 = out32;
+      // (neighbouring cells mostly have the same colour – the picture is in flat palette
+      // colours – so a cell's strength and lifted colour are worked out only when it changes)
+      let last = -1, l = 0, lit = 0;
+      for (let y = 0, j = 0, p = 0; y < rows; y++) {
+        const ths = TH[y & 3];
+        for (let x = 0; x < cols; x++, j += 4, p++) {
+          const px = s32[p];
+          if (px !== last) {
+            last = px;
+            const r = px & 255, g = px >> 8 & 255, b = px >> 16 & 255;
+            const Y = .2126 * r + .7152 * g + .0722 * b, lin = (Y / 255 - black) / span;
+            if (lin <= 0) l = 0;
+            else if (lin >= 1) l = 1;
+            else { const f = Y * 16, i = f | 0; l = curve[i] + (curve[i + 1] - curve[i]) * (f - i); }
+            let m = r > g ? r : g;                                    // the game's colour, lifted towards full brightness
+            if (b > m) m = b;                                         // (k = Math.min(lift, 235 / Math.max(r, g, b, 1)))
+            const row = m << 8;
+            lit = (0xFF000000 | lifted[row + b] << 16 | lifted[row + g] << 8 | lifted[row + r]) >>> 0;
+          }
+          const th = ths[x & 3];
           const v = l + (flicker && l > 0 ? (Math.random() - .5) * flicker : 0);   // noise only where there is something
           if (v > th) {
-            if (ink) { d[j] = ink[0]; d[j + 1] = ink[1]; d[j + 2] = ink[2]; }
-            else {                                                    // the game's colour, lifted towards full brightness
-              const m = Math.max(r, g, b, 1), k = Math.min(R.lift, 235 / m);
-              d[j] = r * k; d[j + 1] = g * k; d[j + 2] = b * k;
-            }
-            d[j + 3] = 255;
+            if (ink) { d[j] = ink[0]; d[j + 1] = ink[1]; d[j + 2] = ink[2]; d[j + 3] = 255; }
+            else d32[p] = lit;
           } else if (ink2 && l * 2.2 > th) { d[j] = ink2[0]; d[j + 1] = ink2[1]; d[j + 2] = ink2[2]; d[j + 3] = 255; }
           else d[j + 3] = 0;
         }

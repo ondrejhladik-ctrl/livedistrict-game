@@ -7,7 +7,7 @@ const Hud = (() => {
     checkpoint: $('checkpoint'), checkpointLevel: $('checkpoint-level'), stationHint: $('station-hint'),
   };
   const show = (node, visible) => node.classList.toggle('hidden', !visible);
-  const pictures = [$('game'), $('game-dots')];
+  const pictures = [$('game'), $('game-dots'), $('game-boards')];
   let greyNow = -1;
 
   // ---------- the intro ----------
@@ -53,14 +53,18 @@ const Hud = (() => {
     },
     showStationHint: visible => show(el.stationHint, visible),
     // black checkpoint screen, announcing the level that comes next
-    showCheckpoint(visible, level = 0) {
-      if (visible) el.checkpointLevel.textContent = `LEVEL ${level}${level >= 2 ? ' · PRŠÍ' : ''}`;
+    showCheckpoint(visible, level = 0, rain = false) {
+      if (visible) el.checkpointLevel.textContent = `LEVEL ${level}${rain ? ' · PRŠÍ' : ''}`;
       show(el.checkpoint, visible);
     },
+    // GAME OVER written out, then the leaderboard (js/ui/gameover.js)
     showGameOver(visible, km = 0, score = 0, isRecord = false) {
       if (visible) el.gameoverInfo.innerHTML =
         `UJETO ${km.toFixed(2)} km&emsp;SKÓRE ${score}${isRecord ? '<br>NOVÝ REKORD!' : ''}`;   // (distance and score on one line, a wide space between)
+      const was = !el.gameover.classList.contains('hidden');
       show(el.gameover, visible);
+      if (visible && !was) GameOver.start();
+      if (!visible && was) GameOver.stop();
     },
   };
 })();
