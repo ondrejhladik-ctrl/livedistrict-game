@@ -117,7 +117,11 @@ const Renderer = (() => {
     const pose = playerPose(state, z), { frame, s } = pose;
     if (state.crashed) { drawCrashed(state, pose, z); return; }
     const left = Math.round(pose.left + (state.drift || 0)), top = Math.round(pose.top), w = Math.round(pose.w), h = Math.round(pose.h);   // drift: the tail swinging out
-    ctx.drawImage(frame.img, left, top, w, h);
+    // by day the car keeps its own colours: the day palette has no dark greys – the
+    // roof, the windows and the highlights would all turn into the asphalt's grey (on
+    // the motorway's grey road the car melted into it)
+    if (Fog.isDay()) Style.keep(ctx, () => ctx.drawImage(frame.img, left, top, w, h), [left, top, w, h]);
+    else ctx.drawImage(frame.img, left, top, w, h);
     lampLight(frame.img, left, top, w, h, Lamps.lightAt(z, dist));
     const underCanopy = Math.abs(state.px) > 1.1 ? Station.lightAt(z, dist) : 0;
     lampLight(frame.img, left, top, w, h, underCanopy, '235,255,220');   // cold white canopy light

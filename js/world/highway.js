@@ -65,18 +65,23 @@ const Highway = (() => {
     radioTimer = setTimeout(() => radio.classList.add('hidden'), 4500);
   }
 
-  // the signs ahead of the camera: around every stop on the motorway (depth before its turn-off → board)
+  // the signs ahead of the camera: around every stop on the motorway. The "1 km" one
+  // stands 100 m past the station before (a whole kilometre before would be right on
+  // it – they are a kilometre apart); before the first one on the motorway a kilometre
+  // before it. Then a song, "500 m", a song. None ever on a forecourt.
   const egg = k => ({ pic: eggs[k % eggs.length], song: EGGS[k % eggs.length][2] });
-  const AROUND = [[250, () => ({ pic: station[1], wide: 1.15 })], [190, i => egg(i * 2)], [125, () => ({ pic: station[0], wide: 1.15 })], [62, i => egg(i * 2 + 1)]];
+  const AFTER = 100 / MU, KM = 1000 / MU;
   function signs(dist) {
     const o = Biome.origin(), out = [], X = CONFIG.exit;
-    for (const m of Biome.stops((dist - o) * MU - 100, (dist - o + 300) * MU)) {
+    const stops = Biome.stops((dist - o) * MU - 200, (dist - o + 300) * MU + KM * MU);
+    const turnOf = m => o + m / MU + X.ahead;
+    const onForecourt = wz => stops.some(m => wz > turnOf(m) - 8 && wz < turnOf(m) + X.length + 8);
+    for (const m of stops) {
       if (m < X.from) continue;
-      const turn = o + m / MU + X.ahead, i = Math.round((m - X.from) / X.every);
-      for (const [before, pic] of AROUND) {
-        const wz = turn - before;
-        if (Biome.zone(wz) === 'highway') out.push({ wz, ...pic(i) });
-      }
+      const turn = turnOf(m), i = Math.round((m - X.from) / X.every), prev = m - X.every;
+      const kmAt = prev >= X.from ? turnOf(prev) + X.length + AFTER : turn - KM;
+      const list = [[kmAt, { pic: station[1], wide: 1.15 }], [turn - 190, egg(i * 2)], [turn - 125, { pic: station[0], wide: 1.15 }], [turn - 62, egg(i * 2 + 1)]];
+      for (const [wz, s] of list) if (wz < turn && Biome.zone(wz) === 'highway' && !onForecourt(wz)) out.push({ wz, ...s });
     }
     return out;
   }
@@ -129,5 +134,5 @@ const Highway = (() => {
   }
   const H = () => CONFIG.screen.H;
 
-  return { draw };
+  return { draw, signs };                                            // (signs: where they stand – for checking)
 })();
