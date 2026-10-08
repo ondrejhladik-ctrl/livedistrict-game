@@ -4,7 +4,7 @@
 // long-tail boats and speedboats going up and down the river.
 // Colours go from the night to the Pattaya day along with Biome.mix.
 const Bridge = (() => {
-  const NEAR = .3, RAIL = 1.4, POST = .8, PYLON_X = 1.62, PYLON_H = 4.2;
+  const NEAR = .3, RAIL = 2.08, POST = .8, PYLON_X = 2.3, PYLON_H = 4.2;   // (the railing at the deck's edge – as wide as the street)
   const K = CONFIG.screen.H - CONFIG.screen.HORIZON;
   const col = (night, day, m) => Biome.hex(Biome.lerpRgb(night, day, m));
 

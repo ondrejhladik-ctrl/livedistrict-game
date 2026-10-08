@@ -183,6 +183,7 @@ const Raster = (() => {
 
   return {
     game: create(document.getElementById('game'), document.getElementById('game-dots')),
-    loading: create(document.getElementById('loading-canvas'), document.getElementById('loading-dots')),   // (the wraps: see index.html)
+    loading: create(document.getElementById('loading-canvas'), document.getElementById('loading-dots')),
+    talk: create(document.getElementById('talk'), document.getElementById('talk-dots')),   // (the boys' talk, js/ui/talk.js)   // (the wraps: see index.html)
   };
 })();

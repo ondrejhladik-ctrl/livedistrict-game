@@ -12,22 +12,34 @@
 <title>CHECKPOINT demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261004opt">
+<link rel="stylesheet" href="css/style.css?v=20261008ts">
 </head>
 <body>
+<!-- pixelate filter for the lettering (css: .lettering) – the centre of every 3×3 block, grown back over it -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="pixelate" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feFlood x="1" y="1" width="1" height="1"/>
+    <feComposite width="3" height="3"/>
+    <feTile result="grid"/>
+    <feComposite in="SourceGraphic" in2="grid" operator="in"/>
+    <feMorphology operator="dilate" radius="1"/>
+  </filter>
+</svg>
 <div id="wrap">
   <div id="stage">
     <canvas id="game" width="320" height="180"></canvas>
     <div id="game-dots" class="dots"><canvas></canvas><canvas class="soft"></canvas></div>
     <canvas id="game-boards"></canvas>
+    <canvas id="talk" class="hidden"></canvas>
+    <div id="talk-dots" class="dots hidden"><canvas></canvas><canvas class="soft"></canvas></div>
     <div id="scanlines"></div>
 
     <div id="hud">
       <div>
-        <div class="label">SKÓRE</div><div id="score">0</div>
-        <div class="label">km/h</div><div id="speed">0</div>
+        <div class="line"><span class="icon horse" aria-label="skóre"></span><span id="score">0</span></div>
+        <span id="speed" hidden>0</span>
       </div>
-      <div class="right"><div class="label">REKORD</div><div id="best">0</div></div>
+      <div class="right"><div class="line"><svg class="icon cup" viewBox="-1 -1 26 26" aria-label="rekord"><path d="M5.5 2h13v2.3h3c.4 4.3-1.9 7.2-5.6 7.6-1 1.8-2.3 2.9-3.4 3.2v2.6h3.1l1.4 3V23H6.9v-2.3l1.4-3h3.1v-2.6c-1.1-.3-2.4-1.4-3.4-3.2C4.3 11.5 2 8.6 2.4 4.3h3.1zM4.6 6.4c.2 1.9 1.1 3.1 2.6 3.5-.5-1-.9-2.2-1-3.5zM19.4 6.4h-1.6c-.1 1.3-.5 2.5-1 3.5 1.5-.4 2.4-1.6 2.6-3.5z" fill="#81bb29" fill-rule="evenodd" stroke="#81bb29" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 2h13v2.3h3c.4 4.3-1.9 7.2-5.6 7.6-1 1.8-2.3 2.9-3.4 3.2v2.6h3.1l1.4 3V23H6.9v-2.3l1.4-3h3.1v-2.6c-1.1-.3-2.4-1.4-3.4-3.2C4.3 11.5 2 8.6 2.4 4.3h3.1zM4.6 6.4c.2 1.9 1.1 3.1 2.6 3.5-.5-1-.9-2.2-1-3.5zM19.4 6.4h-1.6c-.1 1.3-.5 2.5-1 3.5 1.5-.4 2.4-1.6 2.6-3.5z" fill="#81bb29" fill-rule="evenodd" stroke="#0a0806" stroke-width=".45" stroke-linejoin="round"/></svg><span id="best">0</span></div></div>
     </div>
 
     <!-- dev: jump to places on the track (CONFIG.devButtons) -->
@@ -66,12 +78,26 @@
         <div class="acc-title lettering">LEADERBOARD SIGNUP</div>
         <input id="acc-nick" name="nickname" maxlength="16" placeholder="přezdívka" autocomplete="nickname" spellcheck="false">
         <input id="acc-email" name="email" type="email" maxlength="254" placeholder="e-mail" autocomplete="email" spellcheck="false">
-        <label class="acc-consent"><input id="acc-consent" type="checkbox"> souhlasím se zpracováním osobních údajů</label>
+        <div class="acc-consent"><input id="acc-consent" type="checkbox" aria-label="souhlasím se zpracováním osobních údajů" required><a href="osobni-udaje.html" id="acc-terms">souhlasím se zpracováním osobních údajů</a></div>
         <div id="acc-error" class="acc-error"></div>
         <button id="acc-submit" type="submit">hrát</button>
         <button id="acc-skip" type="button">PŘESKOČIT</button>
         <a href="#" id="acc-offline" class="acc-offline hidden">HRÁT BEZ ŽEBŘÍČKU</a>
       </form>
+    </div>
+    <!-- the conditions of the sign-up (js/ui/account.js): agreeing ticks the consent, not agreeing clears it – both back to the form -->
+    <div id="terms" class="overlay terms hidden" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+      <div class="terms-scroll">
+        <div id="terms-title" class="terms-title lettering solid">Informace o zpracování osobních údajů a podmínky účasti</div>
+        <p>Poskytnutím své e-mailové adresy a potvrzením souhlasu se zpracováním osobních údajů v registračním rozhraní stvrzujete svou účast v naší hře a udělujete nám souhlas k nakládání s vašimi údaji. Vaše e-mailová adresa slouží jako primární identifikátor nezbytný pro vaši registraci, průběžné sledování vašich herních výsledků a pro zajištění plynulého chodu samotného závodu. V případě vašeho úspěchu či dosažení výherních pozic bude tento kontaktní údaj využit k tomu, abychom vás mohli oficiálně informovat o výsledcích a domluvit s vámi veškeré náležitosti spojené s předáním odměny.</p>
+        <p>Vzhledem k tomu, že je tato hra součástí širšího propojeného ekosystému našich projektů, váš souhlas se vztahuje rovněž na zařazení vaší e-mailové adresy do naší sdílené databáze pro marketingové účely. Správci těchto údajů jsou společně značky BANDITAS (zaměřující se na streetwear a merchandise), Live District (bookingová a eventová agentura) a Spike Prague (specializovaný prodejce limitovaných tenisek a oblečení). Prostřednictvím tohoto souhlasu nám umožňujete zasílat vám občasná obchodní sdělení, informační newslettery a upozornění na exkluzivní novinky. Může se jednat například o včasné informace o nových produktových dropech, limitovaných edicích, plánovaných koncertech či speciálních akcích a nabídkách napříč všemi zmíněnými platformami.</p>
+        <p>K ochraně vašich osobních údajů přistupujeme s maximální zodpovědností. Veškerá data jsou bezpečně uložena v našich interních systémech a chráněna proti neoprávněnému přístupu. Vaše kontaktní údaje v žádném případě neposkytujeme ani neprodáváme třetím stranám mimo výše uvedenou skupinu našich projektů a prověřené partnery zajišťující technický chod našich služeb, s nimiž máme uzavřené příslušné zpracovatelské smlouvy.</p>
+        <p>V souladu s platnými právními předpisy na ochranu osobních údajů (GDPR) si zachováváte plnou kontrolu nad tím, jak jsou vaše data využívána. Máte právo nás kdykoliv požádat o přístup k vašim evidovaným údajům, o jejich opravu nebo o úplné vymazání z naší databáze. Z odběru marketingových a obchodních sdělení se můžete kdykoliv jednoduše a bezplatně odhlásit, a to prostřednictvím odhlašovacího odkazu, který je standardní součástí každého námi odeslaného e-mailu. Případné odvolání souhlasu se zasíláním marketingových zpráv nemá zpětně žádný vliv na platnost vašich herních výsledků ani na případnou výhru v závodu. Kliknutím na příslušné pole v registračním formuláři stvrzujete, že jste se s těmito podmínkami seznámili a v plném rozsahu s nimi souhlasíte.</p>
+        <div class="terms-buttons">
+          <button id="terms-no" type="button">nesouhlasím</button>
+          <button id="terms-yes" type="button">souhlasím</button>
+        </div>
+      </div>
     </div>
     <!-- checkpoint: the screen goes black with a pixel-art title, then the next level starts -->
     <!-- loading screen: the night skyline slides past behind LOADING… / CLICK TO START (like Drive); a click runs the
@@ -88,9 +114,9 @@
     <div id="tutorial" class="overlay hidden">
       <div class="tut-card" id="tutorial-card">
         <div class="tut-chevrons" aria-hidden="true">
-          <svg viewBox="0 0 7 9" shape-rendering="crispEdges"><path d="M0 0h3v1H0zM1 1h3v1H1zM2 2h3v1H2zM3 3h3v1H3zM4 4h3v1H4zM3 5h3v1H3zM2 6h3v1H2zM1 7h3v1H1zM0 8h3v1H0z"/></svg>
-          <svg viewBox="0 0 7 9" shape-rendering="crispEdges"><path d="M0 0h3v1H0zM1 1h3v1H1zM2 2h3v1H2zM3 3h3v1H3zM4 4h3v1H4zM3 5h3v1H3zM2 6h3v1H2zM1 7h3v1H1zM0 8h3v1H0z"/></svg>
-          <svg viewBox="0 0 7 9" shape-rendering="crispEdges"><path d="M0 0h3v1H0zM1 1h3v1H1zM2 2h3v1H2zM3 3h3v1H3zM4 4h3v1H4zM3 5h3v1H3zM2 6h3v1H2zM1 7h3v1H1zM0 8h3v1H0z"/></svg>
+          <span class="chev"></span>
+          <span class="chev"></span>
+          <span class="chev"></span>
         </div>
       </div>
     </div>
@@ -116,7 +142,7 @@
 
 <!-- Load order matters: each file only uses what is loaded above it
      (or calls it later, at runtime). -->
-<script src="js/config.js?v=20261004hw"></script>
+<script src="js/config.js?v=20261006pb"></script>
 <script src="js/util.js?v=20261004hw"></script>
 <script src="js/assets/loading-car-image.js?v=20260930c"></script>
 <script src="js/assets/tower-image.js?v=20260930c"></script>
@@ -128,7 +154,7 @@
 <script src="js/world/biome.js?v=20261004hw"></script>
 <script src="js/world/track.js?v=20261004hw"></script>
 <script src="js/world/sky.js?v=20260930d"></script>
-<script src="js/world/road.js?v=20261004opt"></script>
+<script src="js/world/road.js?v=20261006br"></script>
 <script src="js/assets/gasoline-shield-image.js?v=20261002zd"></script>
 <script src="js/assets/billboard-images.js?v=20261004hg"></script>
 <script src="js/world/city.js?v=20261004opt"></script>
@@ -139,32 +165,35 @@
 <script src="js/world/exit.js?v=20261004opt"></script>
 <script src="js/world/station.js?v=20261003perf"></script>
 <script src="js/world/props.js?v=20261003perf"></script>
-<script src="js/world/bridge.js?v=20260930c"></script>
+<script src="js/world/bridge.js?v=20261006br"></script>
 <script src="js/assets/gasoline-sign-image.js?v=20261004gs"></script>
-<script src="js/world/highway.js?v=20261005sf"></script>
+<script src="js/world/highway.js?v=20261006tl"></script>
 
 <script src="js/sprites/corvair.js?v=20261001s"></script>
 <script src="js/sprites/traffic-cars.js?v=20260930c"></script>
 
-<script src="js/ui/hud.js?v=20261004sb"></script>
-<script src="js/ui/raster.js?v=20261004opt"></script>
+<script src="js/assets/horse-run-image.js?v=20261006lo"></script>
+<script src="js/ui/hud.js?v=20261006iv"></script>
+<script src="js/ui/raster.js?v=20261006u"></script>
 <script src="js/ui/billboards.js?v=20261004opt"></script>
-<script src="js/ui/intro.js?v=20261004d"></script>
-<script src="js/ui/gameover.js?v=20261004nb"></script>
+<script src="js/ui/intro.js?v=20261008car"></script>
+<script src="js/ui/gameover.js?v=20261006px"></script>
 <script src="js/ui/loading.js?v=20261003a"></script>
-<script src="js/ui/account.js?v=20261004b"></script>
+<script src="js/ui/account.js?v=20261007tm"></script>
 <script src="js/ui/input.js?v=20261003l"></script>
-<script src="js/ui/audio.js?v=20261003l"></script>
+<script src="js/ui/audio.js?v=20261006mu"></script>
 
 <script src="js/game/traffic.js?v=20260930c"></script>
 <script src="js/game/particles.js?v=20261003perf"></script>
 <script src="js/game/puddles.js?v=20260930c"></script>
 <script src="js/ui/cutscene.js?v=20260930c"></script>
-<script src="js/game/game.js?v=20261004hw"></script>
+<script src="js/ui/swipe.js?v=20261006td"></script>
+<script src="js/ui/talk.js?v=20261008fade"></script>
+<script src="js/game/game.js?v=20261008fade"></script>
 <script src="js/ui/devmode.js?v=20260930c"></script>
 <script src="js/ui/dev3d.js?v=20261004tw"></script>
 <script src="js/ui/style.js?v=20261004tr"></script>
-<script src="js/render.js?v=20261004ck"></script>
+<script src="js/render.js?v=20261006td"></script>
 <script src="js/main.js?v=20261004sb"></script>
 </body>
 </html>

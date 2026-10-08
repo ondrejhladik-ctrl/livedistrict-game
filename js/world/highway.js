@@ -1,8 +1,8 @@
 // The motorway's signs on two posts by the right shoulder. Before every petrol
 // station the CHECKPOINT GASOLINE sign (the shield, js/assets/gasoline-sign-image.js)
 // with a plate under it: how far it is (1 km, 500 m); the green boards with white
-// letters around it are not quite road signs – easter eggs:
-// the titles of Dorian & Lboy Bsc's songs together. Drawn into the game's
+// letters around it are not quite road signs – easter eggs: the album CHECKPOINT's
+// tracklist, one track after another (and round again). Drawn into the game's
 // picture and laid over it sharp (Billboards), like the billboards. They stand
 // on the hills like everything else (and behind a crest only show above it).
 const Highway = (() => {
@@ -10,13 +10,10 @@ const Highway = (() => {
   const SIDE_X = 1.55, WIDE = 1.9, LIFT = 1.05;                     // where (road x of the middle), how wide (road x units), the board's bottom (camera heights)
   const POST = [58, 68, 80];
   const LIME = '#6cb820', INK = '#0a0806', FONT = "Anton, Impact, 'Arial Narrow', sans-serif";   // (the billboards' colours and lettering)
-  // [the board's big line, its small line, the song (for the car radio)]
-  const EGGS = [
-    ['TROPICAL VIBE', '↑ 2 km', 'Tropical Vibe'],
-    ['TAM, KDE NÁS VÍTR VEZME', '→', 'Tam, kde nás vítr vezme'],
-    ['SVĚT JE VELKÝ', '↑ ∞ km', 'Svět je velký'],
-    ['KUREVSKY DOBRE NOVINKY', 'VÝJEZD 1 km', 'KUREVSKY DOBRE NOVINKY'],
-  ];
+  // [the board's big line, its small line, the song (for the car radio)]: the tracklist
+  const TRACKS = ['BACKSEAT', 'BIG', 'NUDIM SE', 'OMW2THETOP', 'MRAKY', 'OMAMENY', 'ROOMIE', 'SHOXX',
+    'SLEPÝ', 'TICHO', 'KYSLIK', 'MÍNUS', 'LA VIE', 'DEJAVU', 'KROKY (OUTRO)'];
+  const EGGS = TRACKS.map((t, i) => [t, `TRACK ${i + 1} / ${TRACKS.length}`, `${i + 1}. ${t}`]);
   // a board in the billboards' colours: a dark board in a lime frame, lime letters in
   // the title's lettering – the big line as big as fits, a smaller line under it
   // (c: a board to draw again, once the font is there)
@@ -59,7 +56,7 @@ const Highway = (() => {
   let radioTimer = 0, lastEgg = null;
   function play(song) {
     if (!radio) return;
-    radio.textContent = `♪ Dorian & Lboy Bsc – ${song}`;
+    radio.textContent = `♪ CHECKPOINT – ${song}`;
     radio.classList.remove('hidden');
     clearTimeout(radioTimer);
     radioTimer = setTimeout(() => radio.classList.add('hidden'), 4500);

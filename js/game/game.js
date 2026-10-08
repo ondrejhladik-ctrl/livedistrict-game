@@ -53,13 +53,13 @@ const Game = (() => {
       skid: 0, skidDir: 0, lastYaw: 0, sprayTimer: 0, crashTimer: 0, shake: 0,
       nextStop: 0, stationT: 0, camX: 0, fade: 0,
       crashed: false, crashT: 0, crashDir: 1, smokeTimer: 0,
-      walkT: 0, forcedBack: false, devRun: false, tutorial: 0, grey: 0,
+      walkT: 0, forcedBack: false, devRun: false, tutorial: 0, grey: 0, quickStop: false, pendingScene: false,
     });
     Hud.showTutorial(0);
     Biome.setOrigin(0);                                      // the ride counts from the start (see the intro)
     Track.reset();                                           // a new road with new curves
     Exit.reset();
-    Cutscene.stop();
+    Cutscene.stop(); Talk.stop(); Swipe.stop();
     Hud.showStationHint(false);
     Traffic.reset();
     Puddles.reset();
@@ -227,6 +227,7 @@ const Game = (() => {
   const EX = CONFIG.exit;
   function beginExit() {
     state.mode = 'exit';
+    state.quickStop = EX.cut && state.nextStop < EX.at.length;        // Prague and Pattaya: the old racers' cut (swipeIn) – if switched on
     state.exitSide = Util.pick([-1, 1]);
     state.skid = 0;
     state.walkT = 0; state.forcedBack = false;
@@ -234,6 +235,35 @@ const Game = (() => {
     Traffic.reset();
     Exit.begin(state.dist, state.exitSide);
     Input.clearTouches();
+  }
+
+  // In Prague and Pattaya, the moment the car turns off the picture cuts to a camera
+  // looking straight down at the road - only its lines rushing past (Swipe) - the old
+  // racers' cut; then back to the car driving onto the forecourt, and once it is parked
+  // the picture fades smoothly over to the scene there (the boys' talk, the smoker).
+  // After it the lines again, and the car drives off the forecourt as before.
+  // (The motorway's stations: driven into all the way, as before.)
+  function swipeIn() {
+    state.mode = 'swipe';
+    Swipe.play(state.exitSide, null, () => { state.mode = 'exit'; });   // (then on driving in)
+  }
+  // parked: fade to black, then the scene (it comes up out of the black)
+  function toScene() {
+    state.mode = 'station'; state.stationT = 0; state.speed = 0;
+    state.pendingScene = true;
+  }
+  function startScene() {
+    state.pendingScene = false;
+    if (state.nextStop === 0) Talk.start(state.quickStop ? swipeOut : () => { state.fade = 1; });   // the first one: the boys' talk (js/ui/talk.js)...
+    else Cutscene.start();                                            // ...the others: the wide shot of the station
+  }
+  function swipeOut() {
+    state.mode = 'swipe';
+    Hud.showStationHint(false);
+    Swipe.play(state.exitSide, null, () => {
+      state.mode = 'leaving';                                         // …and off the forecourt (updateLeaving)
+      Input.clearTouches();
+    });
   }
 
   // steer towards a road x (no kerb limit – the car may leave the road here)
@@ -261,21 +291,25 @@ const Game = (() => {
     state.speed = Math.min(easeTo(state.speed, Util.clamp(left * 1.1, 0, EX.speed), dt * 2), Math.max(0, left) * 1.6);
     // keep the lane until the lane starts to widen, then follow it onto the forecourt
     if (state.turning || state.dist + P.z > Exit.state.wz - EX.taper) {
+      if (!state.turning && state.quickStop) { state.turning = true; swipeIn(); return; }   // turning off: the cut
       state.turning = true;
       steerTo(dt, side * park.x);
       stayOnAsphalt();
       state.camX = easeTo(state.camX, side * EX.camX, dt * 1.6);        // the camera follows onto the forecourt
     } else steer(dt, 0);
-    if (left < .03 && state.speed < .3) {                             // parked by the pump
-      state.mode = 'station'; state.stationT = 0; state.speed = 0;
-      Cutscene.start();                                               // cut to the wide shot of the station
-    }
+    if (left < .03 && state.speed < .3) { toScene(); return; }        // parked by the pump: into black smoothly, then the scene
   }
 
   function updateStation(dt) {
     state.yaw = easeTo(state.yaw, 0, dt * 4);
+    if (state.pendingScene) {                                         // fading to black, then the scene
+      state.fade = Math.min(1, state.fade + dt * 1.5);                // (2/3 s)
+      if (state.fade >= 1) startScene();
+      return;
+    }
+    if (Talk.active()) return;                                        // (it runs by itself; afterwards back through black)
     if (Cutscene.active()) {
-      if (Cutscene.update(dt)) state.fade = 1;                         // back to the driving view through black
+      if (Cutscene.update(dt)) { if (state.quickStop) swipeOut(); else state.fade = 1; }   // back to the driving view (through the stripes / black)
       return;
     }
     state.stationT += dt;
@@ -283,7 +317,8 @@ const Game = (() => {
   }
 
   function leaveStation() {
-    if (Cutscene.active()) { Cutscene.stop(); state.fade = 1; return; }   // skip the cutscene
+    if (Talk.active()) { Talk.press(); return; }                      // the talk: the line at once / the next one
+    if (Cutscene.active()) { Cutscene.stop(); if (state.quickStop) swipeOut(); else state.fade = 1; return; }   // skip the cutscene
     if (state.stationT < .6) return;
     state.mode = 'leaving';
     Hud.showStationHint(false);
@@ -298,7 +333,7 @@ const Game = (() => {
     stayOnAsphalt();
     state.camX = easeTo(state.camX, 0, dt * 1.6);
     if (Math.abs(state.px) < .12 && Math.abs(state.camX) < .03) {
-      state.mode = 'play';
+      state.mode = 'play'; state.quickStop = false;
       state.nextStop++;                                        // on to the next petrol station
       state.camX = 0;
       Traffic.reset();
@@ -320,6 +355,7 @@ const Game = (() => {
   function updateTutorial(dt) {
     state.speed = easeTo(state.speed, TU.speed, dt * 2);
     state.score = 0;                                          // the intro's distance does not count
+    Biome.setOrigin(state.dist);                              // …and however long it waits, it stays at the start of Prague (the bridge, Pattaya and the stations keep ahead)
     if (state.tutorial === 1 && state.px > TU.reach) { state.tutorial = 2; Hud.showTutorial(2); }
     else if (state.tutorial === 2 && state.px < -TU.reach) {       // done: the counted ride starts here
       state.tutorial = 3;
@@ -455,9 +491,9 @@ const Game = (() => {
 
     if (state.mode === 'checkpoint') { updateCheckpoint(dt); return; }   // world frozen behind the black screen
 
-    if (state.mode !== 'exit') state.fade = Math.max(0, state.fade - dt * 2);   // fade in after the station
+    if (state.mode !== 'exit' && !state.pendingScene) state.fade = Math.max(0, state.fade - dt * 2);   // fade in after the station (and into a scene)
 
-    if (state.mode === 'title') state.dist += 8 * dt;          // slow cruise until the first ride (under the loading screen)
+    if (state.mode === 'title') { state.dist += 8 * dt; Biome.setOrigin(state.dist); }   // slow cruise until the first ride (under the loading screen, the sign-up) – always at the start of Prague
     if (state.mode === 'exit') updateExit(dt);
     if (state.mode === 'station') updateStation(dt);
     if (state.mode === 'leaving') updateLeaving(dt);

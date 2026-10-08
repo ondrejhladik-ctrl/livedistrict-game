@@ -109,7 +109,20 @@ const GameOver = (() => {
   }
   // under the letters on the face: GAME OVER a soft dark shadow (it stands over the
   // picture), HIGH SCORES its green glow (like the canopy's lights)
+  // the letters a little low-res, as the title's: blown up in big pixels from the
+  // game's own 320×180
+  const [chunky, cg] = layer(W / 2, H / 2);
+  function pixelate() {
+    cg.clearRect(0, 0, W / 2, H / 2);
+    cg.imageSmoothingEnabled = true;
+    cg.drawImage(face, 0, 0, W / 2, H / 2);
+    fg.clearRect(0, 0, W * R, H * R);
+    fg.imageSmoothingEnabled = false;
+    fg.drawImage(chunky, 0, 0, W * R, H * R);
+    fg.imageSmoothingEnabled = true;
+  }
   function halo(kind, cap) {
+    pixelate();
     if (!BLUR) return;
     gg.clearRect(0, 0, W / 2, H / 2);
     gg.filter = `blur(${(kind === 'glow' ? 5 : 3) * cap / 74 * 1.6}px)`;

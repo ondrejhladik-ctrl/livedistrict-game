@@ -89,6 +89,7 @@ const CONFIG = {
   exit: {
     at: [300, 1200, 2100],        // metres: a petrol station stop at each of these (the last one in Pattaya)…
     from: 6000, every: 1000,      // …and on the motorway one every `every` metres from `from` on, for ever
+    cut: false,                   // Prague and Pattaya: the turn-off as a cut to the road seen from above (js/ui/swipe.js) – off: driven in as everywhere
     ahead: 26,                    // depth ahead of the car where the forecourt starts
     length: 7,                    // depth of the forecourt
     taper: 3,                     // lane widening before the forecourt

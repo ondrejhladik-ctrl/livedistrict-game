@@ -5,7 +5,7 @@ const Sound = (() => {
   try { muted = localStorage.getItem('znr.muted') === '1'; } catch (e) {}   // remembered between visits
 
   // background beat – loops for as long as the game runs (M or the speaker button mutes it)
-  const music = new Audio('assets/audio/dejavu.mp3');   // Deja vu
+  const music = new Audio('assets/audio/dejavu-instrumental.mp3');   // DEJAVU (instrumental)
   music.loop = true;
   music.volume = .6;
   music.preload = 'auto';
@@ -68,5 +68,31 @@ const Sound = (() => {
   button.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter') e.preventDefault(); });   // Space still starts the game
   showState();
 
-  return { init, engine, crash, toggleMute };
+  // the typewriter (js/ui/talk.js): a key's clack – a short burst of noise, a little
+  // different every time – and the bell at the end of a line
+  let clack = null;
+  function type() {
+    if (!ctx || muted) return;
+    if (!clack) {
+      const len = Math.round(ctx.sampleRate * .045);
+      clack = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = clack.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 4);
+    }
+    const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = clack; src.playbackRate.value = .8 + Math.random() * .5;
+    f.type = 'bandpass'; f.frequency.value = 1800 + Math.random() * 1600; f.Q.value = 1.2;
+    g.gain.value = .5;
+    src.connect(f).connect(g).connect(ctx.destination); src.start();
+  }
+  function ding() {
+    if (!ctx || muted) return;
+    const t = ctx.currentTime, g = ctx.createGain();
+    g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.0005, t + .7);
+    g.connect(ctx.destination);
+    for (const fr of [2093, 4186]) { const o = ctx.createOscillator(); o.frequency.value = fr; o.connect(g); o.start(t); o.stop(t + .7); }
+  }
+  const duck = on => { music.volume = on ? .22 : .6; };
+
+  return { init, engine, crash, toggleMute, type, ding, duck };
 })();

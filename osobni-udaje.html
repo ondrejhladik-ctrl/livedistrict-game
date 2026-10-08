@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>Informace o zpracování osobních údajů a podmínky účasti – CHECKPOINT demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #000; color: #6cb820; font-family: 'VT323', monospace; scrollbar-color: #6cb820 #000; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 20px 80px; font-size: 22px; line-height: 1.35; }
+  a { color: #6cb820; }
+  p { margin: 0 0 .9em; }
+  /* the heading in the game's lettering (css/style.css .lettering): Anton in the neon green,
+     the printed grain boiling on it, a little low-res */
+  h1 {
+    text-transform: uppercase;
+    font-size: calc(2.4 * clamp(14px, 2.4vw, 26px)); margin: 0 0 28px;   /* (as big as the game's LEADERBOARD SIGNUP) */
+    font-family: Anton, Impact, 'Arial Narrow', sans-serif; font-weight: normal; line-height: 1.38;
+    letter-spacing: .06em; padding-left: .06em;
+    padding-top: .3em; margin-top: -.3em; background-origin: content-box;
+    color: transparent;
+    background-image: var(--grain, none), linear-gradient(#6cb820, #6cb820);   /* (no cut across) */
+    background-size: 300px, auto;
+    -webkit-background-clip: text; background-clip: text;
+    image-rendering: pixelated;
+    animation: grain .4s steps(1) infinite;
+    filter: url(#pixelate);
+  }
+  @keyframes grain {
+    0% { background-position: 0 0, 0 0; }
+    25% { background-position: -113px -57px, 0 0; }
+    50% { background-position: -41px -171px, 0 0; }
+    75% { background-position: -187px -89px, 0 0; }
+  }
+</style>
+</head>
+<body>
+<!-- the pixelate filter (as in index.html): the centre of every 3×3 block, grown back over it -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="pixelate" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feFlood x="1" y="1" width="1" height="1"/>
+    <feComposite width="3" height="3"/>
+    <feTile result="grid"/>
+    <feComposite in="SourceGraphic" in2="grid" operator="in"/>
+    <feMorphology operator="dilate" radius="1"/>
+  </filter>
+</svg>
+<main>
+  <h1>Informace o zpracování osobních údajů a podmínky účasti</h1>
+  <p>Poskytnutím své e-mailové adresy a potvrzením souhlasu se zpracováním osobních údajů v registračním rozhraní stvrzujete svou účast v naší hře a udělujete nám souhlas k nakládání s vašimi údaji. Vaše e-mailová adresa slouží jako primární identifikátor nezbytný pro vaši registraci, průběžné sledování vašich herních výsledků a pro zajištění plynulého chodu samotného závodu. V případě vašeho úspěchu či dosažení výherních pozic bude tento kontaktní údaj využit k tomu, abychom vás mohli oficiálně informovat o výsledcích a domluvit s vámi veškeré náležitosti spojené s předáním odměny.</p>
+  <p>Vzhledem k tomu, že je tato hra součástí širšího propojeného ekosystému našich projektů, váš souhlas se vztahuje rovněž na zařazení vaší e-mailové adresy do naší sdílené databáze pro marketingové účely. Správci těchto údajů jsou společně značky BANDITAS (zaměřující se na streetwear a merchandise), Live District (bookingová a eventová agentura) a Spike Prague (specializovaný prodejce limitovaných tenisek a oblečení). Prostřednictvím tohoto souhlasu nám umožňujete zasílat vám občasná obchodní sdělení, informační newslettery a upozornění na exkluzivní novinky. Může se jednat například o včasné informace o nových produktových dropech, limitovaných edicích, plánovaných koncertech či speciálních akcích a nabídkách napříč všemi zmíněnými platformami.</p>
+  <p>K ochraně vašich osobních údajů přistupujeme s maximální zodpovědností. Veškerá data jsou bezpečně uložena v našich interních systémech a chráněna proti neoprávněnému přístupu. Vaše kontaktní údaje v žádném případě neposkytujeme ani neprodáváme třetím stranám mimo výše uvedenou skupinu našich projektů a prověřené partnery zajišťující technický chod našich služeb, s nimiž máme uzavřené příslušné zpracovatelské smlouvy.</p>
+  <p>V souladu s platnými právními předpisy na ochranu osobních údajů (GDPR) si zachováváte plnou kontrolu nad tím, jak jsou vaše data využívána. Máte právo nás kdykoliv požádat o přístup k vašim evidovaným údajům, o jejich opravu nebo o úplné vymazání z naší databáze. Z odběru marketingových a obchodních sdělení se můžete kdykoliv jednoduše a bezplatně odhlásit, a to prostřednictvím odhlašovacího odkazu, který je standardní součástí každého námi odeslaného e-mailu. Případné odvolání souhlasu se zasíláním marketingových zpráv nemá zpětně žádný vliv na platnost vašich herních výsledků ani na případnou výhru v závodu. Kliknutím na příslušné pole v registračním formuláři stvrzujete, že jste se s těmito podmínkami seznámili a v plném rozsahu s nimi souhlasíte.</p>
+</main>
+<script>
+  // the printed grain, as the game makes it (js/ui/intro.js): dark specks, a few light ones
+  (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const g = c.getContext('2d'), id = g.createImageData(256, 256), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = Math.random();
+      if (r < .55) d[i + 3] = Math.random() ** 2 * 120;
+      else if (r > .996) { d[i] = 214; d[i + 1] = 255; d[i + 2] = 200; d[i + 3] = 70; }
+    }
+    g.putImageData(id, 0, 0);
+    document.documentElement.style.setProperty('--grain', `url(${c.toDataURL()})`);
+  })();
+</script>
+</body>
+</html>

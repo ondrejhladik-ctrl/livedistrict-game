@@ -168,8 +168,10 @@ const Renderer = (() => {
     if (Cutscene.active()) {                                         // petrol station cutscene: wide shot from across the road
       View.setLook(0);
       Dev3D.draw(ctx, state, Cutscene.camera(), { sideCar: Cutscene.car(), noTraffic: true });
+      drawFade(state);                                               // (it comes up out of the black)
       return;
     }
+    if (Swipe.active()) { drawRoadCam(state); drawFade(state); return; }   // the turn-off in Prague and Pattaya (js/ui/swipe.js)
     View.setCam(state.camX);                                         // camera follows the car onto the forecourt
     View.setLook(0);
     if (state.shake > 0) {
@@ -179,6 +181,15 @@ const Renderer = (() => {
     drawStreet(state, state.dist);
     drawFade(state);
     Billboards.check(ctx, Rain.mood());                              // (the sharp billboards: where they can be seen)
+  }
+
+  // The camera straight above the road, looking down (Swipe): only the road's lines
+  // rushing past, drifting towards the station's side. Its own colours, like the road in
+  // the street (clean, no dots by day).
+  function drawRoadCam(state) {
+    const d = state.dist + Swipe.travel();
+    Fog.setMix(Biome.mix(d));
+    Style.keep(ctx, () => Road.drawTop(ctx, d, Swipe.drift()), [0, 0, W, H], true, Fog.isDay());
   }
 
   // The street scene seen from depth `dist` (the car's own depth, or the dev

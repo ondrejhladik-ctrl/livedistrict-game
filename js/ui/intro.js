@@ -39,7 +39,7 @@ const Intro = (() => {
     back: [4.6, 6.2],                    // …on the press the word backs off into the distance (the bars and the road stretching after it), into darkness
     end: 6.6,                            // (a moment of darkness, then the game)
   };
-  const SHOW_CAR = false;                // the car's black silhouette rolling in (switched off for now – true brings it back)
+  const SHOW_CAR = true;                 // the car's black silhouette rolling in (false switches it off)
   const SPEED = 8;                       // the road moves like the game's title cruise (depth units a second)
   const REACH = 3.2;                     // how far out the bars reach (times the distance of the word from the vanishing point)
   const GAPS = .35;                      // how much of the light shows in the gaps between the bars (0 = black gaps, 1 = none)
@@ -54,6 +54,18 @@ const Intro = (() => {
   const [near, ng] = layer(W / 2, H / 2);             // …and more so near the viewer
   const [lines, lg] = layer(W / 2, H / 2);            // the road's lines, in the game's pixels
   const [glow, gg] = layer(W / 2, H / 2);             // the letters' glow (half size, it is soft anyway)
+  // the letters a little low-res: shrunk to PIX (the game's own 320×180) and blown up
+  // again in big pixels
+  const PIX = 2, [chunky, cg] = layer(W / PIX, H / PIX);
+  function pixelate() {
+    cg.clearRect(0, 0, W / PIX, H / PIX);
+    cg.imageSmoothingEnabled = true;
+    cg.drawImage(face, 0, 0, W / PIX, H / PIX);
+    fg.clearRect(0, 0, W, H);
+    fg.imageSmoothingEnabled = false;
+    fg.drawImage(chunky, 0, 0, W, H);
+    fg.imageSmoothingEnabled = true;
+  }
 
   // The word lights up like the panels under the petrol station's canopy
   // (js/world/station.js): a soft glow around it (it does not flicker).
@@ -161,6 +173,7 @@ const Intro = (() => {
       fg.fillStyle = INK;
       fg.fillRect(0, base - DATE.cap * .3, W, 2.6);
       fg.restore();
+      pixelate();
       ctx.drawImage(face, 0, 0);
       if (BLUR) {                                                      // the glow
         gg.clearRect(0, 0, W / 2, H / 2);
@@ -233,6 +246,7 @@ const Intro = (() => {
       fg.fillRect(-2, -CAP * .3, l.w + 4, 2.2);
       fg.restore();
     });
+    pixelate();
     // 2) the bars: every letter's foot drawn out from the vanishing point towards
     // the viewer (each run of it sweeps out a clean trapezoid)
     bg.clearRect(0, 0, W / 2, H / 2);

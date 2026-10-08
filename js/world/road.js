@@ -32,7 +32,7 @@ const Road = (() => {
     edge: '#f2f2ea',
   };
   const TILE = .5;                      // depth of one row of paving tiles (road units)
-  const DECK = 1.42;                    // outer edge of the bridge deck
+  const DECK = 2.12;                    // outer edge of the bridge deck (as wide as the street with its pavements)
   // water and bridge colours: Prague night → Pattaya day
   const WATER = [[8, 26, 32], [58, 160, 112]], GLINT = [[46, 88, 98], [196, 244, 200]], EDGE = [[40, 44, 56], [140, 168, 132]];
   const hash = n => { const s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); };
@@ -192,5 +192,42 @@ const Road = (() => {
     fog(z, y);
   }
 
-  return { draw, crest, top: () => top };
+  // The road from straight above (Swipe's camera): the screen's rows are depths (the
+  // far end at the top), across it the road's x - edges, kerbs, lane lines, the side
+  // road to a petrol station - in each biome's colours. drift: px sideways.
+  const TOP_HW = 64, TOP_PX = 16;                                    // px per road half-width; px per depth unit
+  function drawTop(ctx, dist, drift = 0) {
+    const cx = W / 2 + drift, lw = Math.max(1, Math.round(.03 * TOP_HW)) + 1;
+    const X = u => Math.round(cx + u * TOP_HW);
+    const span = (a, b, y, col) => Util.rect(ctx, X(a), y, X(b) - X(a), 1, col);
+    for (let y = 0; y < H; y++) {
+      const wz = dist + (H - y) / TOP_PX, band = Math.floor(wz / 3) % 2, zone = Biome.zone(wz);
+      if (zone === 'highway') {
+        Util.rect(ctx, 0, y, W, 1, HIGHWAY.grass[band]);
+        span(-1.08, 1.08, y, HIGHWAY.shoulder);
+        span(-1, 1, y, HIGHWAY.asphalt[band]);
+      } else if (zone === 'bridge') {
+        Util.rect(ctx, 0, y, W, 1, '#0b1d24');
+        span(-DECK, DECK, y, '#2c2f3e');
+        span(-R.kerb, R.kerb, y, C.kerb[band]);
+        span(-1, 1, y, C.asphalt[band]);
+      } else {
+        const P = zone === 'thai' ? THAI : C, tile = Math.floor(wz / TILE);
+        Util.rect(ctx, 0, y, W, 1, P.ground);
+        span(-R.pavement, R.pavement, y, wz - tile * TILE < .06 ? P.joint : P.paving[tile % 2]);
+        span(-R.kerb, R.kerb, y, P.kerb[band]);
+        span(-1, 1, y, P.asphalt[band]);
+      }
+      const P = zone === 'highway' ? HIGHWAY : zone === 'thai' ? THAI : C;
+      const r = Exit.reach(wz), side = Exit.state.side;               // the side road to the station
+      if (r) {
+        const out = r > 50 ? side * 4 : side * r;
+        span(Math.min(side * .96, out), Math.max(side * .96, out), y, P.asphalt[band]);
+      }
+      if (wz % 4 < 2) for (const lx of [-1 / 3, 1 / 3]) Util.rect(ctx, X(lx) - lw / 2, y, lw, 1, P.dash);
+      for (const ex of [-.96, .96]) if (!(r && Math.sign(ex) === side)) Util.rect(ctx, X(ex) - lw / 2, y, lw, 1, P.edge);
+    }
+  }
+
+  return { draw, drawTop, crest, top: () => top };
 })();

@@ -20,6 +20,31 @@ const Account = (() => {
     error: $('acc-error'), submit: $('acc-submit'), offline: $('acc-offline'), skip: $('acc-skip'),
     who: $('acc-who'), boards: [$('board-title'), $('board-over')].filter(Boolean),   // (the title screen has none now)
   };
+  // the horse from the logo, for the field being typed in (css: --horse)
+  if (typeof CHECKPOINT_HORSE_IMAGE !== 'undefined') {
+    document.documentElement.style.setProperty('--horse', `url(${CHECKPOINT_HORSE_IMAGE})`);
+    // …and its day version (the HUD in Pattaya, on the motorway – css --horse-day): the body
+    // black, its outline (the lime rim and the dark line inside it) lime
+    const im = new Image();
+    im.onload = () => {
+      const w = im.width, h = im.height, c = Util.canvas(w, h), g = c.getContext('2d');
+      g.drawImage(im, 0, 0);
+      const id = g.getImageData(0, 0, w, h), d = id.data, R = 4;
+      const solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > 0;
+      const out = new Uint8ClampedArray(d);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (!d[i + 3]) continue;
+        let edge = false;
+        for (let dy = -R; dy <= R && !edge; dy++) for (let dx = -R; dx <= R; dx++) if (!solid(x + dx, y + dy)) { edge = true; break; }
+        const [r, gg, b] = edge ? [129, 187, 41] : [10, 8, 6];
+        out[i] = r; out[i + 1] = gg; out[i + 2] = b;
+      }
+      id.data.set(out); g.putImageData(id, 0, 0);
+      document.documentElement.style.setProperty('--horse-day', `url(${c.toDataURL()})`);
+    };
+    im.src = CHECKPOINT_HORSE_IMAGE;
+  }
   const NICK_RE = /^[\p{L}\p{N} _.\-]{2,16}$/u, EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   const ERRORS = {
     nickname_taken: 'Tahle přezdívka už je zabraná, vyber jinou.',
@@ -89,7 +114,7 @@ const Account = (() => {
     const fail = msg => { el.error.textContent = msg; };
     if (!NICK_RE.test(nick)) return fail(ERRORS.bad_nickname);
     if (!EMAIL_RE.test(email)) return fail(ERRORS.bad_email);
-    if (!el.consent.checked) return fail(ERRORS.no_consent);
+    if (!el.consent.checked) { el.consent.parentElement.classList.add('missing'); return fail(ERRORS.no_consent); }
     el.submit.disabled = true; fail('');
     try {
       const out = server() ? await call('POST', '/api/register', { nickname: nick, email, consent: true })
@@ -195,6 +220,28 @@ const Account = (() => {
 
   // ---------- wiring ----------
   el.form.addEventListener('submit', register);
+  el.consent.addEventListener('change', () => { el.consent.parentElement.classList.remove('missing'); if (el.consent.checked && el.error.textContent === ERRORS.no_consent) el.error.textContent = ''; });
+  // The conditions (the text, or the box while it is not ticked) open over the form;
+  // "souhlasím" ticks the consent, "nesouhlasím" clears it – both back to the form
+  // (without the tick the game does not go on: register()).
+  const terms = { box: $('terms'), scroll: document.querySelector('#terms .terms-scroll'), yes: $('terms-yes'), no: $('terms-no') };
+  function showTerms(visible) {
+    terms.box.classList.toggle('hidden', !visible);
+    if (visible) { terms.scroll.scrollTop = 0; terms.yes.focus({ preventScroll: true }); }
+  }
+  function answer(yes) {
+    el.consent.checked = yes;
+    el.consent.dispatchEvent(new Event('change'));
+    showTerms(false);
+  }
+  const terms0 = $('acc-terms');
+  terms0.addEventListener('pointerdown', e => e.stopPropagation());
+  terms0.addEventListener('click', e => { e.preventDefault(); showTerms(true); });
+  el.consent.addEventListener('click', e => { if (el.consent.checked) { e.preventDefault(); showTerms(true); } });   // (ticking it: through the conditions; unticking: at once)
+  terms.box.addEventListener('pointerdown', e => e.stopPropagation());   // (taps here are not steering / start)
+  terms.box.addEventListener('keydown', e => e.stopPropagation());
+  terms.yes.addEventListener('click', () => answer(true));
+  terms.no.addEventListener('click', () => answer(false));
   el.form.addEventListener('pointerdown', e => e.stopPropagation());   // taps on the form are not steering / start
   el.offline.addEventListener('click', e => { e.preventDefault(); offline = true; closeForm(); });
   el.skip.addEventListener('click', e => { e.preventDefault(); closeForm(); });   // optional: play without signing up
