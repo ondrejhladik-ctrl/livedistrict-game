@@ -2,6 +2,8 @@
 // Browsers only allow audio after a user gesture, so init() is called on game start.
 const Sound = (() => {
   let ctx = null, osc, gain, muted = false;
+  let musicGain = null, ducked = 0;                                   // (the music through the engine: its volume eased – ducked: 0 … 1)
+  const MUSIC = .6, DUCKED = .18;                                     // the music's volume; how much of it is left under a cutscene
   try { localStorage.removeItem('znr.muted'); } catch (e) {}           // (no longer remembered: with no speaker button a muted visit could never get its sound back – the M key mutes for this visit)
 
   // background beat – loops for as long as the game runs (M or the speaker button mutes it)
@@ -24,6 +26,13 @@ const Sound = (() => {
       gain = ctx.createGain(); gain.gain.value = 0;
       osc.connect(filter).connect(gain).connect(ctx.destination);
       osc.start();
+      // the music through the engine too, so that its volume can be eased (phones – iPhones – do not
+      // let a page set an audio element's volume)
+      if (/^https?:$/.test(location.protocol)) try {                 // (not from a file: there the browser would silence it)
+        musicGain = ctx.createGain(); musicGain.gain.value = MUSIC * (1 - ducked * (1 - DUCKED));
+        ctx.createMediaElementSource(music).connect(musicGain).connect(ctx.destination);
+        music.volume = 1;
+      } catch (e) { musicGain = null; }
       voices.forEach(v => v.decode());
     } catch (e) { ctx = null; }
   }
@@ -40,7 +49,7 @@ const Sound = (() => {
   // quiet engine hum under the music
   function engine(running, speed) {
     if (!ctx) return;
-    gain.gain.setTargetAtTime(running && !muted ? .018 : 0, ctx.currentTime, .05);
+    gain.gain.setTargetAtTime(running && !muted ? .018 * (1 - ducked * .8) : 0, ctx.currentTime, .05);
     osc.frequency.setTargetAtTime(38 + speed * 3.2, ctx.currentTime, .1);
   }
 
@@ -124,7 +133,30 @@ const Sound = (() => {
     g.connect(ctx.destination);
     for (const fr of [2093, 4186]) { const o = ctx.createOscillator(); o.frequency.value = fr; o.connect(g); o.start(t); o.stop(t + .7); }
   }
-  const duck = on => { music.volume = on ? .22 : .6; };
+  // the game quieter under a cutscene: the music (and the engine's hum) eased down over `slow` seconds
+  // – and back up after it
+  let duckRaf = 0;
+  function duck(on, slow = 1.6) {
+    const target = on ? 1 : 0;
+    if (ducked === target && !duckRaf) return;
+    const level = d => MUSIC * (1 - d * (1 - DUCKED));
+    if (musicGain && ctx) {
+      ducked = target;
+      const g = musicGain.gain, now = ctx.currentTime;
+      g.cancelScheduledValues(now); g.setValueAtTime(g.value, now);
+      g.linearRampToValueAtTime(level(target), now + slow);
+      return;
+    }
+    cancelAnimationFrame(duckRaf);                                    // (no engine: the element's volume, eased frame by frame)
+    const from = ducked, t0 = performance.now();
+    const step = now => {
+      const u = Math.min(1, (now - t0) / 1000 / slow);
+      ducked = from + (target - from) * u;
+      try { music.volume = level(ducked); } catch (e) {}
+      duckRaf = u < 1 ? requestAnimationFrame(step) : 0;
+    };
+    duckRaf = requestAnimationFrame(step);
+  }
 
   // a voice track (the cutscenes' dubbing, js/ui/talk.js): an audio element, played if not muted
   // (loaded at once, decoded once the engine is there; played by the engine – it may start any time
@@ -164,5 +196,5 @@ const Sound = (() => {
     return v;
   }
 
-  return { init, engine, crash, toggleMute, type, ding, duck, voice, muted: () => muted, playing: () => !music.paused, state: () => ({ ctx: ctx ? ctx.state : null, voices: voices.map(v => +v.time().toFixed(2)) }) };
+  return { init, engine, crash, toggleMute, type, ding, duck, voice, muted: () => muted, playing: () => !music.paused, state: () => ({ ctx: ctx ? ctx.state : null, voices: voices.map(v => +v.time().toFixed(2)), music: +(musicGain ? musicGain.gain.value : music.volume).toFixed(3), via: musicGain ? 'engine' : 'element' }) };
 })();

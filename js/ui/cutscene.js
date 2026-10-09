@@ -173,8 +173,8 @@ const Cutscene = (() => {
     hud.classList.toggle('hidden', on);
     canvas.classList.toggle('hidden', !on);
   }
-  function start(s = 0) { shot = 0; t = 0; score = Math.floor(s); show(true); draw(); }
-  function stop() { if (shot < 0) return; shot = -1; show(false); }
+  function start(s = 0) { shot = 0; t = 0; score = Math.floor(s); show(true); draw(); Sound.duck(true); }
+  function stop() { if (shot < 0) return; shot = -1; show(false); Sound.duck(false); }
 
   // returns true when it has just ended
   function update(dt) {

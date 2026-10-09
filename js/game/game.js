@@ -60,6 +60,7 @@ const Game = (() => {
     Track.reset();                                           // a new road with new curves
     Exit.reset();
     Cutscene.stop(); Talk.stop(); Swipe.stop();
+    Sound.duck(false, .4);                                            // (a new ride: the music up again, whatever was on)
     Hud.showStationHint(false);
     Traffic.reset();
     Puddles.reset();
@@ -251,6 +252,7 @@ const Game = (() => {
   function toScene() {
     state.mode = 'station'; state.stationT = 0; state.speed = 0;
     state.pendingScene = true;
+    Sound.duck(true);                                                 // (the game quietens as the picture goes to black)
   }
   function startScene() {
     state.pendingScene = false;

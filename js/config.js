@@ -18,14 +18,14 @@ const CONFIG = {
     roadEdge: .76,                // beyond this the car starts leaving the road
     offroadSpeed: .6,             // speed multiplier while off the road
     pavement: 1.8,                // the car may drive up onto the pavement this far (the houses start at 2.1)
-    pavementTime: 3,              // seconds on the pavement before the car is steered back by itself
+    pavementTime: 1,              // seconds on the pavement before the car is steered back by itself (only a moment: no riding round the traffic there)
     returnTo: .72,                // where it is brought back to (the outer lane)
     steerSpeed: 2.2,              // sideways speed at full yaw (road units / s)
     yawResponse: 6,               // how fast the car turns in/out (higher = snappier)
     laneView: 2,                  // how much the car looks turned to the centre in a side lane
   },
 
-  speed: { start: 8, max: 27.2, accel: .112, toKmh: 7 },   // (20 % slower than the original 10 / 34 / .28; accel halved: full speed after ~3 min instead of ~1.5)
+  speed: { start: 8, max: 23.4, accel: .112, toKmh: 7 },   // (the top speed later on 14 % lower than it was – 27.2; the start as before: full speed after ~2.3 min)
 
   // slow intro before the first run: grey picture, "→" then "←", then the colours come back
   tutorial: {
@@ -45,7 +45,7 @@ const CONFIG = {
     minGap: 6,                    // min depth gap to the last car in the same lane
     keepDistance: 3,              // cars slow down behind a slower car in lane
     firstSpawn: .4,
-    interval: { start: 1, min: .3, decay: .012 },
+    interval: { start: 1.4, min: .55, decay: .01 },   // seconds between new cars: at first, at least (later on), how fast it shortens – lighter traffic than it was (1 / .3 / .012)
     hitDepth: .55,                // collision: depth overlap …
     hitWidth: .44,                // … and sideways overlap
     lightsOnZ: 9,                 // closer than this a car switches its lights on
