@@ -52,6 +52,10 @@ const CONFIG = {
   },
 
   city: { aheadZ: 50, drawZ: 46 },
+  // phones and tablets (a touch screen): lighter drawing – the houses only as far as the fog leaves
+  // anything of them (drawZ; beyond it they are under ~96 % fog), their details (windows, shutters,
+  // balconies) only from this many screen px per floor on (detailPx; a computer: 2)
+  lite: { on: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches, drawZ: 37, detailPx: 3.5 },
 
   checkpoint: {
     enabled: false,               // checkpoints are switched off for now

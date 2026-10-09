@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
+<script>
+  // WebKit (every browser on iPhones and iPads, and Safari): its SVG filters on the page's elements
+  // garble them (the lettering's pixelating, the sign-up TV's bulge) – css: html.webkit leaves them out.
+  // Phones and tablets: html.touch. An iPhone without the fullscreen API: html.ios
+  (() => {
+    const ua = navigator.userAgent, h = document.documentElement;
+    const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (ios || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|Android/.test(ua))) h.classList.add('webkit');
+    if (ios) h.classList.add('ios');
+    if (matchMedia('(pointer: coarse)').matches) h.classList.add('touch');
+  })();
+</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
@@ -12,7 +24,7 @@
 <title>CHECKPOINT demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261009fs2">
+<link rel="stylesheet" href="css/style.css?v=20261009ios3">
 </head>
 <body>
 <!-- pixelate filter for the lettering (css: .lettering) – the centre of every 3×3 block, grown back over it -->
@@ -107,6 +119,8 @@
       <button id="acc-skip" type="button">PŘESKOČIT</button>
       <!-- phones: the game on the whole screen (js/ui/account.js – shown only where the browser can do it) -->
       <button id="acc-full" type="button" class="hidden" aria-label="Celá obrazovka"><svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h4v1H1v3H0zM8 0h4v4h-1V1H8zM0 8h1v3h3v1H0zM11 8h1v4H8v-1h3z"/></svg>CELÁ OBRAZOVKA</button>
+      <!-- iPhones (no fullscreen for pages): how to get the game on the whole screen -->
+      <div id="acc-full-hint" class="hidden">Na iPhonu: klepni na <b>Sdílet</b> <svg viewBox="0 0 12 14" aria-hidden="true"><path d="M5 0h2v1h1v1h1v1H7v6H5V3H3V2h1V1h1zM1 5h3v1H2v6h8V6H8V5h3v8H1z"/></svg> a pak <b>Přidat na plochu</b>. Hra se z ikony otevře přes celou obrazovku.</div>
     </div>
     <!-- the conditions of the sign-up (js/ui/account.js): agreeing ticks the consent, not agreeing clears it – both back to the form -->
     <div id="terms" class="overlay terms hidden" role="dialog" aria-modal="true" aria-labelledby="terms-title">
@@ -166,7 +180,7 @@
 
 <!-- Load order matters: each file only uses what is loaded above it
      (or calls it later, at runtime). -->
-<script src="js/config.js?v=20261008ns"></script>
+<script src="js/config.js?v=20261009lite"></script>
 <script src="js/util.js?v=20261004hw"></script>
 <script src="js/assets/loading-car-image.js?v=20260930c"></script>
 <script src="js/assets/tower-image.js?v=20260930c"></script>
@@ -181,7 +195,7 @@
 <script src="js/world/road.js?v=20261008n"></script>
 <script src="js/assets/gasoline-shield-image.js?v=20261002zd"></script>
 <script src="js/assets/billboard-images.js?v=20261004hg"></script>
-<script src="js/world/city.js?v=20261004opt"></script>
+<script src="js/world/city.js?v=20261009lite"></script>
 <script src="js/world/rain.js?v=20261004sb"></script>
 <script src="js/world/lamps.js?v=20261003c"></script>
 <script src="js/assets/tour-sign-image.js?v=20261002d"></script>
@@ -204,21 +218,21 @@
 <script src="js/ui/gameover.js?v=20261006px"></script>
 <script src="js/ui/led.js?v=20261008b"></script>
 <script src="js/ui/loading.js?v=20261008dive"></script>
-<script src="js/ui/account.js?v=20261009fs"></script>
+<script src="js/ui/account.js?v=20261009ios2"></script>
 <script src="js/ui/input.js?v=20261003l"></script>
-<script src="js/ui/audio.js?v=20261009dub"></script>
+<script src="js/ui/audio.js?v=20261009mu"></script>
 
 <script src="js/game/traffic.js?v=20260930c"></script>
 <script src="js/game/particles.js?v=20261008g"></script>
 <script src="js/game/puddles.js?v=20260930c"></script>
 <script src="js/ui/cutscene.js?v=20261008logo6"></script>
 <script src="js/ui/swipe.js?v=20261006td"></script>
-<script src="js/ui/talk.js?v=20261009dub"></script>
+<script src="js/ui/talk.js?v=20261009t"></script>
 <script src="js/game/game.js?v=20261008logo"></script>
 <script src="js/ui/devmode.js?v=20260930c"></script>
 <script src="js/ui/dev3d.js?v=20261004tw"></script>
 <script src="js/ui/style.js?v=20261004tr"></script>
 <script src="js/render.js?v=20261008ns"></script>
-<script src="js/main.js?v=20261004sb"></script>
+<script src="js/main.js?v=20261009ios"></script>
 </body>
 </html>

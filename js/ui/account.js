@@ -377,17 +377,22 @@ const Account = (() => {
   // phones: the game on the whole screen (and turned to landscape where it can be locked) – the button
   // only where the browser can do it (not on iPhones), and gone once it is so
   const full = $('acc-full'), root = document.documentElement;
-  const canFull = !!(root.requestFullscreen || root.webkitRequestFullscreen) && matchMedia('(pointer: coarse)').matches;
+  const fsApi = !!(root.requestFullscreen || root.webkitRequestFullscreen), touch = matchMedia('(pointer: coarse)').matches;
+  const homeScreen = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;   // (opened from the home screen: whole already)
+  const canFull = touch && !homeScreen && (fsApi || root.classList.contains('ios')), hint = $('acc-full-hint');
   const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
   const showFull = () => full && full.classList.toggle('hidden', !canFull || isFull());
   if (full) {
     full.addEventListener('pointerdown', e => e.stopPropagation());
     full.addEventListener('click', e => {
       e.preventDefault();
+      if (!fsApi) { if (hint) hint.classList.toggle('hidden'); return; }  // (an iPhone: how to do it instead)
+      const failed = () => { if (hint && !isFull()) hint.classList.remove('hidden'); };   // (refused: how to do it instead)
       try {
         const p = (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: 'hide' });
-        if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {});
-      } catch (err) {}
+        if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(failed);
+        else setTimeout(failed, 500);
+      } catch (err) { failed(); }
     });
     document.addEventListener('fullscreenchange', showFull);
     document.addEventListener('webkitfullscreenchange', showFull);

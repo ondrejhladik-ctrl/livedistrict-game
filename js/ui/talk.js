@@ -55,7 +55,7 @@ const Talk = (() => {
       { text: 'tak kolik dáme tracků na to album ?', bg: 'bg-lboy', pose: ['lboy-talk', 'lboy-smoke'], box: 'box-a' },
       { text: 'kámo, drive by mělo 14...', bg: 'bg-dori', pose: ['water-up', 'water-drink'], box: 'box-b' },
       { text: 'chekpoint dáme 15 tracků', bg: 'bg-dori', pose: ['water-down', 'water-down'], box: 'box-c' },
-      { text: 'okay jedeme', bg: 'end-bg', pose: ['end-legs', 'end-legs'], box: 'box-a', rows: ['okay jedeme'], drop: 'end-butt' },
+      { bg: 'end-bg', pose: ['end-legs', 'end-legs'], box: 'box-a', rows: ['to zní', 'docela dobře.'], drop: 'end-butt' },
     ],
     prague2: [                                                         // (the second petrol station)
       { bg: 'bg-dori', pose: ['dori-talk', 'dori-smoke'], box: 'box-b', rows: ['nechceš se', 'prohodit ?'] },

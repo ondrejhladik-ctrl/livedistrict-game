@@ -150,6 +150,13 @@ body.raster .dots { display: block; }
 }
 #acc-full svg { height: .9em; width: .9em; fill: currentColor; }
 #acc-full.hidden { display: none; }
+#acc-full-hint {                    /* (iPhones) under the button: how to get the game on the whole screen */
+  position: absolute; top: calc(3% + 1.8em); left: 2.5%; z-index: 36; max-width: 22em; text-align: left;
+  font-size: .8em; line-height: 1.35; color: var(--neon); background: rgba(0, 0, 0, .9); padding: .6em .8em;
+  border-left: 2px solid var(--neon);
+}
+#acc-full-hint svg { height: .95em; width: .85em; fill: currentColor; vertical-align: -.1em; }
+#acc-full-hint.hidden { display: none; }
 #account.diving #acc-full { visibility: hidden; }
 #acc-skip {                        /* white, in the top right corner of the screen (the speaker is in the bottom one) */
   position: absolute; right: 2.5%; top: 3%; z-index: 36; text-shadow: 1px 1px 0 #000, 0 0 4px #000;
@@ -164,6 +171,9 @@ body.raster .dots { display: block; }
   outline: none; user-select: text; -webkit-user-select: text; touch-action: auto; border-radius: 0;
 }
 #acc-form input::placeholder { color: #2f6a18; }
+/* phones: the dim greens a little lighter (on a small, bright-lit screen they were hard to read) */
+.touch #acc-form input::placeholder, .touch .acc-consent { color: #4a9a22; }
+.touch .acc-consent input { background: #4a9a22; }
 /* the browser's autofill (and its preview): no white or blue box – black with the
    neon text like a typed value (the inset shadow paints over the browser's colour;
    the long transition keeps it from ever fading in) */
@@ -236,6 +246,8 @@ body.raster .dots { display: block; }
   background: #000;
   filter: url(#crt-bulge);           /* (everything on it bulging with the glass) */
 }
+/* WebKit: no SVG clip or bulge (it garbles them) – the glass's rounded corners only */
+.webkit .crt-screen { clip-path: none; filter: none; border-radius: 2.4em / 3em; overflow: hidden; }
 /* faint green lines over the whole glass, all the time (its shape showing on the black) */
 .crt-screen::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
@@ -357,6 +369,7 @@ body.raster .dots { display: block; }
 .lettering.solid { background-image: var(--grain, none), linear-gradient(#6cb820, #6cb820); }
 /* the lettering a little low-res, like the title sequence's (the SVG filter in index.html) */
 .lettering { filter: url(#pixelate); }
+.webkit .lettering { filter: none; }                               /* (WebKit garbles the SVG filter: the lettering without its pixelating) */
 @keyframes grain {
   0% { background-position: 0 0, 0 0; }
   25% { background-position: -113px -57px, 0 0; }

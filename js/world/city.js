@@ -19,6 +19,8 @@ const City = (() => {
   ]);
   const ROOFS = ['#15151e', '#101018', '#17172a', '#121220'];
   const FLOOR = .5, NEAR = .2;
+  const LITE = CONFIG.lite.on, DETAIL = LITE ? CONFIG.lite.detailPx : 2;   // (phones: the details only on nearer houses)
+  if (LITE) CONFIG.city.drawZ = Math.min(CONFIG.city.drawZ, CONFIG.lite.drawZ);
   const WIN = .42;                                    // window spacing along the street
   const SIGN_MIN_FLOORS = 6, SIGN_CHANCE = .45;       // which buildings get the green sign
   const LIT = ['#a6e83a', '#4f7a1c', '#6cb820'];      // lit window: neon green, dim green, mid green
@@ -453,7 +455,7 @@ const City = (() => {
 
     // street facade: plaster, a band over the shops, windows, the cornice
     strip(z0, z1, 0, b.height, b.wall);
-    if (floorH > 2) {
+    if (floorH > DETAIL) {
       strip(z0, z1, FLOOR - .05, FLOOR, b.frame);
       for (let f = 0; f < b.floors; f++) for (let c = 0; c < b.cols; c++) {
         const col = b.windows[f * b.cols + c], cz = z0 + .1 + c * cw;
@@ -564,7 +566,7 @@ const City = (() => {
       ctx.fill();
     };
     const bands = (list, fill) => quads(list.map(([ya, yb]) => [0, b.depth, ya, yb]), fill);
-    const fpx = FH * View.K / zn, step = fpx >= 3.5 ? 1 : fpx >= 2 ? 2 : 0;   // the floors on screen: all, every other one, none (far off: plain walls)
+    const fpx = FH * View.K / zn, step = fpx >= 3.5 ? 1 : fpx >= DETAIL ? 2 : 0;   // the floors on screen: all, every other one, none (far off: plain walls)
     const floors = (from, to) => { const l = []; if (step) for (let f = 1; f < b.floors; f += step) l.push([(f + from) * FH, (f + to) * FH]); return l; };
     const lime = along(LIME, LIME_FAR);
     if (b.style === 'white') {                                        // white, dark windows, balconies of lime glass
@@ -626,11 +628,11 @@ const City = (() => {
   function drawThai(ctx, b, z0, z1, zn, floorH, X, poly, strip) {
     const cw = (b.depth - .2) / b.cols, FH = b.FH;
     strip(z0, z1, 0, b.height, b.wall);
-    if (floorH > 2) {
+    if (floorH > DETAIL) {
       for (let c = 0; c < b.cols; c++) {                               // ground floor
         const cz = z0 + .1 + c * cw;
         strip(cz + cw * .06, cz + cw * .94, .02, FH * .74, b.shops[c]);
-        if (floorH > 5) for (let y = .1; y < FH * .7; y += .09) strip(cz + cw * .06, cz + cw * .94, y, y + .02, 'rgba(0,0,0,.15)');   // shutter ribs
+        if (floorH > (LITE ? 8 : 5)) for (let y = .1; y < FH * .7; y += .09) strip(cz + cw * .06, cz + cw * .94, y, y + .02, 'rgba(0,0,0,.15)');   // shutter ribs
         strip(cz, cz + cw, FH * .74, FH * .86, b.awnings[c]);
       }
       for (let f = 1; f < b.floors; f++) {
@@ -664,7 +666,7 @@ const City = (() => {
     if (z0 < NEAR) return;
     const xo = b.inner + b.width, face = (ya, yb, c) => poly([[b.inner, ya, z0], [xo, ya, z0], [xo, yb, z0], [b.inner, yb, z0]], c);
     face(0, b.height, b.front);
-    if (floorH > 2) for (let f = 1; f < b.floors; f++) face(f * FH - .02, f * FH + .04, b.trim);
+    if (floorH > DETAIL) for (let f = 1; f < b.floors; f++) face(f * FH - .02, f * FH + .04, b.trim);
     face(b.height - .05, b.height, b.trim);
     face(0, b.height, Fog.color(z0));
   }
@@ -672,7 +674,7 @@ const City = (() => {
   function drawModern(ctx, b, z0, z1, zn, floorH, X, poly, strip) {
     const cw = (b.depth - .2) / b.cols;
     strip(z0, z1, 0, b.height, b.wall);
-    if (floorH > 2) {
+    if (floorH > DETAIL) {
       for (let f = 1; f < b.floors; f++) {
         const y = f * FLOOR, ya = y + .1, yb = y + .42;
         strip(z0, z1, y - .025, y + .025, LINE);                          // floor slab
@@ -707,7 +709,7 @@ const City = (() => {
     if (z0 < NEAR) return;
     const xo = b.inner + b.width, face = (ya, yb, c) => poly([[b.inner, ya, z0], [xo, ya, z0], [xo, yb, z0], [b.inner, yb, z0]], c);
     face(0, b.height, b.front);
-    if (floorH > 2) for (let f = 1; f < b.floors; f++) face(f * FLOOR - .025, f * FLOOR + .025, LINE);
+    if (floorH > DETAIL) for (let f = 1; f < b.floors; f++) face(f * FLOOR - .025, f * FLOOR + .025, LINE);
     face(b.height - .04, b.height, LINE);
     face(0, b.height, Fog.color(z0));
     if (b.sign) {

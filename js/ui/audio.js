@@ -2,7 +2,7 @@
 // Browsers only allow audio after a user gesture, so init() is called on game start.
 const Sound = (() => {
   let ctx = null, osc, gain, muted = false;
-  try { muted = localStorage.getItem('znr.muted') === '1'; } catch (e) {}   // remembered between visits
+  try { localStorage.removeItem('znr.muted'); } catch (e) {}           // (no longer remembered: with no speaker button a muted visit could never get its sound back – the M key mutes for this visit)
 
   // background beat – loops for as long as the game runs (M or the speaker button mutes it)
   const music = new Audio('assets/audio/dejavu-instrumental.mp3');   // DEJAVU (instrumental)
@@ -41,6 +41,15 @@ const Sound = (() => {
     src.buffer = buf; src.connect(g).connect(ctx.destination); src.start();
   }
 
+  // phones (iPhones above all) only let sound start from some touches (the end of a tap, not its
+  // start): once the game has started, any tap or click starts the music if it is not playing yet
+  const unlock = () => {
+    if (!ctx || muted || document.hidden) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    if (music.paused) music.play().catch(() => {});
+  };
+  for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, unlock, true);
+
   // phones: pause the music when the app goes to the background, resume on return
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) music.pause();
@@ -56,7 +65,6 @@ const Sound = (() => {
   }
   function toggleMute() {
     muted = !muted;
-    try { localStorage.setItem('znr.muted', muted ? '1' : '0'); } catch (e) {}
     if (muted) music.pause();
     else if (ctx) music.play().catch(() => {});   // only resume once the game has been started
     if (ctx) gain.gain.setTargetAtTime(0, ctx.currentTime, .02);
@@ -101,5 +109,5 @@ const Sound = (() => {
     return { play: (at = 0) => { try { a.currentTime = at; } catch (e) {} if (!muted) a.play().catch(() => {}); }, stop: () => a.pause(), time: () => a.currentTime, playing: () => !a.paused && !a.ended, ended: () => a.ended, length: () => a.duration || 0 };
   }
 
-  return { init, engine, crash, toggleMute, type, ding, duck, voice, muted: () => muted };
+  return { init, engine, crash, toggleMute, type, ding, duck, voice, muted: () => muted, playing: () => !music.paused };
 })();
