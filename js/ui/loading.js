@@ -271,6 +271,21 @@ const Loading = (() => {
   }
 
   const blit = () => ctx.drawImage(buf, 0, 0, canvas.width, canvas.height);
+  // a faint LED panel over the skyline (as the boys' talk, js/ui/led.js): coming up from the bottom
+  // when the screen comes, bands going up it, flickering – on its own canvas, as sharp as the screen
+  const LED_ALPHA = .3, ledCanvas = document.getElementById('loading-led'), ledCtx = ledCanvas.getContext('2d'), led = Led.panel();
+  let ledW = -1, ledH = -1;
+  if (typeof ResizeObserver !== 'undefined')
+    new ResizeObserver(es => { const r = es[es.length - 1].contentRect; ledW = r.width; ledH = r.height; }).observe(ledCanvas);
+  function drawLed(t) {
+    let cw = ledW, ch = ledH;
+    if (cw < 0) { const r = ledCanvas.getBoundingClientRect(); cw = r.width; ch = r.height; }
+    const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(cw * dpr), h = Math.round(ch * dpr);
+    if (!w || !h) return;
+    if (ledCanvas.width !== w || ledCanvas.height !== h) { ledCanvas.width = w; ledCanvas.height = h; }
+    ledCtx.clearRect(0, 0, w, h);
+    led.draw(ledCtx, canvas, w, h, dpr, t, LED_ALPHA, 'skyline');
+  }
 
   // one layer of houses, moved to the left in a loop, with its blinking warning lights
   // a board shrunk to a width (cached; the boards are rebuilt once the font and
@@ -358,6 +373,7 @@ const Loading = (() => {
       draw(t);
       blit();
       Raster.loading.render();
+      if (!intro) drawLed(t);                                          // (behind the sign-up: not needed)
     }
     requestAnimationFrame(frame);
   }
@@ -380,6 +396,8 @@ const Loading = (() => {
   }
   function startIntro() {
     intro = 'font';
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);   // (black till it starts: after the dive into the TV, not the skyline again)
+    Raster.loading.render();
     const font = document.fonts ? document.fonts.load(`74px ${Intro.font}`) : Promise.resolve();
     Promise.race([font, new Promise(ok => setTimeout(ok, 1500))]).catch(() => {}).then(() => {
       intro = 'running';

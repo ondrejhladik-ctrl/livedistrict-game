@@ -12,11 +12,21 @@
 <title>CHECKPOINT demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261008ts">
+<link rel="stylesheet" href="css/style.css?v=20261008logo">
 </head>
 <body>
 <!-- pixelate filter for the lettering (css: .lettering) – the centre of every 3×3 block, grown back over it -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- an old TV's screen (css: .crt-screen): every edge bulging out, the corners rounded – in the box's own 0…1 -->
+  <clipPath id="crt-shape" clipPathUnits="objectBoundingBox">
+    <path d="M.07 .025 Q.5 -.025 .93 .025 Q.982 .03 .986 .1 Q1.014 .5 .986 .9 Q.982 .97 .93 .975 Q.5 1.025 .07 .975 Q.018 .97 .014 .9 Q-.014 .5 .014 .1 Q.018 .03 .07 .025Z"/>
+  </clipPath>
+  <!-- …and what is on it bulging with the glass: each point drawn from a little further out, the more
+       the nearer a corner (the map and the strength: set for the screen's size by js/ui/account.js) -->
+  <filter id="crt-bulge" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feImage id="crt-bulge-map" preserveAspectRatio="none" result="map"/>
+    <feDisplacementMap id="crt-bulge-disp" in="SourceGraphic" in2="map" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
   <filter id="pixelate" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
     <feFlood x="1" y="1" width="1" height="1"/>
     <feComposite width="3" height="3"/>
@@ -27,11 +37,15 @@
 </svg>
 <div id="wrap">
   <div id="stage">
-    <canvas id="game" width="320" height="180"></canvas>
-    <div id="game-dots" class="dots"><canvas></canvas><canvas class="soft"></canvas></div>
-    <canvas id="game-boards"></canvas>
+    <!-- the game's picture: 16:9, at the stage's bottom (on phones the stage may be wider – the sky's top cut off) -->
+    <div id="view">
+      <canvas id="game" width="320" height="180"></canvas>
+      <div id="game-dots" class="dots"><canvas></canvas><canvas class="soft"></canvas></div>
+      <canvas id="game-boards"></canvas>
+    </div>
     <canvas id="talk" class="hidden"></canvas>
     <div id="talk-dots" class="dots hidden"><canvas></canvas><canvas class="soft"></canvas></div>
+    <canvas id="logo-scene" class="hidden"></canvas>   <!-- the petrol stations' logo scene (js/ui/cutscene.js) -->
     <div id="scanlines"></div>
 
     <div id="hud">
@@ -51,10 +65,14 @@
       <button data-m="2000">PATTAYA</button>
       <button data-m="2060">BENZÍNKA 3</button>
       <button data-m="4950">DÁLNICE</button>
+      <button data-m="5950">NOC</button>
     </div>
 
     <!-- the car radio (js/world/highway.js): the song whose sign was just passed -->
     <div id="radio" class="radio hidden"></div>
+
+    <!-- the boys' talk: skip it all (also the Esc key) -->
+    <button id="skip" type="button" class="hidden">PŘESKOČIT</button>
 
     <!-- sound on / off (also the M key) -->
     <button id="mute" type="button" aria-label="Ztlumit zvuk" aria-pressed="false">
@@ -74,16 +92,19 @@
 
     <!-- leaderboard sign-up: nickname + e-mail (for contacting the winners) -->
     <div id="account" class="overlay account hidden">
-      <form id="acc-form" autocomplete="on" novalidate>
-        <div class="acc-title lettering">LEADERBOARD SIGNUP</div>
-        <input id="acc-nick" name="nickname" maxlength="16" placeholder="přezdívka" autocomplete="nickname" spellcheck="false">
-        <input id="acc-email" name="email" type="email" maxlength="254" placeholder="e-mail" autocomplete="email" spellcheck="false">
-        <div class="acc-consent"><input id="acc-consent" type="checkbox" aria-label="souhlasím se zpracováním osobních údajů" required><a href="osobni-udaje.html" id="acc-terms">souhlasím se zpracováním osobních údajů</a></div>
-        <div id="acc-error" class="acc-error"></div>
-        <button id="acc-submit" type="submit">hrát</button>
-        <button id="acc-skip" type="button">PŘESKOČIT</button>
-        <a href="#" id="acc-offline" class="acc-offline hidden">HRÁT BEZ ŽEBŘÍČKU</a>
-      </form>
+      <!-- the form on an old TV's blue screen (the bezel round it, the red light under it) -->
+      <div class="crt"><div class="crt-screen">
+        <form id="acc-form" autocomplete="on" novalidate>
+          <div class="acc-title lettering">LEADERBOARD SIGNUP</div>
+          <input id="acc-nick" name="nickname" maxlength="16" placeholder="přezdívka" autocomplete="nickname" spellcheck="false">
+          <input id="acc-email" name="email" type="email" maxlength="254" placeholder="e-mail" autocomplete="email" spellcheck="false">
+          <div class="acc-consent"><input id="acc-consent" type="checkbox" aria-label="souhlasím se zpracováním osobních údajů" required><a href="osobni-udaje.html" id="acc-terms">souhlasím se zpracováním osobních údajů</a></div>
+          <div id="acc-error" class="acc-error"></div>
+          <button id="acc-submit" type="submit">hrát</button>
+          <a href="#" id="acc-offline" class="acc-offline hidden">HRÁT BEZ ŽEBŘÍČKU</a>
+        </form>
+      </div><canvas class="crt-led"></canvas></div>
+      <button id="acc-skip" type="button">PŘESKOČIT</button>
     </div>
     <!-- the conditions of the sign-up (js/ui/account.js): agreeing ticks the consent, not agreeing clears it – both back to the form -->
     <div id="terms" class="overlay terms hidden" role="dialog" aria-modal="true" aria-labelledby="terms-title">
@@ -105,6 +126,7 @@
     <div id="loading" class="overlay loading">
       <canvas id="loading-canvas" width="640" height="360"></canvas>
       <div id="loading-dots" class="dots"><canvas></canvas><canvas class="soft"></canvas></div>
+      <canvas id="loading-led"></canvas>   <!-- a faint LED panel over the skyline (js/ui/led.js) -->
       <div id="loading-prompt" class="load-prompt lettering solid">MEZERNÍK / KLEPNI PRO START</div>
       <div id="loading-start" class="load-start">LOADING…</div>
     </div>
@@ -142,7 +164,7 @@
 
 <!-- Load order matters: each file only uses what is loaded above it
      (or calls it later, at runtime). -->
-<script src="js/config.js?v=20261006pb"></script>
+<script src="js/config.js?v=20261008ns"></script>
 <script src="js/util.js?v=20261004hw"></script>
 <script src="js/assets/loading-car-image.js?v=20260930c"></script>
 <script src="js/assets/tower-image.js?v=20260930c"></script>
@@ -151,10 +173,10 @@
 <script src="js/assets/pattaya-images.js?v=20260930c"></script>
 
 <script src="js/world/fog.js?v=20261004tw"></script>
-<script src="js/world/biome.js?v=20261004hw"></script>
+<script src="js/world/biome.js?v=20261008ns"></script>
 <script src="js/world/track.js?v=20261004hw"></script>
-<script src="js/world/sky.js?v=20260930d"></script>
-<script src="js/world/road.js?v=20261006br"></script>
+<script src="js/world/sky.js?v=20261008n"></script>
+<script src="js/world/road.js?v=20261008n"></script>
 <script src="js/assets/gasoline-shield-image.js?v=20261002zd"></script>
 <script src="js/assets/billboard-images.js?v=20261004hg"></script>
 <script src="js/world/city.js?v=20261004opt"></script>
@@ -178,22 +200,23 @@
 <script src="js/ui/billboards.js?v=20261004opt"></script>
 <script src="js/ui/intro.js?v=20261008car"></script>
 <script src="js/ui/gameover.js?v=20261006px"></script>
-<script src="js/ui/loading.js?v=20261003a"></script>
-<script src="js/ui/account.js?v=20261007tm"></script>
+<script src="js/ui/led.js?v=20261008b"></script>
+<script src="js/ui/loading.js?v=20261008dive"></script>
+<script src="js/ui/account.js?v=20261008dive3"></script>
 <script src="js/ui/input.js?v=20261003l"></script>
 <script src="js/ui/audio.js?v=20261006mu"></script>
 
 <script src="js/game/traffic.js?v=20260930c"></script>
-<script src="js/game/particles.js?v=20261003perf"></script>
+<script src="js/game/particles.js?v=20261008g"></script>
 <script src="js/game/puddles.js?v=20260930c"></script>
-<script src="js/ui/cutscene.js?v=20260930c"></script>
+<script src="js/ui/cutscene.js?v=20261008logo6"></script>
 <script src="js/ui/swipe.js?v=20261006td"></script>
-<script src="js/ui/talk.js?v=20261008fade"></script>
-<script src="js/game/game.js?v=20261008fade"></script>
+<script src="js/ui/talk.js?v=20261008boy"></script>
+<script src="js/game/game.js?v=20261008logo"></script>
 <script src="js/ui/devmode.js?v=20260930c"></script>
 <script src="js/ui/dev3d.js?v=20261004tw"></script>
 <script src="js/ui/style.js?v=20261004tr"></script>
-<script src="js/render.js?v=20261006td"></script>
+<script src="js/render.js?v=20261008ns"></script>
 <script src="js/main.js?v=20261004sb"></script>
 </body>
 </html>

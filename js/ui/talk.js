@@ -17,7 +17,11 @@ const Talk = (() => {
     'water-down': [309, 136, 1498, 2480], 'water-up': [315, 104, 1770, 2480], 'water-drink': [326, 125, 1722, 2480],
     // (the last shot: the legs and the butt dropped to the ground – it falls in, see DROP)
     'end-legs': [0, 0, 3508, 2483], 'end-butt': [2429, 327, 2744, 1446],
-    'dori-talk': [400, 88, 2140, 2483], 'dori-smoke': [402, 90, 1735, 2483],   // (with the cigarette – kept, not in the lines now)
+    'dori-talk': [400, 88, 2140, 2483], 'dori-smoke': [402, 90, 1735, 2483],   // (Lukas with the cigarette)
+    'dori-sober': [1224, 127, 2661, 2483],                            // (Dori sober: lboy-talk without the cigarette – see DERIVED)
+    // (Pattaya, in tank tops, with cans: Dori on the right, Lukas on the left)
+    'pt-dori-drink': [1849, 208, 3048, 2480], 'pt-dori-down': [1965, 234, 2974, 2480], 'pt-dori-up': [1739, 232, 2973, 2480],
+    'pt-lukas-out': [427, 226, 1708, 2480], 'pt-lukas-hold': [460, 229, 1521, 2480], 'pt-lukas-drink': [426, 229, 1623, 2480],
   };
   // the dialogue boxes: where they stand in the 3508×2483 picture (x0, y0, x1, y1 – Lboy's
   // on the left, Dori's on the right; held to the screen's bottom edge as far from it as
@@ -39,14 +43,41 @@ const Talk = (() => {
     'dori-talk': { px: 10, at: [[1920, 288, 2140, 832], [2040, 832, 2140, 884]] },
     'dori-smoke': { px: 8, at: [[1362, 190, 1642, 530]] },
   };
-  // the lines: the background, the boy (while typing → a moment after the line is out), the box
-  const LINES = [
-    { text: 'tak kolik dáme tracků na to album ?', bg: 'bg-lboy', pose: ['lboy-talk', 'lboy-smoke'], box: 'box-a' },
-    { text: 'kámo, drive by mělo 14...', bg: 'bg-dori', pose: ['water-up', 'water-drink'], box: 'box-b' },
-    { text: 'chekpoint dáme 15 tracků', bg: 'bg-dori', pose: ['water-down', 'water-down'], box: 'box-c' },
-    // (Dori's box with its own words in it instead of the picture's: rows)
-    { text: 'okay jedeme', bg: 'end-bg', pose: ['end-legs', 'end-legs'], box: 'box-a', rows: ['okay jedeme'], drop: 'end-butt' },
-  ];
+  // poses made from another's picture with parts of it cleared (x0, y0, x1, y1 in the picture)
+  const DERIVED = {
+    'dori-sober': { from: 'lboy-talk', clear: [[1224, 207, 1444, 711], [1260, 705, 1418, 799], [1490, 767, 1540, 801]] },   // (the smoke, the cigarette, its end behind the fingers)
+  };
+  // the scenes, each its lines: the background, the boy (while typing → a moment after the line
+  // is out), the box (Dori's: box-a, Lukas's: box-b, box-c) – rows: the box with these words in it
+  // instead of its picture's own (a row each)
+  const SCENES = {
+    prague: [                                                          // (the first petrol station)
+      { text: 'tak kolik dáme tracků na to album ?', bg: 'bg-lboy', pose: ['lboy-talk', 'lboy-smoke'], box: 'box-a' },
+      { text: 'kámo, drive by mělo 14...', bg: 'bg-dori', pose: ['water-up', 'water-drink'], box: 'box-b' },
+      { text: 'chekpoint dáme 15 tracků', bg: 'bg-dori', pose: ['water-down', 'water-down'], box: 'box-c' },
+      { text: 'okay jedeme', bg: 'end-bg', pose: ['end-legs', 'end-legs'], box: 'box-a', rows: ['okay jedeme'], drop: 'end-butt' },
+    ],
+    prague2: [                                                         // (the second petrol station)
+      { bg: 'bg-dori', pose: ['dori-talk', 'dori-smoke'], box: 'box-b', rows: ['nechceš se', 'prohodit ?'] },
+      { bg: 'bg-lboy', pose: ['dori-sober', 'dori-sober'], box: 'box-a', rows: ['kámo vzali mi papíry.', 'jsem zpátky na zadní'] },
+      { bg: 'bg-dori', pose: ['dori-smoke', 'dori-talk'], box: 'box-c', rows: ['to je hard', 'to dej do toho intra'] },
+    ],
+    highway: [                                                         // (the first petrol station on the motorway: Dori with the vodka)
+      { bg: 'bg-dori', pose: ['pt-lukas-hold', 'pt-lukas-out'], box: 'box-b', rows: ['silná show', 'dneska'] },
+      { bg: 'bg-lboy', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['a ještě víc', 'jich čeká'] },
+      { bg: 'bg-dori', pose: ['pt-lukas-out', 'pt-lukas-drink'], box: 'box-c', rows: ['jaro bude', 'next level'] },
+      { bg: 'bg-lboy', pose: ['pt-dori-drink', 'pt-dori-down'], box: 'box-a', rows: ['okay pome ať', 'stíháme sound check'] },
+    ],
+    pattaya: [                                                         // (the first petrol station in Pattaya)
+      { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['brácho,', 'super trenínk'] },
+      { bg: 'bg-dori-pt', pose: ['pt-lukas-out', 'pt-lukas-drink'], box: 'box-b', rows: ['už to potřebovalo', 'checkpoint'] },
+      { bg: 'bg-lboy-pt', pose: ['pt-dori-down', 'pt-dori-up'], box: 'box-a', rows: ['crazy že se sem', 'vracíme každej rok'] },
+      { bg: 'bg-dori-pt', pose: ['pt-lukas-hold', 'pt-lukas-out'], box: 'box-c', rows: ['chceš koupit', 'vodu ?'] },
+      { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['ser na to', 'přines vodku'] },
+    ],
+  };
+  for (const L of Object.values(SCENES).flat()) if (!L.text) L.text = L.rows.join(' ');   // (typed as one: the rows and a space between)
+  let LINES = SCENES.prague;                                        // (the scene playing)
   if (document.fonts) document.fonts.load("40px 'VT323'").catch(() => {});   // (the boxes' lettering ready before the first line)
   const img = {}, smoke = {};
   // the butt falling in the last shot (a line's drop): its whole picture (the ash trailing above
@@ -61,6 +92,25 @@ const Talk = (() => {
     ember: [2615, 1310], body: [2436, 935, 2672, 1352], ash: [2650, 935, 2672, 1275] };
   let buttBody = null, buttOut = null;
   for (const n of ['bg-lboy', 'bg-dori', 'end-bg', 'end-butt']) { img[n] = new Image(); img[n].src = A + n + '.webp?v=3'; }
+  // backgrounds repainted in another's colours: each pixel by its brightness onto the ramp,
+  // dark to light (in Pattaya: its fresh greens to white – the game's day palette, js/ui/style.js)
+  const PATTAYA = ['#0b1a10', '#0b3d1f', '#146b34', '#1f8f45', '#2fb556', '#4fd36b', '#86ec8e', '#c4f7c0', '#f2f2ea'];
+  const RECOLOUR = { 'bg-lboy-pt': ['bg-lboy', PATTAYA], 'bg-dori-pt': ['bg-dori', PATTAYA] };
+  for (const [n, [from, ramp]] of Object.entries(RECOLOUR)) {
+    const im = new Image();
+    im.onload = () => {
+      const c = Util.canvas(im.width, im.height), g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(im, 0, 0);
+      const id = g.getImageData(0, 0, c.width, c.height), d = id.data, R = ramp.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16))), top = R.length - 1;
+      for (let i = 0; i < d.length; i += 4) {
+        const f = Math.min(top, (.2126 * d[i] + .7152 * d[i + 1] + .0722 * d[i + 2]) / 255 * top * 1.15), k = Math.min(top - 1, f | 0), u = f - k;
+        for (let ch = 0; ch < 3; ch++) d[i + ch] = R[k][ch] + (R[k + 1][ch] - R[k][ch]) * u;
+      }
+      g.putImageData(id, 0, 0);
+      img[n] = c;
+    };
+    im.src = A + from + '.webp?v=3';
+  }
   img['end-butt'].onload = () => {                                   // (the butt alone, to lie on the ground)
     const im = img['end-butt'], [d0, d1, d2] = SPRITES['end-butt'], k = im.width / (d2 - d0), [b0, b1, b2, b3] = DROP.body, [a0, a1, a2, a3] = DROP.ash;
     const c = Util.canvas(Math.round((b2 - b0) * k), Math.round((b3 - b1) * k)), g = c.getContext('2d');
@@ -74,10 +124,17 @@ const Talk = (() => {
     og.putImageData(id, 0, 0);
     buttOut = o;
   };
-  for (const n of new Set(LINES.flatMap(L => L.pose))) {               // (only the poses in the lines)
-    const im = new Image();
-    im.onload = () => { if (SMOKE[n]) cutSmoke(n, im); };
-    im.src = A + n + '.webp?v=3';
+  for (const n of new Set(Object.values(SCENES).flat().flatMap(L => L.pose))) {   // (only the poses in the scenes)
+    const im = new Image(), D = DERIVED[n];
+    im.onload = () => {
+      if (D) {                                                         // (the other's picture, the parts cleared)
+        const [x0, y0, x1] = SPRITES[n], k = im.width / (x1 - x0), c = Util.canvas(im.width, im.height), g = c.getContext('2d');
+        g.drawImage(im, 0, 0);
+        for (const [a, b, e, f] of D.clear) g.clearRect((a - x0) * k, (b - y0) * k, (e - a) * k, (f - b) * k);
+        img[n] = c;
+      } else if (SMOKE[n]) cutSmoke(n, im);
+    };
+    im.src = A + (D ? D.from : n) + '.webp?v=3';
     img[n] = im;
   }
   // the boy without his smoke (img[n]), the smoke on its own (smoke[n]): the light grey
@@ -172,21 +229,16 @@ const Talk = (() => {
   // a little bigger than the picture (BG_ZOOM), across its spare width in BG_PAN seconds
   // (from when it comes – one background over more lines goes on, not over again)
   const BG_ZOOM = 1.1, BG_PAN = 10;
-  // over the picture (the background and the boy) its LED panel: the picture in cells of
-  // DOT_CELL px, each cell's brightness (Rec. 709: .2126 R + .7152 G + .0722 B) toned between
-  // DOT_BLACK and DOT_WHITE and through a gamma, lit where it beats the 4×4 Bayer matrix – in
-  // the cell's own colour, brightened (DOT_LIT: times, plus) –
-  // a pixel's gap cut between the cells. It comes up from the bottom over DOT_RISE seconds
-  // when a background comes, bands of it go up, it flickers (made anew DOT_FPS times a
-  // second), and it is faint (DOT_ALPHA)
-  // (the mid tones the cells don't light get their colour darkened, DOT_MID; under it all the panel's
-  // own dark, DOT_BACK – as deep as the panel is strong there)
-  const DOT_CELL = 3, DOT_BLACK = .08, DOT_WHITE = .7, DOT_GAMMA = 1.3, DOT_LIT = [1.25, 30], DOT_MID = .45;
-  const DOT_BACK = '10,10,14', DOT_RISE = 1.6, DOT_FPS = 15, DOT_ALPHA = .5;
-  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(n => (n + .5) / 16);
+  // over the picture (the background and the boy) its LED panel (js/ui/led.js), this strong
+  const DOT_ALPHA = .5, DOT_BOY = .7;                               // (over the boy: 30 % fainter)
 
   const canvas = document.getElementById('talk'), ctx = canvas.getContext('2d');
-  const hud = document.getElementById('hud');
+  const hud = document.getElementById('hud'), skipBtn = document.getElementById('skip');
+  // skipping it all: into black at once, then on (the button, or Esc)
+  const skip = () => { if (line >= 0 && closing < 0) closing = 0; };
+  skipBtn.addEventListener('pointerdown', e => e.stopPropagation());   // (not a press of the talk, nor steering)
+  skipBtn.addEventListener('click', e => { e.preventDefault(); skip(); skipBtn.blur(); });
+  addEventListener('keydown', e => { if (e.code === 'Escape') skip(); });
   let line = -1, t = 0, typed = 0, done = 0, raf = 0, last = 0, onEnd = null, grain = null;
   let bgName = null, bgT = 0;                                       // the background shown and for how long
   let age = 0, closing = -1;                                        // seconds since it began; since it began to go to black (-1: not yet)
@@ -195,67 +247,9 @@ const Talk = (() => {
     new ResizeObserver(es => { const r = es[es.length - 1].contentRect; boxW = r.width; boxH = r.height; }).observe(canvas);
   const ready = i => i && (i instanceof HTMLCanvasElement || (i.complete && i.naturalWidth));
 
-  // the LED panel (see DOT_CELL): the picture drawn so far sampled small, the cells lit in
-  // a canvas a cell a pixel, that grown to the screen and
-  // the gaps cut out of it – made anew DOT_FPS times a second, drawn faint every frame
-  const dsrc = Util.canvas(1, 1), dsg = dsrc.getContext('2d', { willReadFrequently: true });
-  const dcell = Util.canvas(1, 1), dcg = dcell.getContext('2d'), dots = Util.canvas(1, 1), dg = dots.getContext('2d');
-  let dotsAt = -1, dotsFor = '', gap = null, gapFor = 0;
-  function drawDots(W, H, dpr) {
-    const now = performance.now(), cell = Math.max(2, Math.round(DOT_CELL * dpr)), cols = Math.ceil(W / cell), rows = Math.ceil(H / cell);
-    if (dots.width !== W || dots.height !== H) { dots.width = W; dots.height = H; dotsAt = -1; }
-    if (dotsAt < 0 || dotsFor !== bgName || now - dotsAt >= 1000 / DOT_FPS) {
-      dotsAt = now; dotsFor = bgName;
-      if (dsrc.width !== cols || dsrc.height !== rows) { dsrc.width = dcell.width = cols; dsrc.height = dcell.height = rows; }
-      dsg.imageSmoothingEnabled = true; dsg.imageSmoothingQuality = 'high';
-      dsg.clearRect(0, 0, cols, rows);
-      dsg.drawImage(canvas, 0, 0, cols * cell, rows * cell, 0, 0, cols, rows);
-      const src = dsg.getImageData(0, 0, cols, rows).data, out = dcg.createImageData(cols, rows), o = out.data;
-      const T = now / 1000, edge = Math.min(1, bgT / DOT_RISE) * 1.05, TAU = Math.PI * 2, span = DOT_WHITE - DOT_BLACK;
-      for (let r = 0; r < rows; r++) {
-        const u = 1 - (r + .5) / rows;                                   // 0 at the bottom, 1 at the top
-        const fade = Math.max(0, Math.min(1, (edge - u) / .35));         // (up from the bottom, thinning out upwards)
-        if (!fade) continue;
-        const wave = .5 + .5 * Math.sin(TAU * (2.5 * u - .35 * T));    // (bands going up)
-        const q = Math.random(), gain = fade * (.45 + .55 * wave) * (q < .025 ? .3 : q > .975 ? 1.6 : 1);   // (now and then a row flickers)
-        for (let c = 0, i = r * cols * 4; c < cols; c++, i += 4) {
-          const L = (.2126 * src[i] + .7152 * src[i + 1] + .0722 * src[i + 2]) / 255;
-          const l = Math.max(0, Math.min(1, (L - DOT_BLACK) / span)) ** DOT_GAMMA, v = l * gain + (Math.random() - .5) * .2;
-          if (v > BAYER[(r & 3) * 4 + (c & 3)]) {
-            o[i] = Math.min(255, src[i] * DOT_LIT[0] + DOT_LIT[1]); o[i + 1] = Math.min(255, src[i + 1] * DOT_LIT[0] + DOT_LIT[1]);
-            o[i + 2] = Math.min(255, src[i + 2] * DOT_LIT[0] + DOT_LIT[1]); o[i + 3] = 255;
-          } else if (v > .2) { o[i] = src[i] * DOT_MID; o[i + 1] = src[i + 1] * DOT_MID; o[i + 2] = src[i + 2] * DOT_MID; o[i + 3] = 255; }
-        }
-      }
-      dcg.putImageData(out, 0, 0);
-      dg.globalCompositeOperation = 'source-over';
-      dg.clearRect(0, 0, W, H);
-      dg.imageSmoothingEnabled = false;
-      dg.drawImage(dcell, 0, 0, cols * cell, rows * cell);
-      if (gapFor !== cell) {                                             // (the gap: a pixel at the right and bottom of each cell)
-        const pc = Util.canvas(cell, cell), pg = pc.getContext('2d'), gw = Math.max(1, Math.round(dpr));
-        pg.fillRect(cell - gw, 0, gw, cell); pg.fillRect(0, cell - gw, cell, gw);
-        gap = dg.createPattern(pc, 'repeat'); gapFor = cell;
-      }
-      dg.globalCompositeOperation = 'destination-out';
-      dg.fillStyle = gap; dg.fillRect(0, 0, W, H);
-      // the panel's dark under the cells (and in the gaps): deepest at the bottom, gone
-      // where the panel thins out (as fade above)
-      const top = Math.max(0, 1 - edge), mid = Math.max(0, 1 - edge + .35);
-      if (top < 1) {
-        const back = dg.createLinearGradient(0, 0, 0, H);
-        back.addColorStop(top, `rgba(${DOT_BACK},0)`);
-        back.addColorStop(Math.min(1, mid), `rgba(${DOT_BACK},${Math.min(1, (mid > 1 ? 1 - (mid - 1) / .35 : 1)).toFixed(3)})`);
-        if (mid < 1) back.addColorStop(1, `rgba(${DOT_BACK},1)`);
-        dg.globalCompositeOperation = 'destination-over';
-        dg.fillStyle = back; dg.fillRect(0, 0, W, H);
-      }
-      dg.globalCompositeOperation = 'source-over';
-    }
-    ctx.globalAlpha = DOT_ALPHA;
-    ctx.drawImage(dots, 0, 0);
-    ctx.globalAlpha = 1;
-  }
+  // the LED panel over the picture drawn so far (coming up anew with each background)
+  const panel = Led.panel();
+  const drawDots = (W, H, dpr, fg) => panel.draw(ctx, canvas, W, H, dpr, bgT, DOT_ALPHA, bgName, fg);
 
   function draw() {
     let cw = boxW, ch = boxH;
@@ -301,7 +295,10 @@ const Talk = (() => {
         ctx.restore();
       }
     }
-    if (ready(bg)) { drawDots(W, H, dpr); ctx.imageSmoothingEnabled = true; }   // (the panel over both)
+    if (ready(bg)) {                                                   // (the panel over both – fainter over the boy)
+      const boy = ready(sp) ? { key: pose + W + 'x' + H, alpha: DOT_ALPHA * DOT_BOY, draw: g => g.drawImage(sp, ox + x0 * s, y0 * s, (x1 - x0) * s, (y1 - y0) * s) } : null;
+      drawDots(W, H, dpr, boy); ctx.imageSmoothingEnabled = true;
+    }
     if (t < BOX_T) return;                                             // (the box comes a moment later)
     // the dialogue box (its picture: the frame and the portrait – its own lettering covered,
     // the box is black under it) with the line typed out in the game's lettering (VT323)
@@ -379,7 +376,7 @@ const Talk = (() => {
   }
   function finish() {
     cancelAnimationFrame(raf); raf = 0;
-    canvas.classList.add('hidden'); hud.classList.remove('hidden');
+    canvas.classList.add('hidden'); hud.classList.remove('hidden'); skipBtn.classList.add('hidden');
     line = -1; closing = -1;
     Sound.duck(false);
     const f = onEnd; onEnd = null;
@@ -387,10 +384,11 @@ const Talk = (() => {
   }
 
   return {
-    // done: called when it is over (then the game goes on)
-    start(done) {
+    // done: called when it is over (then the game goes on); scene: which (SCENES – Prague's if not said)
+    start(done, scene) {
       onEnd = done;
-      canvas.classList.remove('hidden'); hud.classList.add('hidden');
+      LINES = SCENES[scene] || SCENES.prague;
+      canvas.classList.remove('hidden'); hud.classList.add('hidden'); skipBtn.classList.remove('hidden');
       Sound.duck(true);
       bgName = null; age = 0; closing = -1;
       show(0);
@@ -406,6 +404,7 @@ const Talk = (() => {
       if (typed < L.text.length) { typed = L.text.length; done = t; Sound.ding(); }
       else next();
     },
+    skip,
     stop() { if (line >= 0) { onEnd = null; finish(); } },             // (a new ride: no going back through black)
     active: () => line >= 0,
   };

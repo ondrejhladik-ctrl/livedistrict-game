@@ -2,7 +2,9 @@
 // Pattaya (a Thai street in bright green daylight, like the pixel-art postcard).
 //   zone(wz)   'city' | 'bridge' | 'thai' at a world depth
 //   mix(dist)  0 (Prague night) … 1 (Pattaya day): the environment changes
-//              gradually while driving over the bridge (fog, sky, light, rain)
+//              gradually while driving over the bridge (fog, sky, light, rain) – and back
+//              on the motorway (from CONFIG.biome.night): the green night again
+//   night(dist)  0 … 1: how far the motorway's night has come
 // The Pattaya sky: flat green bands with a bank of heaped clouds, and instead of the
 // Žižkov tower the hill with the PATTAYA city sign (cut out of the postcard).
 // On the motorway (from CONFIG.biome.highway) the hill sinks and low green
@@ -23,9 +25,11 @@ const Biome = (() => {
     const u = Util.clamp((dist + 30 - highway()) / 50, 0, 1);
     return u * u * (3 - 2 * u);
   }
+  const ramp = (dist, at, len) => { const u = Util.clamp((dist - origin - at / MU) / (len / MU), 0, 1); return u * u * (3 - 2 * u); };
+  const night = dist => ramp(dist, B.night, B.nightLen);
   function mix(dist) {
     const u = Util.clamp((dist - start() + 6) / (end() - start() - 12), 0, 1);
-    return u * u * (3 - 2 * u);
+    return u * u * (3 - 2 * u) * (1 - night(dist));
   }
   const lerpRgb = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
   const hex = a => `rgb(${a[0]},${a[1]},${a[2]})`;
@@ -131,12 +135,17 @@ const Biome = (() => {
     row(13, 5, ['#4fd36b', '#6fe082', '#3cbc5a'], 4.1);
     return c;
   })();
-  function drawSky(ctx, m, shift, mead = 0) {
-    if (m <= .001) return;
-    ctx.globalAlpha = skyCover(m);
-    ctx.drawImage(sky, 0, 0);
-    ctx.globalAlpha = 1;
-    if (hill && mead < 1) {
+  // (the meadows at night: the same, dark)
+  const meadowsNight = Util.canvas(MEADOW_W, 40);
+  (() => { const g = meadowsNight.getContext('2d'); g.drawImage(meadows, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(4,12,7,.82)'; g.fillRect(0, 0, MEADOW_W, 40); })();
+  // n: the motorway's night (0 … 1) – the meadows darken with it
+  function drawSky(ctx, m, shift, mead = 0, n = 0) {
+    if (m > .001) {
+      ctx.globalAlpha = skyCover(m);
+      ctx.drawImage(sky, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+    if (hill && mead < 1 && m > .001) {
       const w = Math.round(hill.width * HILL_SCALE), h = Math.round(hill.height * HILL_SCALE);
       const u = Util.clamp((m - .1) / .65, 0, 1), rise = Math.max(1 - u * u * (3 - 2 * u), mead);   // 1 = still below the horizon (it sinks again on the motorway)
       const x = Math.round(W / 2 - w / 2 + shift), y = HORIZON - 3 - h + Math.round(rise * (h + 6));
@@ -151,6 +160,7 @@ const Biome = (() => {
       ctx.save();
       ctx.beginPath(); ctx.rect(0, 0, W, HORIZON + 2); ctx.clip();
       ctx.drawImage(meadows, Math.round(-170 + shift), y);
+      if (n > 0) { ctx.globalAlpha = n; ctx.drawImage(meadowsNight, Math.round(-170 + shift), y); ctx.globalAlpha = 1; }
       ctx.restore();
     }
   }
@@ -168,5 +178,5 @@ const Biome = (() => {
   // where a stop's forecourt is (world depth of its middle; the turn-off opens CONFIG.exit.ahead past its metres)
   const stopWz = m => origin + m / MU + X.ahead + X.length / 2;
 
-  return { zone, mix, meadow, start, end, highway, origin: () => origin, setOrigin, lerpRgb, hex, drawSky, skyCover, stop, stops, stopWz };
+  return { zone, mix, night, meadow, start, end, highway, origin: () => origin, setOrigin, lerpRgb, hex, drawSky, skyCover, stop, stops, stopWz };
 })();

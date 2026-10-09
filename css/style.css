@@ -17,6 +17,16 @@ html, body {
   box-sizing: border-box;
 }
 #stage { position: relative; aspect-ratio: 16 / 9; width: min(100%, 177.78vh); width: min(100%, 177.78dvh); }
+#view { position: absolute; left: 0; right: 0; bottom: 0; aspect-ratio: 16 / 9; }   /* the game's picture (on a computer: the whole stage) */
+/* phones: the stage fills the screen – up to a fifth wider than 16:9, the game's picture as wide
+   as it, standing on its bottom (the top of the sky cut off); the HUD and buttons at the screen's
+   edges. Wider still: black bars at the sides */
+@media (pointer: coarse) {
+  #wrap { container-type: size; }
+  #stage { aspect-ratio: auto; width: min(100cqw, 222.2cqh); height: min(100cqh, 56.25cqw); overflow: hidden; }
+  #mute { width: clamp(40px, 6vw, 56px); }
+  #skip { font-size: clamp(16px, 2.6vw, 24px); }
+}
 
 /* touch hint arrows in the bottom corners (touch screens only) */
 #touch-hint { display: none; }
@@ -87,6 +97,13 @@ body.raster .dots { display: block; }
 }
 #devjump button:hover { text-decoration: underline; }
 
+/* the boys' talk: skip it – white, in the top right corner (where the HUD is, hidden then) */
+#skip {
+  position: absolute; right: 2.5%; top: 3%; z-index: 35; padding: .4em 0 .4em .8em;
+  font: inherit; font-size: clamp(12px, 1.8vw, 20px); color: #fff; background: none; border: 0; cursor: pointer;
+  text-shadow: 1px 1px 0 #000, 0 0 4px #000; touch-action: manipulation;
+}
+
 /* sound on / off – a pixel speaker in the bottom right corner */
 #mute {
   position: absolute; right: 2.5%; bottom: 3%; z-index: 35;
@@ -119,9 +136,9 @@ body.raster .dots { display: block; }
 @keyframes pop { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* ---------- leaderboard sign-up ---------- */
-.account { background: rgba(0, 0, 0, .88); pointer-events: auto; z-index: 25; }
-#acc-skip {                        /* white, in the bottom right corner of the screen */
-  position: absolute; right: 2.5%; bottom: 3%;
+.account { background: #000; pointer-events: auto; z-index: 25; }   /* (just black round the TV screen) */
+#acc-skip {                        /* white, in the top right corner of the screen (the speaker is in the bottom one) */
+  position: absolute; right: 2.5%; top: 3%; z-index: 36; text-shadow: 1px 1px 0 #000, 0 0 4px #000;
   font: inherit; font-size: .85em; color: #fff; background: none; border: 0; cursor: pointer; padding: 0;
 }
 #acc-form {
@@ -194,6 +211,72 @@ body.raster .dots { display: block; }
 #acc-submit:hover, #acc-submit:focus-visible { background-color: var(--neon); }   /* the lighter green (like the ticked consent) */
 #acc-submit:disabled { opacity: .5; }
 .acc-offline { color: #8fd42a; font-size: .75em; text-align: center; }
+/* the form on an old TV's screen, on black: no frame – just the glass, every edge bulging out
+   (the clip path #crt-shape in index.html), nearly square (4:3), black; now and then a green
+   glitch on it (js/ui/account.js) – and the red light under it */
+.crt { position: relative; padding-bottom: 1.6em; font-size: clamp(12px, min(2.4vw, 4.4vh), 26px); }
+@media (max-height: 560px) { .crt-screen { aspect-ratio: auto; } }   /* (a low phone screen: as high as the form needs) */
+.crt-screen {
+  position: relative; aspect-ratio: 4 / 3; box-sizing: border-box; clip-path: url(#crt-shape);
+  display: flex; align-items: center; justify-content: center; padding: 1.6em 2.6em;
+  background: #000;
+  filter: url(#crt-bulge);           /* (everything on it bulging with the glass) */
+}
+/* faint green lines over the whole glass, all the time (its shape showing on the black) */
+.crt-screen::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(108, 184, 32, .07) 0 2px, transparent 2px 5px);
+}
+/* the glitch: a band of green light at --gy (--gh high), the lines stronger, the picture jerked
+   aside by --gx – faint */
+.crt-screen::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background:
+    linear-gradient(to bottom, transparent var(--gy, 40%), rgba(108, 184, 32, .38) var(--gy, 40%), rgba(108, 184, 32, .38) calc(var(--gy, 40%) + var(--gh, 6%)), transparent calc(var(--gy, 40%) + var(--gh, 6%))),
+    repeating-linear-gradient(to bottom, rgba(108, 184, 32, .13) 0 2px, transparent 2px 5px);
+}
+.crt-screen.glitch::after { opacity: .55; }
+.crt-screen.glitch #acc-form { transform: translateX(var(--gx, 0)); }
+/* the fields straight on the glass: no black box behind the text (the browser's autofill neither) */
+.crt #acc-form input[type=text], .crt #acc-form input:not([type]), .crt #acc-form input[type=email] { background: transparent; }
+.crt #acc-form input:-webkit-autofill { -webkit-box-shadow: none; box-shadow: none; }
+.crt #acc-form input:autofill { box-shadow: none; }
+.crt-led { position: absolute; right: 9%; bottom: .35em; transform: translate(50%, 50%); pointer-events: none; image-rendering: auto; }   /* (the red light: LED dots, drawn by js/ui/account.js) */
+.crt #acc-form { font-size: 1em; max-width: none; }
+/* into the TV (js/ui/account.js diveIn): the form gone at once, the horse galloping in the middle (as
+   tall as the title sequence's date, gliding there from the screen's middle), the TV zoomed round it –
+   slowly, then faster – and gone into black; then the horse gone too */
+.tv-horse-box {
+  position: absolute; top: 50%; left: 50%; height: 30%; aspect-ratio: 37 / 24; display: none; pointer-events: none;
+  transform: translate(-50%, calc(-50% + var(--hy, 0px))); opacity: 1;
+  transition: transform 1.6s cubic-bezier(.45, 0, .55, 1) .1s, opacity .2s linear;
+  /* the glow, as round the date (js/ui/intro.js: its blur laid over lighter) */
+  filter: drop-shadow(0 0 .5vh rgba(108, 184, 32, .55)) drop-shadow(0 0 1.8vh rgba(108, 184, 32, .4));
+}
+.tv-horse {
+  display: block; width: 100%; height: 100%;
+  /* as the date and CHECKPOINT (css .lettering): the green, the thin dark cut across, the grain boiling on it */
+  background-image: var(--grain, none), linear-gradient(to bottom, #6cb820 66.7%, #0a0806 66.7% 69.3%, #6cb820 69.3%);
+  background-size: calc(min(100vw, 177.78vh) * .4), auto; image-rendering: pixelated;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  animation: grain .4s steps(1) infinite;
+}
+/* the title sequence's film over it all: the grain (its light specks show on the black) and the dark vignette */
+.tv-film {
+  position: absolute; inset: 0; display: none; pointer-events: none;
+  background-image: var(--grain, none), radial-gradient(ellipse 62% 70% at 50% 55%, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, .6) 100%);
+  background-size: calc(min(100vw, 177.78vh) * .4), 100% 100%;
+  animation: grain .4s steps(1) infinite;
+}
+#account.diving .tv-horse-box, #account.diving .tv-film { display: block; }
+#account.horse-out .tv-horse-box { opacity: 0; }
+#account.diving #acc-form, #account.diving #acc-skip { visibility: hidden; }
+#account.diving .crt-screen::after { display: none; }              /* (no glitch on the way in) */
+#account.diving .crt {
+  transform-origin: 50% calc(50% - .8em);                           /* (the screen's middle: the light's room under it) */
+  transform: scale(var(--zoom, 6)); opacity: 0; will-change: transform, opacity;
+  transition: transform 1.6s cubic-bezier(.55, 0, .75, .85) .1s, opacity .45s linear 1.3s;
+}
 
 #gameover-info { white-space: nowrap; }       /* distance and score stay on one line, even on small screens */
 /* game over (js/ui/gameover.js): GAME OVER and HIGH SCORES are drawn into a canvas
@@ -236,6 +319,8 @@ body.raster .dots { display: block; }
 .loading { background: #000; pointer-events: auto; z-index: 20; transition: opacity .5s; }
 .loading.fadeout { opacity: 0; }
 #loading-canvas { position: absolute; inset: 0; }
+#loading-led { position: absolute; inset: 0; pointer-events: none; image-rendering: auto; }
+#loading.intro #loading-led { display: none; }   /* (only over the skyline: not over the title sequence) */
 /* The lettering of the title sequence (js/ui/intro.js), for the page's titles:
    Anton in the game's neon green, spaced like there (7 % of the capital height), a
    thin dark cut across the letters (at 30 % of the capital height above the
@@ -361,4 +446,5 @@ body.raster .dots { display: block; }
 /* the boys' talk at the first petrol station (js/ui/talk.js): over the game, under the scanlines */
 #talk { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 22; pointer-events: none; image-rendering: auto; }
 #talk-dots { z-index: 23; }
+#logo-scene { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 22; pointer-events: none; image-rendering: auto; }
 

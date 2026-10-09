@@ -165,10 +165,8 @@ const Renderer = (() => {
       Dev3D.draw(ctx, state, Dev.camera());                          // real 3D camera, turns all the way round
       return;
     }
-    if (Cutscene.active()) {                                         // petrol station cutscene: wide shot from across the road
-      View.setLook(0);
-      Dev3D.draw(ctx, state, Cutscene.camera(), { sideCar: Cutscene.car(), noTraffic: true });
-      drawFade(state);                                               // (it comes up out of the black)
+    if (Cutscene.active()) {                                         // the petrol station's logo scene: on its own canvas over all (js/ui/cutscene.js)
+      Util.rect(ctx, 0, 0, W, H, '#000');
       return;
     }
     if (Swipe.active()) { drawRoadCam(state); drawFade(state); return; }   // the turn-off in Prague and Pattaya (js/ui/swipe.js)
@@ -204,8 +202,9 @@ const Renderer = (() => {
     // the sky is infinitely far: it slides sideways as the road turns
     const T = CONFIG.track, skyShift = Util.clamp(-Track.heading(dist) * T.skyShift, -150, 150);
 
-    Sky.draw(ctx, state.time, View.look() + Math.round(skyShift));
-    Biome.drawSky(ctx, biome, Math.round(skyShift), Biome.meadow(dist));   // the green day sky and the PATTAYA city hill (the meadows on the motorway)
+    const night = Biome.night(dist);                                 // (the motorway's green night: the night sky again, no tower)
+    Sky.draw(ctx, state.time, View.look() + Math.round(skyShift), Biome.zone(dist) === 'highway');
+    Biome.drawSky(ctx, biome, Math.round(skyShift), Biome.meadow(dist), night);   // the green day sky and the PATTAYA city hill (the meadows on the motorway)
     // The road keeps its own colours (not the 8-bit palette): its even fade into the
     // distance would break into hard dark and light bands. Everything drawn after it
     // goes through Style.over: where it only tints the road (shadows, the rain's mood,

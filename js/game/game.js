@@ -188,7 +188,7 @@ const Game = (() => {
   // ---------- bits flying from the wheels ----------
   // When the car swerves hard (or skids), the rear wheels throw little pixels
   // of road towards the camera, in the colours of the pavement along the road edge.
-  const SPRAY_COLORS = ['#2e2e4c', '#3a3a5e', '#4a4a72', '#23233a'];
+  const SPRAY_COLORS = ['#2d5a18', '#3f7a1e', '#4f9a22', '#6cb820'];   // (green, as LED dots – js/game/particles.js)
   function wheelSpray(dt) {
     const swerve = Math.abs(state.yaw - state.lastYaw) / Math.max(dt, 1e-3);   // yaw change per second
     state.lastYaw = state.yaw;
@@ -201,7 +201,7 @@ const Game = (() => {
     state.sprayTimer = .05;
     const z = P.z, s = CONFIG.spriteScale / z, cx = View.x(state.px, z) + (state.drift || 0), y = View.y(0, z) - 1;
     if (CONFIG.style.simple) {                                        // little dust puffs under the rear wheels
-      for (const side of [-1, 1]) Particles.puff(cx + side * 22.5 * s, y, side, 4 + (state.skid > 0 ? 3 : 0));
+      for (const side of [-1, 1]) Particles.puff(cx + side * 22.5 * s, y, side, 2 + (state.skid > 0 ? 2 : 0));
       return;
     }
     const count = 1 + Math.min(3, Math.floor(swerve / 2)) + (state.skid > 0 ? 2 : 0);
@@ -254,8 +254,12 @@ const Game = (() => {
   }
   function startScene() {
     state.pendingScene = false;
-    if (state.nextStop === 0) Talk.start(state.quickStop ? swipeOut : () => { state.fade = 1; });   // the first one: the boys' talk (js/ui/talk.js)...
-    else Cutscene.start();                                            // ...the others: the wide shot of the station
+    // the first two, the first past the bridge (in Pattaya) and the first on the motorway: the boys' talk (js/ui/talk.js)...
+    const i = state.nextStop, B = CONFIG.biome;
+    const scene = i === 0 ? 'prague' : i === 1 && Biome.stop(1) <= B.bridgeStart ? 'prague2' : Biome.stop(i) > B.bridgeEnd && Biome.stop(i - 1) <= B.bridgeEnd ? 'pattaya'
+      : Biome.stop(i) >= B.highway && Biome.stop(i - 1) < B.highway ? 'highway' : null;
+    if (scene) Talk.start(state.quickStop ? swipeOut : () => { state.fade = 1; }, scene);
+    else Cutscene.start(state.score);                                 // ...the others: the CHECKPOINT logo and the score (js/ui/cutscene.js)
   }
   function swipeOut() {
     state.mode = 'swipe';

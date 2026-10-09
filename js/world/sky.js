@@ -91,10 +91,12 @@ const Sky = (() => {
   tower.src = TOWER_IMAGE;
 
   // look: camera turn in px (dev mode) – the sky moves with it; the sides that
-  // come into view are filled with the same sky without the tower
-  function draw(ctx, time, look = 0) {
+  // come into view are filled with the same sky without the tower (bare: no tower at all –
+  // the motorway's night, far from Prague)
+  function draw(ctx, time, look = 0, bare = false) {
     const ox = Math.round(-12 + look);           // the background does not move when steering
-    ctx.drawImage(layer, ox, 0);
+    ctx.drawImage(bare ? plain : layer, ox, 0);
+    if (bare) { if (ox > 0) ctx.drawImage(plain, ox - WIDTH, 0); if (ox + WIDTH < W) ctx.drawImage(plain, ox + WIDTH, 0); return; }
     if (ox > 0) ctx.drawImage(plain, ox - WIDTH, 0);
     if (ox + WIDTH < W) ctx.drawImage(plain, ox + WIDTH, 0);
     if (Math.floor(time * 1.5) % 2 === 0)        // blinking aircraft light

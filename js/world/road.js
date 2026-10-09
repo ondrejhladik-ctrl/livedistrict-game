@@ -31,6 +31,24 @@ const Road = (() => {
     dash: '#f2f2ea',
     edge: '#f2f2ea',
   };
+  // …and at night (Biome.night): dark meadows and asphalt, the lines in the game's lime
+  const HIGHWAY_NIGHT = {
+    grass: ['#0b1d10', '#09170d'], shoulder: '#262837', asphalt: ['#15151e', '#15151e'], dash: '#a6e83a', edge: '#8fd42a',
+  };
+  const rgbOf = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const lerpHex = (a, b, t) => Biome.hex(Biome.lerpRgb(rgbOf(a), rgbOf(b), t));
+  let hwFor = -1, hwNow = HIGHWAY;
+  function highwayColours(n) {                                        // (the two lerped, once per frame)
+    n = Math.round(n * 32) / 32;
+    if (n === hwFor) return hwNow;
+    hwFor = n;
+    if (!n) return (hwNow = HIGHWAY);
+    const N = HIGHWAY_NIGHT, D = HIGHWAY;
+    return (hwNow = {
+      grass: [0, 1].map(i => lerpHex(D.grass[i], N.grass[i], n)), shoulder: lerpHex(D.shoulder, N.shoulder, n),
+      asphalt: [0, 1].map(i => lerpHex(D.asphalt[i], N.asphalt[i], n)), dash: lerpHex(D.dash, N.dash, n), edge: lerpHex(D.edge, N.edge, n),
+    });
+  }
   const TILE = .5;                      // depth of one row of paving tiles (road units)
   const DECK = 2.12;                    // outer edge of the bridge deck (as wide as the street with its pavements)
   // water and bridge colours: Prague night → Pattaya day
@@ -98,6 +116,7 @@ const Road = (() => {
       dist, time,
       water: Biome.hex(Biome.lerpRgb(WATER[0], WATER[1], m)), glint: Biome.hex(Biome.lerpRgb(GLINT[0], GLINT[1], m)),
       deckEdge: Biome.hex(Biome.lerpRgb(EDGE[0], EDGE[1], m)),
+      hw: highwayColours(Biome.night(dist)),
     };
     crestZ.length = crestY.length = 0;
     top = HORIZON + 1;
@@ -143,7 +162,7 @@ const Road = (() => {
 
     if (zone === 'highway') {
       // the motorway: meadow up to a narrow pale shoulder, grey asphalt, white lines
-      const P2 = HIGHWAY;
+      const P2 = env.hw;
       Util.rect(pens[0], 0, y, W, 1, P2.grass[band]);
       Util.rect(pens[1], cx - hw * 1.08, y, hw * 2.16, 1, P2.shoulder);
       Util.rect(pens[6], cx - hw, y, hw * 2, 1, P2.asphalt[band]);

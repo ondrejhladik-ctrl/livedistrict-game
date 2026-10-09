@@ -88,7 +88,7 @@ const CONFIG = {
   // petrol station: at 'at' metres the car turns onto the forecourt by itself and parks
   exit: {
     at: [300, 1200, 2100],        // metres: a petrol station stop at each of these (the last one in Pattaya)…
-    from: 6000, every: 1000,      // …and on the motorway one every `every` metres from `from` on, for ever
+    from: 5500, every: 1000,      // …and on the motorway one every `every` metres from `from` on, for ever
     cut: false,                   // Prague and Pattaya: the turn-off as a cut to the road seen from above (js/ui/swipe.js) – off: driven in as everywhere
     ahead: 26,                    // depth ahead of the car where the forecourt starts
     length: 7,                    // depth of the forecourt
@@ -134,7 +134,7 @@ const CONFIG = {
   // biomes: Prague → a bridge over the water (the environment changes) → Pattaya
   // …and from highway on: only the motorway through meadows, for ever
   // towers: from here on Pattaya's second row of tall towers stands behind the shophouses
-  biome: { bridgeStart: 1400, bridgeEnd: 2000, towers: 2250, highway: 5000 },   // metres
+  biome: { bridgeStart: 1400, bridgeEnd: 2000, towers: 2250, highway: 5000, night: 6000, nightLen: 300 },   // metres (night: on the motorway the day turns into the green night again, over nightLen)
 
   // dev: buttons at the side to jump to places on the track (false = hidden)
   devButtons: true,
