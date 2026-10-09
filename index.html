@@ -12,7 +12,7 @@
 <title>CHECKPOINT demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261008logo">
+<link rel="stylesheet" href="css/style.css?v=20261009fs2">
 </head>
 <body>
 <!-- pixelate filter for the lettering (css: .lettering) – the centre of every 3×3 block, grown back over it -->
@@ -105,6 +105,8 @@
         </form>
       </div><canvas class="crt-led"></canvas></div>
       <button id="acc-skip" type="button">PŘESKOČIT</button>
+      <!-- phones: the game on the whole screen (js/ui/account.js – shown only where the browser can do it) -->
+      <button id="acc-full" type="button" class="hidden" aria-label="Celá obrazovka"><svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h4v1H1v3H0zM8 0h4v4h-1V1H8zM0 8h1v3h3v1H0zM11 8h1v4H8v-1h3z"/></svg>CELÁ OBRAZOVKA</button>
     </div>
     <!-- the conditions of the sign-up (js/ui/account.js): agreeing ticks the consent, not agreeing clears it – both back to the form -->
     <div id="terms" class="overlay terms hidden" role="dialog" aria-modal="true" aria-labelledby="terms-title">
@@ -202,16 +204,16 @@
 <script src="js/ui/gameover.js?v=20261006px"></script>
 <script src="js/ui/led.js?v=20261008b"></script>
 <script src="js/ui/loading.js?v=20261008dive"></script>
-<script src="js/ui/account.js?v=20261008dive3"></script>
+<script src="js/ui/account.js?v=20261009fs"></script>
 <script src="js/ui/input.js?v=20261003l"></script>
-<script src="js/ui/audio.js?v=20261006mu"></script>
+<script src="js/ui/audio.js?v=20261009dub"></script>
 
 <script src="js/game/traffic.js?v=20260930c"></script>
 <script src="js/game/particles.js?v=20261008g"></script>
 <script src="js/game/puddles.js?v=20260930c"></script>
 <script src="js/ui/cutscene.js?v=20261008logo6"></script>
 <script src="js/ui/swipe.js?v=20261006td"></script>
-<script src="js/ui/talk.js?v=20261008boy"></script>
+<script src="js/ui/talk.js?v=20261009dub"></script>
 <script src="js/game/game.js?v=20261008logo"></script>
 <script src="js/ui/devmode.js?v=20260930c"></script>
 <script src="js/ui/dev3d.js?v=20261004tw"></script>

@@ -33,7 +33,12 @@ html, body {
 @media (pointer: coarse) {
   #touch-hint {
     display: flex; justify-content: space-between; position: absolute; left: 2%; right: 2%; bottom: 3%;
-    pointer-events: none; z-index: 5; font-size: clamp(24px, 6vw, 48px); color: rgba(184, 255, 74, .35);
+    pointer-events: none; z-index: 5; font-size: clamp(24px, 6vw, 48px);
+  }
+  #touch-hint span {                /* as bold as the tutorial's horse: the lime with the printed grain boiling on it */
+    color: transparent; background-image: var(--grain, none), linear-gradient(#6cb820, #6cb820);
+    background-size: calc(min(100vw, 177.78vh) * .4), auto; -webkit-background-clip: text; background-clip: text;
+    animation: grain .4s steps(1) infinite; filter: drop-shadow(0 0 6px rgba(108, 184, 32, .45));
   }
 }
 
@@ -105,7 +110,8 @@ body.raster .dots { display: block; }
 }
 
 /* sound on / off – a pixel speaker in the bottom right corner */
-#mute {
+#mute { display: none; }   /* (no button: the M key mutes) */
+#mute-old {
   position: absolute; right: 2.5%; bottom: 3%; z-index: 35;
   width: clamp(28px, 4.2vw, 48px); aspect-ratio: 4 / 3; padding: 0; border: 0; background: none; cursor: pointer;
   color: var(--neon); filter: drop-shadow(1px 1px 0 #000) drop-shadow(0 0 4px #000); opacity: .85;
@@ -137,6 +143,14 @@ body.raster .dots { display: block; }
 
 /* ---------- leaderboard sign-up ---------- */
 .account { background: #000; pointer-events: auto; z-index: 25; }   /* (just black round the TV screen) */
+#acc-full {                        /* in the top left corner: the game on the whole screen (phones) */
+  position: absolute; top: 3%; left: 2.5%; z-index: 36; display: flex; align-items: center; gap: .45em;
+  font: inherit; font-size: .85em; color: var(--neon); background: none; border: 0; cursor: pointer; padding: 0;
+  text-shadow: 1px 1px 0 #000, 0 0 4px #000; touch-action: manipulation;
+}
+#acc-full svg { height: .9em; width: .9em; fill: currentColor; }
+#acc-full.hidden { display: none; }
+#account.diving #acc-full { visibility: hidden; }
 #acc-skip {                        /* white, in the top right corner of the screen (the speaker is in the bottom one) */
   position: absolute; right: 2.5%; top: 3%; z-index: 36; text-shadow: 1px 1px 0 #000, 0 0 4px #000;
   font: inherit; font-size: .85em; color: #fff; background: none; border: 0; cursor: pointer; padding: 0;

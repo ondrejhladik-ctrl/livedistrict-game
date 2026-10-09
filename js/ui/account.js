@@ -374,6 +374,25 @@ const Account = (() => {
   el.form.addEventListener('pointerdown', e => e.stopPropagation());   // taps on the form are not steering / start
   el.offline.addEventListener('click', e => { e.preventDefault(); offline = true; closeForm(); });
   el.skip.addEventListener('click', e => { e.preventDefault(); closeForm(); });   // optional: play without signing up
+  // phones: the game on the whole screen (and turned to landscape where it can be locked) – the button
+  // only where the browser can do it (not on iPhones), and gone once it is so
+  const full = $('acc-full'), root = document.documentElement;
+  const canFull = !!(root.requestFullscreen || root.webkitRequestFullscreen) && matchMedia('(pointer: coarse)').matches;
+  const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const showFull = () => full && full.classList.toggle('hidden', !canFull || isFull());
+  if (full) {
+    full.addEventListener('pointerdown', e => e.stopPropagation());
+    full.addEventListener('click', e => {
+      e.preventDefault();
+      try {
+        const p = (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: 'hide' });
+        if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {});
+      } catch (err) {}
+    });
+    document.addEventListener('fullscreenchange', showFull);
+    document.addEventListener('webkitfullscreenchange', showFull);
+    showFull();
+  }
   Loading.onDone(() => { showWho(); refreshBoards(); });
 
   return {

@@ -76,7 +76,16 @@ const Talk = (() => {
       { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['ser na to', 'přines vodku'] },
     ],
   };
-  for (const L of Object.values(SCENES).flat()) if (!L.text) L.text = L.rows.join(' ');   // (typed as one: the rows and a space between)
+  for (const L of Object.values(SCENES).flat()) if (!L.text) L.text = L.rows.join(' ');
+  // the scenes' dubbing (assets/audio): the voices, and when each line is in it – [the shot comes,
+  // the words begin, how long they are said] (seconds into the track); with it the scene goes by
+  // the track (the shots, the typing as it is said) and ends with it. Muted: as without it.
+  const DUBS = {
+    prague: { src: 'assets/audio/dabing-cutscene1.wav', cues: [[0, .45, 2.1], [4.6, 5.2, 1.1], [6.4, 6.95, 3.1], [10.2, 13.5, .8]] },
+  };
+  const voices = {};
+  for (const k in DUBS) voices[k] = Sound.voice(DUBS[k].src);
+  let dub = null, voice = null;   // (typed as one: the rows and a space between)
   let LINES = SCENES.prague;                                        // (the scene playing)
   if (document.fonts) document.fonts.load("40px 'VT323'").catch(() => {});   // (the boxes' lettering ready before the first line)
   const img = {}, smoke = {};
@@ -240,6 +249,7 @@ const Talk = (() => {
   skipBtn.addEventListener('click', e => { e.preventDefault(); skip(); skipBtn.blur(); });
   addEventListener('keydown', e => { if (e.code === 'Escape') skip(); });
   let line = -1, t = 0, typed = 0, done = 0, raf = 0, last = 0, onEnd = null, grain = null;
+  let boxAt = BOX_T;                                                 // (when the box comes, into the line)
   let bgName = null, bgT = 0;                                       // the background shown and for how long
   let age = 0, closing = -1;                                        // seconds since it began; since it began to go to black (-1: not yet)
   let boxW = -1, boxH = -1;
@@ -299,7 +309,7 @@ const Talk = (() => {
       const boy = ready(sp) ? { key: pose + W + 'x' + H, alpha: DOT_ALPHA * DOT_BOY, draw: g => g.drawImage(sp, ox + x0 * s, y0 * s, (x1 - x0) * s, (y1 - y0) * s) } : null;
       drawDots(W, H, dpr, boy); ctx.imageSmoothingEnabled = true;
     }
-    if (t < BOX_T) return;                                             // (the box comes a moment later)
+    if (t < boxAt) return;                                             // (the box comes a moment later)
     // the dialogue box (its picture: the frame and the portrait – its own lettering covered,
     // the box is black under it) with the line typed out in the game's lettering (VT323)
     const bx = img[L.box], [b0, b1, b2, b3] = BOXES[L.box];
@@ -356,10 +366,27 @@ const Talk = (() => {
     last = now;
     t += dt; bgT += dt; age += dt;
     if (closing >= 0) { closing += dt; paint(); if (closing >= FADE_OUT) finish(); return; }   // (into black, then over)
+    if (dub) {                                                         // by the dubbing's track
+      const a = voice.time(), cues = dub.cues;
+      if (age > 1.5 && a === 0) { dub = null; voice.stop(); }         // (it does not play: as without it)
+      else {
+        let i = 0;
+        while (i + 1 < cues.length && a >= cues[i + 1][0]) i++;
+        if (i !== line) show(i);
+        const [at, say, len] = cues[line], n = LINES[line].text.length;
+        t = a - at; boxAt = Math.max(.3, say - at - .35);
+        const want = Util.clamp(Math.floor((a - say) / len * n), 0, n);
+        if (want > typed) typed = want;
+        if (typed === n && !done) done = t;
+        if (voice.ended() || (voice.length() && a >= voice.length() - .05)) closing = 0;
+        paint();
+        return;
+      }
+    }
     const L = LINES[line], n = L.text.length;
-    if (t < BOX_T) { paint(); return; }                                // (no box yet)
+    if (t < boxAt) { paint(); return; }                                // (no box yet)
     if (typed < n) {
-      const want = Math.min(n, Math.floor((t - BOX_T) * CPS));
+      const want = Math.min(n, Math.floor((t - boxAt) * CPS));
       while (typed < want) { typed++; if (L.text[typed - 1] !== ' ') Sound.type(); }
       if (typed === n) { done = t; Sound.ding(); }
     } else if (t - done > HOLD) { next(); if (line < 0) return; }
@@ -367,7 +394,7 @@ const Talk = (() => {
   }
 
   function show(i) {
-    line = i; t = 0; typed = 0; done = 0;
+    line = i; t = 0; typed = 0; done = 0; boxAt = BOX_T;
     if (LINES[i].bg !== bgName) { bgName = LINES[i].bg; bgT = 0; }      // (a new background starts at the left)
   }
   function next() {
@@ -378,6 +405,8 @@ const Talk = (() => {
     cancelAnimationFrame(raf); raf = 0;
     canvas.classList.add('hidden'); hud.classList.remove('hidden'); skipBtn.classList.add('hidden');
     line = -1; closing = -1;
+    if (voice) voice.stop();                                           // (the dubbing stops with it – skipped too)
+    dub = voice = null;
     Sound.duck(false);
     const f = onEnd; onEnd = null;
     if (f) f();
@@ -388,6 +417,9 @@ const Talk = (() => {
     start(done, scene) {
       onEnd = done;
       LINES = SCENES[scene] || SCENES.prague;
+      const key = SCENES[scene] ? scene : 'prague';
+      dub = DUBS[key] && !Sound.muted() ? DUBS[key] : null; voice = dub ? voices[key] : null;
+      if (voice) voice.play(0);
       canvas.classList.remove('hidden'); hud.classList.add('hidden'); skipBtn.classList.remove('hidden');
       Sound.duck(true);
       bgName = null; age = 0; closing = -1;
@@ -399,8 +431,13 @@ const Talk = (() => {
     press() {
       if (line < 0) return;
       if (closing >= 0) { finish(); return; }                          // (going to black: over at once)
+      if (dub) {                                                       // (by the track: on to the next line in it, or the end)
+        const c = dub.cues[line + 1];
+        if (c) voice.play(c[0]); else closing = 0;
+        return;
+      }
       const L = LINES[line];
-      if (t < BOX_T) t = BOX_T;                                        // (the box at once)
+      if (t < boxAt) t = boxAt;                                        // (the box at once)
       if (typed < L.text.length) { typed = L.text.length; done = t; Sound.ding(); }
       else next();
     },

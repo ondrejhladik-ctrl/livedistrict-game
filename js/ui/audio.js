@@ -94,5 +94,12 @@ const Sound = (() => {
   }
   const duck = on => { music.volume = on ? .22 : .6; };
 
-  return { init, engine, crash, toggleMute, type, ding, duck };
+  // a voice track (the cutscenes' dubbing, js/ui/talk.js): an audio element, played if not muted
+  function voice(src) {
+    const a = new Audio(src);
+    a.preload = 'auto';
+    return { play: (at = 0) => { try { a.currentTime = at; } catch (e) {} if (!muted) a.play().catch(() => {}); }, stop: () => a.pause(), time: () => a.currentTime, playing: () => !a.paused && !a.ended, ended: () => a.ended, length: () => a.duration || 0 };
+  }
+
+  return { init, engine, crash, toggleMute, type, ding, duck, voice, muted: () => muted };
 })();
