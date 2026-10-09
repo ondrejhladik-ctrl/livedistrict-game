@@ -28,7 +28,9 @@ const Sound = (() => {
       osc.start();
       // the music through the engine too, so that its volume can be eased (phones – iPhones – do not
       // let a page set an audio element's volume)
-      if (/^https?:$/.test(location.protocol)) try {                 // (not from a file: there the browser would silence it)
+      // (not from a file – there the browser would silence it – and not on iPhones / Safari: routed so, their
+      // music can go silent; there it plays as it is, and is not eased under the cutscenes)
+      if (/^https?:$/.test(location.protocol) && !document.documentElement.classList.contains('webkit')) try {
         musicGain = ctx.createGain(); musicGain.gain.value = MUSIC * (1 - ducked * (1 - DUCKED));
         ctx.createMediaElementSource(music).connect(musicGain).connect(ctx.destination);
         music.volume = 1;
@@ -64,22 +66,14 @@ const Sound = (() => {
 
   // phones (iPhones above all) only let sound start from some touches (the end of a tap, not its
   // start): once the game has started, any tap or click starts the music if it is not playing yet
-  // …and the first touch (the click on the loading screen) unlocks it all: the engine made, and the
-  // music started and stopped at once (so that it may start later, outside a touch – iPhones)
-  let primed = false;
+  // …and every touch makes sure of it: the engine made and running (the first touch – the click on the
+  // loading screen – readies it for the dubbing; it plays nothing), and once the game has started
+  // (the press on the CHECKPOINT screen: init) the music playing – the music never before that
   const unlock = () => {
     if (document.hidden) return;
     makeCtx();
     if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
-    if (!primed && !started) {                                         // (silent: muted while it is started and stopped)
-      primed = true;
-      music.muted = true;
-      const done = () => { if (!started || muted) music.pause(); music.muted = false; };
-      const p = music.play();
-      if (p && p.then) p.then(done).catch(() => { primed = false; music.muted = false; });
-      else done();
-    }
-    if (started && !muted && music.paused) music.play().catch(() => {});
+    if (started && !muted && music.paused) music.play().catch(() => {});   // (a phone that refused it at the press itself: at the end of the same tap)
   };
   for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, unlock, true);
 

@@ -248,6 +248,11 @@ body.raster .dots { display: block; }
 }
 /* WebKit: no SVG clip or bulge (it garbles them) – the glass's rounded corners only */
 .webkit .crt-screen { clip-path: none; filter: none; border-radius: 2.4em / 3em; overflow: hidden; }
+/* …and drawn by hand over it (js/ui/crt.js): the glass, the lettering, the fields – bulging as here */
+.crt-canvas .crt-screen { clip-path: none; filter: none; background: transparent; border-radius: 0; overflow: visible; }
+.crt-canvas .crt-screen::before, .crt-canvas .crt-screen::after { display: none; }
+.crt-canvas #acc-form { opacity: 0; }   /* (there still for the taps and the typing – the canvas shows it) */
+.crt-cv { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 /* faint green lines over the whole glass, all the time (its shape showing on the black) */
 .crt-screen::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
