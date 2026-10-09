@@ -33,7 +33,7 @@ html, body {
 @media (pointer: coarse) {
   #touch-hint {
     display: flex; justify-content: space-between; position: absolute; left: 2%; right: 2%; bottom: 3%;
-    pointer-events: none; z-index: 5; font-size: clamp(24px, 6vw, 48px);
+    pointer-events: none; z-index: 5; font-size: clamp(32px, 8vw, 66px);
   }
   #touch-hint span {                /* as bold as the tutorial's horse: the lime with the printed grain boiling on it */
     color: transparent; background-image: var(--grain, none), linear-gradient(#6cb820, #6cb820);

@@ -351,8 +351,52 @@ const Loading = (() => {
   let loaded = false, done = false;
   const elapsed = () => (performance.now() - start) / 1000;
 
+  // Really loading: everything the game needs downloaded and its pictures unpacked before it may
+  // start – so that nothing is fetched or unpacked later, mid-ride (phones stuttered on it): every
+  // picture (index.html notes them all down), the dubbing (js/ui/audio.js), the music, the fonts.
+  // LOADING n % meanwhile; then the game's drawing run through once (warmed up); then CLICK TO
+  // START (not before DURATION). Something that does not come in GIVE_UP seconds is not waited for.
+  const GIVE_UP = 40, PRE = window.__preload || { imgs: [], files: [] };
+  const fetchFile = url => new Promise(ok => {                       // (into the browser's cache: the audio element finds it there)
+    const x = new XMLHttpRequest(); x.open('GET', url); x.responseType = 'arraybuffer'; x.onloadend = ok; x.send();
+  });
+  const files = [fetchFile('assets/audio/dejavu-instrumental.mp3')];
+  let filesIn = 0;
+  const fontsIn = document.fonts ? Promise.all(["40px Anton", "40px VT323"].map(f => document.fonts.load(f).catch(() => {}))) : Promise.resolve();
+  let fontsDone = false;
+  fontsIn.then(() => { fontsDone = true; });
+  let stage = 'files';                                                 // files → unpack → ready
+  const imgDone = i => i.complete || i.__failed;
+  const countIn = () => {
+    const all = PRE.files.concat(files);
+    if (all.length !== countIn.n) { countIn.n = all.length; filesIn = 0; all.forEach(p => p.then(() => { filesIn++; })); }
+    const imgs = PRE.imgs.filter(i => i.src);
+    for (const i of imgs) if (!i.__watched) { i.__watched = true; i.addEventListener('error', () => { i.__failed = true; }); }
+    const n = imgs.length + all.length + 1, d = imgs.filter(imgDone).length + filesIn + (fontsDone ? 1 : 0);
+    return [d, n];
+  };
+  function unpack() {                                                  // the pictures decoded and drawn once; the game's drawing run once
+    stage = 'unpack';
+    const imgs = PRE.imgs.filter(i => i.src && i.complete && i.naturalWidth), c = Util.canvas(2, 2), g = c.getContext('2d');
+    Promise.all(imgs.map(i => (i.decode ? i.decode().catch(() => {}) : null))).then(() => {
+      for (const i of imgs) { try { g.drawImage(i, 0, 0, 2, 2); } catch (e) {} }
+      try {
+        if (typeof Renderer !== 'undefined' && typeof Game !== 'undefined')
+          for (let k = 0; k < 3; k++) { Renderer.draw(Game.state); Style.apply(document.getElementById('game'), Biome.mix(Game.state.dist)); }
+      } catch (e) {}
+      stage = 'ready';
+      if (!loaded) startText.textContent = 'LOADING 100 %';
+    });
+  }
   // timed by the clock (not by frames), so it also works if drawing is throttled
   const check = setInterval(() => {
+    const [d, n] = countIn(), giveUp = elapsed() > GIVE_UP;
+    if (stage === 'files') {
+      startText.textContent = `LOADING ${Math.min(99, Math.floor(d / n * 100))} %`;
+      if (d >= n || giveUp) unpack();
+      return;
+    }
+    if (stage !== 'ready' && !giveUp) return;
     if (elapsed() < DURATION) return;
     clearInterval(check);
     loaded = true;

@@ -10,10 +10,12 @@ const Sound = (() => {
   music.volume = .6;
   music.preload = 'auto';
 
-  // called on every (re)start of a ride: the beat starts again from the beginning
-  function init() {
-    music.currentTime = 0;
-    if (!muted) music.play().catch(() => {});
+  // iPhones: the game's sound plays even with the ring/silent switch on silent (iOS 17+), as a game should
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+
+  // the sound engine (the hum, the clacks, the dubbing): made at the first touch – phones only let
+  // sound start from one – and then it plays whenever the game wants
+  function makeCtx() {
     if (ctx) return;
     try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -22,7 +24,17 @@ const Sound = (() => {
       gain = ctx.createGain(); gain.gain.value = 0;
       osc.connect(filter).connect(gain).connect(ctx.destination);
       osc.start();
+      voices.forEach(v => v.decode());
     } catch (e) { ctx = null; }
+  }
+
+  // called on every (re)start of a ride: the beat starts again from the beginning
+  let started = false;
+  function init() {
+    started = true;
+    makeCtx();
+    music.currentTime = 0;
+    if (!muted) music.play().catch(() => {});
   }
 
   // quiet engine hum under the music
@@ -43,10 +55,22 @@ const Sound = (() => {
 
   // phones (iPhones above all) only let sound start from some touches (the end of a tap, not its
   // start): once the game has started, any tap or click starts the music if it is not playing yet
+  // …and the first touch (the click on the loading screen) unlocks it all: the engine made, and the
+  // music started and stopped at once (so that it may start later, outside a touch – iPhones)
+  let primed = false;
   const unlock = () => {
-    if (!ctx || muted || document.hidden) return;
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-    if (music.paused) music.play().catch(() => {});
+    if (document.hidden) return;
+    makeCtx();
+    if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
+    if (!primed && !started) {                                         // (silent: muted while it is started and stopped)
+      primed = true;
+      music.muted = true;
+      const done = () => { if (!started || muted) music.pause(); music.muted = false; };
+      const p = music.play();
+      if (p && p.then) p.then(done).catch(() => { primed = false; music.muted = false; });
+      else done();
+    }
+    if (started && !muted && music.paused) music.play().catch(() => {});
   };
   for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, unlock, true);
 
@@ -65,8 +89,8 @@ const Sound = (() => {
   }
   function toggleMute() {
     muted = !muted;
-    if (muted) music.pause();
-    else if (ctx) music.play().catch(() => {});   // only resume once the game has been started
+    if (muted) { music.pause(); voices.forEach(v => v.stop()); }
+    else if (started) music.play().catch(() => {});   // only resume once the game has been started
     if (ctx) gain.gain.setTargetAtTime(0, ctx.currentTime, .02);
     showState();
   }
@@ -103,11 +127,42 @@ const Sound = (() => {
   const duck = on => { music.volume = on ? .22 : .6; };
 
   // a voice track (the cutscenes' dubbing, js/ui/talk.js): an audio element, played if not muted
+  // (loaded at once, decoded once the engine is there; played by the engine – it may start any time
+  // then, phones too; time(): seconds into it, 0 until it plays)
+  const voices = [];
   function voice(src) {
-    const a = new Audio(src);
-    a.preload = 'auto';
-    return { play: (at = 0) => { try { a.currentTime = at; } catch (e) {} if (!muted) a.play().catch(() => {}); }, stop: () => a.pause(), time: () => a.currentTime, playing: () => !a.paused && !a.ended, ended: () => a.ended, length: () => a.duration || 0 };
+    let data = null, buf = null, node = null, from = 0, at0 = 0, playing = false;
+    const xhr = new XMLHttpRequest();                                 // (not fetch: it works from a file too)
+    xhr.open('GET', src); xhr.responseType = 'arraybuffer';
+    const got = new Promise(ok => { xhr.onloadend = ok; });          // (the loading screen waits for it – js/ui/loading.js)
+    if (window.__preload) window.__preload.files.push(got);
+    xhr.onload = () => { if (xhr.response) { data = xhr.response; v.decode(); } };
+    xhr.send();
+    const stop = () => { playing = false; if (node) { try { node.stop(); } catch (e) {} node = null; } };
+    const v = {
+      decode() {
+        if (!ctx || !data || buf) return;
+        const d = data; data = null;
+        const p = ctx.decodeAudioData(d, b => { buf = b; }, () => {});
+        if (p && p.then) p.then(b => { buf = b; }).catch(() => {});
+      },
+      play(at = 0) {
+        stop();
+        if (!ctx || !buf || muted) return;
+        if (ctx.state !== 'running') ctx.resume().catch(() => {});
+        node = ctx.createBufferSource(); node.buffer = buf; node.connect(ctx.destination);
+        node.start(0, Math.min(at, buf.duration));
+        from = at; at0 = ctx.currentTime; playing = true;
+      },
+      stop,
+      time: () => (playing && ctx ? Math.min(buf.duration, from + ctx.currentTime - at0) : 0),
+      playing: () => playing && v.time() < buf.duration,
+      ended: () => !!buf && playing && v.time() >= buf.duration - .02,
+      length: () => (buf ? buf.duration : 0),
+    };
+    voices.push(v);
+    return v;
   }
 
-  return { init, engine, crash, toggleMute, type, ding, duck, voice, muted: () => muted, playing: () => !music.paused };
+  return { init, engine, crash, toggleMute, type, ding, duck, voice, muted: () => muted, playing: () => !music.paused, state: () => ({ ctx: ctx ? ctx.state : null, voices: voices.map(v => +v.time().toFixed(2)) }) };
 })();

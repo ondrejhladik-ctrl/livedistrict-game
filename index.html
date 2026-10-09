@@ -15,6 +15,15 @@
     if (ios) h.classList.add('ios');
     if (matchMedia('(pointer: coarse)').matches) h.classList.add('touch');
   })();
+  // every picture the game makes (new Image()) noted down, so that the loading screen can wait for
+  // them all – loaded and unpacked – before the game may start (js/ui/loading.js); other files it
+  // waits for: __preload.files (promises)
+  (() => {
+    const P = window.__preload = { imgs: [], files: [] }, Native = window.Image;
+    const Img = function (w, h) { const i = new Native(w, h); P.imgs.push(i); return i; };
+    Img.prototype = Native.prototype;
+    window.Image = Img;
+  })();
 </script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,7 +33,7 @@
 <title>CHECKPOINT demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261009ios3">
+<link rel="stylesheet" href="css/style.css?v=20261009ar">
 </head>
 <body>
 <!-- pixelate filter for the lettering (css: .lettering) – the centre of every 3×3 block, grown back over it -->
@@ -217,17 +226,17 @@
 <script src="js/ui/intro.js?v=20261008car"></script>
 <script src="js/ui/gameover.js?v=20261006px"></script>
 <script src="js/ui/led.js?v=20261008b"></script>
-<script src="js/ui/loading.js?v=20261008dive"></script>
+<script src="js/ui/loading.js?v=20261009pre2"></script>
 <script src="js/ui/account.js?v=20261009ios2"></script>
 <script src="js/ui/input.js?v=20261003l"></script>
-<script src="js/ui/audio.js?v=20261009mu"></script>
+<script src="js/ui/audio.js?v=20261009pre"></script>
 
 <script src="js/game/traffic.js?v=20260930c"></script>
 <script src="js/game/particles.js?v=20261008g"></script>
 <script src="js/game/puddles.js?v=20260930c"></script>
 <script src="js/ui/cutscene.js?v=20261008logo6"></script>
 <script src="js/ui/swipe.js?v=20261006td"></script>
-<script src="js/ui/talk.js?v=20261009t"></script>
+<script src="js/ui/talk.js?v=20261009ios"></script>
 <script src="js/game/game.js?v=20261008logo"></script>
 <script src="js/ui/devmode.js?v=20260930c"></script>
 <script src="js/ui/dev3d.js?v=20261004tw"></script>

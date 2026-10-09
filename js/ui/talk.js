@@ -367,6 +367,7 @@ const Talk = (() => {
     t += dt; bgT += dt; age += dt;
     if (closing >= 0) { closing += dt; paint(); if (closing >= FADE_OUT) finish(); return; }   // (into black, then over)
     if (dub) {                                                         // by the dubbing's track
+      if (!voice.playing() && age < 1.5) voice.play(0);               // (not decoded yet at the start: as soon as it is)
       const a = voice.time(), cues = dub.cues;
       if (age > 1.5 && a === 0) { dub = null; voice.stop(); }         // (it does not play: as without it)
       else {
