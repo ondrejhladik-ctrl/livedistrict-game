@@ -4,6 +4,10 @@ const Util = {
   pick: list => list[Math.floor(Math.random() * list.length)],
   clamp: (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
 
+  // how sharp the overlays over the game are drawn (device pixels per CSS pixel): the screen's own,
+  // at most 2 – phones (CONFIG.lite) at most 1.5: far fewer pixels to fill each frame, hardly to be seen
+  dpr: () => Math.min(devicePixelRatio || 1, typeof CONFIG !== 'undefined' && CONFIG.lite && CONFIG.lite.on ? 1.5 : 2),
+
   canvas(w, h) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;

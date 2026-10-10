@@ -35,9 +35,12 @@
 
     if (Dev.active()) Dev.update(dt, Game.state);                  // dev mode: game frozen, camera flies
     else Game.update(dt);
-    if (Loading.isDone()) {                                        // (under the loading screen – the skyline, the sign-up, the title sequence – nothing to draw: it is all covered)
+    // (nothing to draw while it is all covered: under the loading screen – the skyline, the sign-up, the title
+    // sequence – and under a cutscene, the boys' talk or the logo, drawn whole over the game)
+    if (Loading.isDone() && !Talk.active() && !Cutscene.active()) {
       Renderer.draw(Game.state);
       Style.apply(document.getElementById('game'), Biome.mix(Game.state.dist));   // the simple 8-bit palette
+      Billboards.resolve(Style.frame(), Rain.mood());              // where the billboards can be seen (from the picture the palette read)
       Raster.game.render();                                        // the dot raster over the picture
       Billboards.render(Game.state.fade);                          // the billboards' pictures, sharp, over it
     }
@@ -45,7 +48,7 @@
     const s = Game.state;
     Hud.update(s.score, Math.round(s.speed * CONFIG.speed.toKmh), s.best);
     Sound.engine(['play', 'exit', 'station', 'leaving'].includes(s.mode), s.speed);
-    if (Loading.isDone()) measured(performance.now() - t0);
+    if (Loading.isDone() && !Talk.active() && !Cutscene.active()) measured(performance.now() - t0);
 
     requestAnimationFrame(frame);
   }

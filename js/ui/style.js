@@ -89,9 +89,23 @@ const Style = (() => {
   // kept and the picture need not be read before.
   // flat: the drawing does take the palette's colours, only without the halftone
   // (the road by day: clean, as the night road is).
+  // draw null: what the picture shows there now is kept – read with the next look at the picture
+  // (the road: right after it the layer over it reads the picture anyway – one read, not two).
   // Bookkeeping: kept.by – which keep() a pixel belongs to (0: none), kept.col – the
-  // colour it was left with (0: covered since); box – where anything is kept this frame.
-  let kept = null, handles = [], box = null;
+  // colour it was left with (0: covered since); box – where anything is kept this frame;
+  // pending – the keep()s still to be read.
+  let kept = null, handles = [], box = null, pending = [];
+  // the pending keep()s, from px (the whole picture as it is now)
+  function settle(px, w, h) {
+    if (!kept || kept.col.length !== w * h) kept = { col: new Uint32Array(w * h), by: new Uint16Array(w * h) };
+    const col = kept.col, by = kept.by;
+    for (const { id, x0, y0, x1, y1 } of pending) {
+      for (let y = y0; y < y1; y++) for (let i = y * w + x0, end = y * w + x1; i < end; i++) { col[i] = px[i]; by[i] = id; }
+      box = box ? [Math.min(box[0], x0), Math.min(box[1], y0), Math.max(box[2], x1), Math.max(box[3], y1)] : [x0, y0, x1, y1];
+    }
+    pending = [];
+  }
+  const readAll = ctx => new Uint32Array(ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height).data.buffer);
   // rect → canvas pixels [x0, y0, x1, y1), shifted with the canvas (the shake), with
   // a margin of pad pixels, clipped; no rect (or a rotated / scaled canvas): all of it
   function region(ctx, rect, pad) {
@@ -106,10 +120,12 @@ const Style = (() => {
   }
   function keep(ctx, draw, rect, covers = false, flat = false) {
     const hd = { total: 0, seen: 0, flat, shown: () => (on ? (hd.total ? hd.seen / hd.total : 0) : 1) };
-    if (!on) { draw(); return hd; }
+    if (!on) { if (draw) draw(); return hd; }
     const c = ctx.canvas, w = c.width, h = c.height;
     const [x0, y0, x1, y1] = region(ctx, rect, covers ? 0 : 2), rw = x1 - x0, rh = y1 - y0;
-    if (rw <= 0 || rh <= 0) { draw(); handles.push(hd); return hd; }   // (off screen: nothing to keep)
+    if (rw <= 0 || rh <= 0) { if (draw) draw(); handles.push(hd); return hd; }   // (off screen: nothing to keep)
+    if (!draw) { pending.push({ id: handles.push(hd), x0, y0, x1, y1 }); return hd; }   // (read later)
+    if (pending.length) settle(readAll(ctx), w, h);                  // (the ones still to be read first: they are older)
     const before = covers ? null : new Uint32Array(ctx.getImageData(x0, y0, rw, rh).data.buffer);
     draw();
     const after = new Uint32Array(ctx.getImageData(x0, y0, rw, rh).data.buffer);
@@ -138,10 +154,13 @@ const Style = (() => {
   // area ([x, y, w, h], optional): where the layer can change the picture at all – only
   // that part is looked at
   function over(ctx, draw, haze = false, nested = false, area = null) {
-    if (!on || !kept || !box) { draw(); return; }
-    const first = handles.length;                                    // keep()s up to here were there before the layer
+    if (!on) { draw(); return; }
     const cw = ctx.canvas.width, ch = ctx.canvas.height;
-    const pre = nested ? new Uint32Array(ctx.getImageData(0, 0, cw, ch).data.buffer) : null;
+    let all = null;
+    if (pending.length) { all = readAll(ctx); settle(all, cw, ch); }   // (the road kept just before: read now, once)
+    if (!kept || !box) { draw(); return; }
+    const first = handles.length;                                    // keep()s up to here were there before the layer
+    const pre = nested ? all || readAll(ctx) : null;
     draw();
     let [x0, y0, x1, y1] = box;                                      // (box: with the ones kept meanwhile)
     if (area) {
@@ -179,13 +198,16 @@ const Style = (() => {
 
   // repaint the finished frame; mix: Biome.mix at the camera. The sky takes the
   // day palette as soon as the day sky mostly covers it, the rest halfway over the bridge.
+  let fresh = false;                                                // (raw is this frame's picture)
   function apply(canvas, mix) {
+    fresh = false;
     if (on) repaint(canvas, mix);
     const g = canvas.getContext('2d');
     for (const draw of later) draw(g);
     later.length = 0;
     handles = [];
     box = null;
+    pending = [];
   }
   // The halftone (CONFIG.style.dither): a colour between two palette entries is
   // laid out as a pattern of the two – ordered dithering, 4×4 Bayer, like a halftone
@@ -202,6 +224,7 @@ const Style = (() => {
     if (!CONFIG.style.dither) {                                        // the usual way: pixel → finished pixel, by the tables
       const g = canvas.getContext('2d'), w = canvas.width, id = g.getImageData(0, 0, w, canvas.height);
       const px = new Uint32Array(id.data.buffer), n = px.length, skyEnd = (CONFIG.screen.HORIZON + 1) * w;
+      if (pending.length) settle(px, w, canvas.height);
       const K = handles.length && kept.by.length === n ? kept : null, by = K && K.by, col = K && K.col;
       const sl = sky.lutN, gl = ground.lutB;
       for (let p = 0; p < n; p++) {
@@ -225,8 +248,10 @@ const Style = (() => {
     }
     const g = canvas.getContext('2d'), w = canvas.width, h = canvas.height, id = g.getImageData(0, 0, w, h);
     const px = new Uint32Array(id.data.buffer), n = px.length, skyEnd = (CONFIG.screen.HORIZON + 1) * w;
+    if (pending.length) settle(px, w, h);
     if (!raw || raw.length !== n) raw = new Uint32Array(n);
-    raw.set(px);                                                       // (the colours before, for the neighbours)
+    raw.set(px);                                                       // (the colours before, for the neighbours – and for Billboards: frame())
+    fresh = true;
     const K = handles.length && kept.by.length === n ? kept : null, by = K && K.by, col = K && K.col;
     const alike = (a, b) => {
       if (a === b) return true;
@@ -263,5 +288,6 @@ const Style = (() => {
     if (K) K.by.fill(0);
   }
 
-  return { apply, keep, over, after, simple: () => on };
+  // frame(): the picture as it was just before the palette, this frame (null: not read – the palette off)
+  return { apply, keep, over, after, simple: () => on, frame: () => (fresh ? raw : null) };
 })();

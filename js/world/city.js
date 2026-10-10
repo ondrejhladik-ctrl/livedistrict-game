@@ -434,11 +434,37 @@ const City = (() => {
       ctx.lineTo(xa, View.y(yb, za));
       ctx.fill();
     };
+    // many such rectangles gathered by colour and filled as one path each (far fewer fills: phones) –
+    // a batch at a time, in the order the layers lie on each other (nothing of one colour in a batch
+    // overlaps another colour of it)
+    const batch = () => {
+      const by = new Map();
+      return {
+        add(za, zb, ya, yb, col, x = b.inner) {
+          za = Math.max(za, NEAR);
+          if (zb <= za) return;
+          let a = by.get(col);
+          if (!a) by.set(col, a = []);
+          a.push(za, zb, ya, yb, x);
+        },
+        fill() {
+          for (const [col, a] of by) {
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            for (let i = 0; i < a.length; i += 5) {
+              const za = a[i], zb = a[i + 1], ya = a[i + 2], yb = a[i + 3], xa = X(a[i + 4], za), xb = X(a[i + 4], zb);
+              ctx.moveTo(xa, View.y(ya, za)); ctx.lineTo(xb, View.y(ya, zb)); ctx.lineTo(xb, View.y(yb, zb)); ctx.lineTo(xa, View.y(yb, za)); ctx.closePath();
+            }
+            ctx.fill();
+          }
+        },
+      };
+    };
     const floorH = FLOOR * View.K / zn;
     if (b.type === 'tower') { drawTower(ctx, b, z0, z1, zn, X); return; }
-    if (b.type === 'modern') { drawModern(ctx, b, z0, z1, zn, floorH, X, poly, strip); return; }
+    if (b.type === 'modern') { drawModern(ctx, b, z0, z1, zn, floorH, X, poly, strip, batch); return; }
     if (b.type === 'classic') { drawClassic(ctx, b, z0, z1, zn, X, strip); return; }
-    if (b.type === 'thai') { drawThai(ctx, b, z0, z1, zn, floorH, X, poly, strip); return; }
+    if (b.type === 'thai') { drawThai(ctx, b, z0, z1, zn, floorH, X, poly, strip, batch); return; }
     const R = b.roof, xr = b.inner + R.run, top = b.height + R.h;
 
     // mansard roof: a steep slope up from the cornice, dormers in it, chimneys on top
@@ -457,12 +483,14 @@ const City = (() => {
     strip(z0, z1, 0, b.height, b.wall);
     if (floorH > DETAIL) {
       strip(z0, z1, FLOOR - .05, FLOOR, b.frame);
+      const wins = batch();
       for (let f = 0; f < b.floors; f++) for (let c = 0; c < b.cols; c++) {
         const col = b.windows[f * b.cols + c], cz = z0 + .1 + c * cw;
-        if (f === 0) { strip(cz + cw * .12, cz + cw * .88, .06, FLOOR * .72, col); continue; }   // shop window / door
+        if (f === 0) { wins.add(cz + cw * .12, cz + cw * .88, .06, FLOOR * .72, col); continue; }   // shop window / door
         const za = cz + cw * .3, zb = cz + cw * .7, ya = f * FLOOR + .1, yb = f * FLOOR + .38;
-        strip(za, zb, ya, yb, col);
+        wins.add(za, zb, ya, yb, col);
       }
+      wins.fill();
     }
     strip(z0, z1, b.height - .08, b.height, b.frame);
 
@@ -494,7 +522,19 @@ const City = (() => {
   function drawClassic(ctx, b, z0, z1, zn, X, strip) {
     // road-facing wall with ribbon windows
     strip(z0, z1, 0, b.height, b.wall);
-    if (FLOOR * View.K / zn > 2) for (let f = 0; f < b.floors; f++) strip(Math.max(zn, z0 + .15), z1 - .15, f * FLOOR + .18, f * FLOOR + .38, '#0a0a12');
+    if (FLOOR * View.K / zn > 2) {                                      // (the ribbon windows: one path)
+      const za = Math.max(zn, z0 + .15, NEAR), zb = z1 - .15;
+      if (zb > za) {
+        const xa = X(b.inner, za), xb = X(b.inner, zb);
+        ctx.fillStyle = '#0a0a12';
+        ctx.beginPath();
+        for (let f = 0; f < b.floors; f++) {
+          const ya = f * FLOOR + .18, yb = f * FLOOR + .38;
+          ctx.moveTo(xa, View.y(ya, za)); ctx.lineTo(xb, View.y(ya, zb)); ctx.lineTo(xb, View.y(yb, zb)); ctx.lineTo(xa, View.y(yb, za)); ctx.closePath();
+        }
+        ctx.fill();
+      }
+    }
     // fog on the wall, thicker towards its far end
     const xn = X(b.inner, zn), xf = X(b.inner, z1);
     if (Math.abs(xf - xn) > .5) {
@@ -625,26 +665,28 @@ const City = (() => {
   // a Thai shophouse: shops with rolling shutters and awnings on the ground
   // floor, balconies and windows above, shop signs on the facade, a water tank
   // on the flat roof
-  function drawThai(ctx, b, z0, z1, zn, floorH, X, poly, strip) {
+  function drawThai(ctx, b, z0, z1, zn, floorH, X, poly, strip, batch) {
     const cw = (b.depth - .2) / b.cols, FH = b.FH;
     strip(z0, z1, 0, b.height, b.wall);
     if (floorH > DETAIL) {
+      const shops = batch(), ribs = batch(), awnings = batch(), wins = batch(), trims = batch(), acs = batch();
       for (let c = 0; c < b.cols; c++) {                               // ground floor
         const cz = z0 + .1 + c * cw;
-        strip(cz + cw * .06, cz + cw * .94, .02, FH * .74, b.shops[c]);
-        if (floorH > (LITE ? 8 : 5)) for (let y = .1; y < FH * .7; y += .09) strip(cz + cw * .06, cz + cw * .94, y, y + .02, 'rgba(0,0,0,.15)');   // shutter ribs
-        strip(cz, cz + cw, FH * .74, FH * .86, b.awnings[c]);
+        shops.add(cz + cw * .06, cz + cw * .94, .02, FH * .74, b.shops[c]);
+        if (floorH > (LITE ? 8 : 5)) for (let y = .1; y < FH * .7; y += .09) ribs.add(cz + cw * .06, cz + cw * .94, y, y + .02, 'rgba(0,0,0,.15)');   // shutter ribs
+        awnings.add(cz, cz + cw, FH * .74, FH * .86, b.awnings[c]);
       }
       for (let f = 1; f < b.floors; f++) {
         const y = f * FH;
-        strip(z0, z1, y - .02, y + .04, b.trim);                       // balcony slab
+        trims.add(z0, z1, y - .02, y + .04, b.trim);                   // balcony slab
         for (let c = 0; c < b.cols; c++) {
           const cz = z0 + .1 + c * cw;
-          strip(cz + cw * .2, cz + cw * .8, y + FH * .2, y + FH * .78, b.windows[f * b.cols + c]);
-          strip(cz + cw * .12, cz + cw * .88, y + FH * .26, y + FH * .3, b.trim);   // balcony rail
-          if ((c + f) % 3 === 0) strip(cz + cw * .72, cz + cw * .92, y + FH * .55, y + FH * .72, '#d8e0d0');   // an AC unit
+          wins.add(cz + cw * .2, cz + cw * .8, y + FH * .2, y + FH * .78, b.windows[f * b.cols + c]);
+          trims.add(cz + cw * .12, cz + cw * .88, y + FH * .26, y + FH * .3, b.trim);   // balcony rail
+          if ((c + f) % 3 === 0) acs.add(cz + cw * .72, cz + cw * .92, y + FH * .55, y + FH * .72, '#d8e0d0');   // an AC unit
         }
       }
+      for (const l of [shops, ribs, awnings, wins, trims, acs]) l.fill();
       for (const s of b.signs) {                                       // shop signs
         strip(z0 + s.z, z0 + s.z + s.w, s.y, s.y + s.h, s.bg);
         strip(z0 + s.z + s.w * .12, z0 + s.z + s.w * .88, s.y + s.h * .4, s.y + s.h * .6, s.fg);
@@ -671,22 +713,24 @@ const City = (() => {
     face(0, b.height, Fog.color(z0));
   }
 
-  function drawModern(ctx, b, z0, z1, zn, floorH, X, poly, strip) {
+  function drawModern(ctx, b, z0, z1, zn, floorH, X, poly, strip, batch) {
     const cw = (b.depth - .2) / b.cols;
     strip(z0, z1, 0, b.height, b.wall);
     if (floorH > DETAIL) {
+      const lines = batch(), glass = batch(), wins = batch(), mullions = batch();
       for (let f = 1; f < b.floors; f++) {
         const y = f * FLOOR, ya = y + .1, yb = y + .42;
-        strip(z0, z1, y - .025, y + .025, LINE);                          // floor slab
-        if (b.glass) strip(z0, z1, ya, yb, GLASS);                        // ribbon of dark glass
-        else { strip(z0, z1, ya - .02, ya + .02, LINE); strip(z0, z1, yb - .02, yb + .02, LINE); }
+        lines.add(z0, z1, y - .025, y + .025, LINE);                      // floor slab
+        if (b.glass) glass.add(z0, z1, ya, yb, GLASS);                    // ribbon of dark glass
+        else { lines.add(z0, z1, ya - .02, ya + .02, LINE); lines.add(z0, z1, yb - .02, yb + .02, LINE); }
         for (let c = 0; c < b.cols; c++) {
           const cz = z0 + .1 + c * cw, lit = b.windows[f * b.cols + c];
-          if (lit) strip(cz + .02, cz + cw - .02, ya + .02, yb - .02, lit);
-          strip(cz - .012, cz + .012, ya, yb, b.glass ? b.wall : LINE);   // mullion
+          if (lit) wins.add(cz + .02, cz + cw - .02, ya + .02, yb - .02, lit);
+          mullions.add(cz - .012, cz + .012, ya, yb, b.glass ? b.wall : LINE);   // mullion
         }
-        strip(z1 - .112, z1 - .088, ya, yb, b.glass ? b.wall : LINE);
+        mullions.add(z1 - .112, z1 - .088, ya, yb, b.glass ? b.wall : LINE);
       }
+      for (const l of [lines, glass, wins, mullions]) l.fill();
       // ground floor: a dark base line and a glass entrance with double doors
       strip(z0, z1, FLOOR - .03, FLOOR + .03, LINE);
       const dz = z0 + .1 + Math.floor(b.cols / 2) * cw;
@@ -757,13 +801,7 @@ const City = (() => {
       ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
       ctx.globalCompositeOperation = 'source-over';
     }
-    ctx.globalAlpha = 1 - fog * .3;                      // a lit board: it cuts through the fog
-    const smooth = ctx.imageSmoothingEnabled;
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(SIGN, sx, sy, sw, sh);
-    ctx.imageSmoothingEnabled = smooth;
-    ctx.globalAlpha = 1;
-    Billboards.add(ctx, sharpOf(b), sx, sy, sw, sh, fog * .3);
+    Billboards.draw(ctx, SIGN, sharpOf(b), sx, sy, sw, sh, fog * .3);   // (a lit board: it cuts through the fog – only a little of it laid over)
   }
 
   // raw data for the dev 3D view

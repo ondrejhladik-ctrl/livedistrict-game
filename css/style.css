@@ -38,7 +38,7 @@ html, body {
   #touch-hint span {                /* as bold as the tutorial's horse: the lime with the printed grain boiling on it */
     color: transparent; background-image: var(--grain, none), linear-gradient(#6cb820, #6cb820);
     background-size: calc(min(100vw, 177.78vh) * .4), auto; -webkit-background-clip: text; background-clip: text;
-    animation: grain .4s steps(1) infinite; filter: drop-shadow(0 0 6px rgba(108, 184, 32, .45));
+    filter: drop-shadow(0 0 6px rgba(108, 184, 32, .45));   /* (the grain still: a filter re-drawn ten times a second costs phones) */
   }
 }
 

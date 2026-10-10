@@ -177,8 +177,7 @@ const Renderer = (() => {
       ctx.translate(Math.round(Util.rand(-a, a)), Math.round(Util.rand(-a, a)));
     }
     drawStreet(state, state.dist);
-    drawFade(state);
-    Billboards.check(ctx, Rain.mood());                              // (the sharp billboards: where they can be seen)
+    drawFade(state);                                                 // (where the sharp billboards can be seen: once the frame is read – js/main.js)
   }
 
   // The camera straight above the road, looking down (Swipe): only the road's lines
@@ -187,7 +186,8 @@ const Renderer = (() => {
   function drawRoadCam(state) {
     const d = state.dist + Swipe.travel();
     Fog.setMix(Biome.mix(d));
-    Style.keep(ctx, () => Road.drawTop(ctx, d, Swipe.drift()), [0, 0, W, H], true, Fog.isDay());
+    Road.drawTop(ctx, d, Swipe.drift());
+    Style.keep(ctx, null, [0, 0, W, H], true, Fog.isDay());
   }
 
   // The street scene seen from depth `dist` (the car's own depth, or the dev
@@ -223,11 +223,12 @@ const Renderer = (() => {
       Road.draw(ctx, dist, state.time);
       Fog.drawWisps(ctx, state.time, 1 - biome * .85);
       const top = Math.min(Road.top(), split);                        // (the hills may lift the road above the horizon)
-      Style.keep(ctx, () => {}, [0, top, W, split - top], true, true);
-      if (split < H) Style.keep(ctx, () => {}, [0, split, W, H - split], true);
+      Style.keep(ctx, null, [0, top, W, split - top], true, true);    // (null: kept as it is now – read with the next look at the picture)
+      if (split < H) Style.keep(ctx, null, [0, split, W, H - split], true);
     } else {
       Fog.drawWisps(ctx, state.time, 1 - biome * .85);
-      Style.keep(ctx, () => Road.draw(ctx, dist, state.time), [0, HORIZON + 1, W, H - HORIZON - 1], true);
+      Road.draw(ctx, dist, state.time);
+      Style.keep(ctx, null, [0, HORIZON + 1, W, H - HORIZON - 1], true);
     }
     Style.over(ctx, () => drawOverRoad(state, dist, shift), false, true);   // (nested: the signs, the smokers, the station keep their colours in it)
     // sparks and smoke, the rain on the glass – looked at only where they are (the rain

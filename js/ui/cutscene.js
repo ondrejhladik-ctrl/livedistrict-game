@@ -94,12 +94,13 @@ const Cutscene = (() => {
   function draw() {
     let cw = boxW, ch = boxH;
     if (cw <= 0) { const r = canvas.getBoundingClientRect(); cw = r.width; ch = r.height; }
-    const dpr = Math.min(devicePixelRatio || 1, 2), W = Math.round(cw * dpr), H = Math.round(ch * dpr);
+    const dpr = Util.dpr(), W = Math.round(cw * dpr), H = Math.round(ch * dpr);
     if (!W || !H) return;
     if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+    const shown = [];                                                  // (what is drawn this frame – for the LED panel)
     const px = Math.max(2, Math.round(H / 190));                         // (the art's pixels: a little low-res)
     ctx.imageSmoothingEnabled = false;
 
@@ -116,7 +117,7 @@ const Cutscene = (() => {
         g.shadowBlur = 0;
       });
       ctx.globalAlpha = flick;
-      ctx.drawImage(low, 0, 0, low.width * px, low.height * px);
+      ctx.drawImage(low, 0, 0, low.width * px, low.height * px); shown.push([low, low.width * px, low.height * px, ctx.globalAlpha]);
       if (glitching) { ctx.globalAlpha = flick * .9; glitchy(canvas, W, H, W * (out > 0 ? .06 : .04)); }
       ctx.globalAlpha = 1;
     }
@@ -143,7 +144,7 @@ const Cutscene = (() => {
           g.globalCompositeOperation = 'source-over';
         });
         ctx.globalAlpha = 1 - fade;
-        ctx.drawImage(low, 0, 0, low.width * px, low.height * px);
+        ctx.drawImage(low, 0, 0, low.width * px, low.height * px); shown.push([low, low.width * px, low.height * px, ctx.globalAlpha]);
         ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - fade) * .35;   // (lit up, as the date)
         ctx.drawImage(low, 0, 0, low.width * px, low.height * px);
         ctx.globalCompositeOperation = 'source-over';
@@ -161,7 +162,11 @@ const Cutscene = (() => {
       ctx.fillStyle = grain; ctx.fillRect(0, 0, (W + 512 * gs) / gs, (H + 512 * gs) / gs);
       ctx.restore();
     }
-    panel.draw(ctx, canvas, W, H, dpr, t, .35, 'logo');
+    panel.draw(ctx, g => {                                             // (the picture again, small – the screen is never read back)
+      g.fillStyle = INK; g.fillRect(0, 0, W, H);
+      for (const [c, w, h, al] of shown) { g.globalAlpha = al; g.drawImage(c, 0, 0, w, h); }
+      g.globalAlpha = 1;
+    }, W, H, dpr, t, .35, 'logo');
     const vig = ctx.createRadialGradient(W / 2, H * .55, H * .3, W / 2, H * .55, W * .62);
     vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,.6)');
     ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);

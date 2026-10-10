@@ -4,12 +4,14 @@
 // pictures themselves, at the screen's full resolution, without any of that –
 // only where the board can still be seen: what stands in front of it (a nearer
 // house, a car, the smoke, the rain) stays in front.
-// How: City draws a board into the game's picture and tells add() where (and
-// what it looks like there, just drawn); at the end of the frame check() looks
-// at those pixels again – where they are unchanged (or only darkened by the
-// rain's mood, the same all over) the board can be seen; render() then draws the
+// How: City (and the motorway's signs) draw a board with draw(): into the game's
+// picture, and the same pixels into a picture of its own (ref – the boards alone,
+// as they were drawn); once the frame is finished resolve() compares the two –
+// where the game still shows the board's pixels (or only darkened by the rain's
+// mood, the same all over) the board can be seen; render() then draws the
 // pictures there: a board seen whole straight, one partly hidden cut to its
-// visible pixels.
+// visible pixels. (The game's picture is read only once a frame, by the palette –
+// Style.frame() – and ref once: reading a canvas stalls the drawing, phones the most.)
 const Billboards = (() => {
   const { W, H } = CONFIG.screen;
   const canvas = document.getElementById('game-boards'), ctx = canvas.getContext('2d');
@@ -20,39 +22,99 @@ const Billboards = (() => {
   let maskData = null;
   const TOL = 6;                                                      // (how much a pixel may differ and still be the board)
   let list = [], dirty = [];
+  // ref: the boards alone, exactly as drawn into the game (tmp: one board, at its size, before
+  // it is laid into both); refBox: where it has anything (cleared at the next frame)
+  const ref = Util.canvas(W, H), rg = ref.getContext('2d', { willReadFrequently: true });
+  const tmp = Util.canvas(1, 1), tg = tmp.getContext('2d');
+  let refBox = null, game = null;
   // the overlay's size on the page, reported when it changes (not asked every frame)
   let boxW = -1, boxH = -1;
   if (typeof ResizeObserver !== 'undefined')
     new ResizeObserver(es => { const r = es[es.length - 1].contentRect; boxW = r.width; boxH = r.height; }).observe(canvas);
 
-  // a board just drawn into the game's picture (g): pic – its picture (sharp), x, y,
-  // w, h – where (game pixels, before the shake), fog – how much it fades into the fog,
-  // maxY – nothing of it below this row (behind a crest of the hills)
-  function add(g, pic, x, y, w, h, fog, maxY = H) {
-    const m = g.getTransform();
+  // a board drawn into the game's picture (g): small – its picture for the game, pic – its picture
+  // sharp (for the overlay), x, y, w, h – where (game pixels, whole, before the shake), fog – how
+  // much it fades into the fog (the fog's colour laid over its own pixels), maxY – nothing of it
+  // below this row (behind a crest of the hills)
+  // (a picture with no see-through pixel – most boards – is drawn straight into both, the fog laid over
+  // its rectangle; one with see-through pixels – a shield – first on its own, the fog only on its pixels)
+  const solid = new WeakMap();
+  function isSolid(img) {
+    if (solid.has(img)) return solid.get(img);
+    let yes = false;
+    try {
+      const c = Util.canvas(img.width, img.height), cg = c.getContext('2d', { willReadFrequently: true });
+      cg.drawImage(img, 0, 0);
+      const d = cg.getImageData(0, 0, c.width, c.height).data;
+      yes = true;
+      for (let i = 3; i < d.length; i += 4) if (d[i] < 255) { yes = false; break; }
+    } catch (e) {}
+    solid.set(img, yes);
+    return yes;
+  }
+  function draw(g, small, pic, x, y, w, h, fog, maxY = H) {
+    game = g;
+    const m = g.getTransform(), iw = Math.max(1, Math.round(w)), ih = Math.max(1, Math.round(h));
+    const fogCol = fog > 0 ? `rgba(${Fog.haze().join(',')},${fog.toFixed(3)})` : null;
+    const plain = isSolid(small);
+    if (!plain) {
+      if (tmp.width < iw || tmp.height < ih) { tmp.width = Math.max(tmp.width, iw); tmp.height = Math.max(tmp.height, ih); }
+      tg.globalCompositeOperation = 'source-over'; tg.globalAlpha = 1;
+      tg.clearRect(0, 0, iw, ih);
+      tg.imageSmoothingEnabled = true; tg.imageSmoothingQuality = 'low';
+      tg.drawImage(small, 0, 0, iw, ih);
+      if (fogCol) { tg.globalCompositeOperation = 'source-atop'; tg.fillStyle = fogCol; tg.fillRect(0, 0, iw, ih); tg.globalCompositeOperation = 'source-over'; }
+    }
+    const put = c => {                                               // (the same pixels into the game and into ref)
+      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      if (plain) {
+        c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'low';
+        c.drawImage(small, x, y, iw, ih);
+        if (fogCol) { c.fillStyle = fogCol; c.fillRect(x, y, iw, ih); }
+      } else {
+        c.imageSmoothingEnabled = false;
+        c.drawImage(tmp, 0, 0, iw, ih, x, y, iw, ih);
+      }
+    };
+    g.save(); put(g); g.restore();
+    rg.save();
+    rg.setTransform(1, 0, 0, 1, m.e, m.f);
+    if (maxY < H) { rg.beginPath(); rg.rect(-W, -H, W * 3, maxY + H); rg.clip(); }
+    put(rg);
+    rg.restore();
     x += m.e; y += m.f;
     const x0 = Math.max(0, Math.floor(x)), y0 = Math.max(0, Math.floor(y));
-    const x1 = Math.min(W, Math.ceil(x + w)), y1 = Math.min(H, Math.ceil(y + h), Math.floor(maxY + m.f));
+    const x1 = Math.min(W, Math.ceil(x + iw)), y1 = Math.min(H, Math.ceil(y + ih), Math.floor(maxY + m.f));
     if (x1 <= x0 || y1 <= y0) return;
-    const ref = new Uint32Array(g.getImageData(x0, y0, x1 - x0, y1 - y0).data.buffer);
-    list.push({ pic, x, y, w, h, x0, y0, rw: x1 - x0, rh: y1 - y0, ref, fog, mask: null, full: false });
+    refBox = refBox ? [Math.min(refBox[0], x0), Math.min(refBox[1], y0), Math.max(refBox[2], x1), Math.max(refBox[3], y1)] : [x0, y0, x1, y1];
+    list.push({ pic, x, y, w: iw, h: ih, x0, y0, rw: x1 - x0, rh: y1 - y0, fog, mask: null, full: false });
   }
 
-  // the frame is drawn (before the palette): where can each board still be seen?
-  // mood: [r, g, b, a] – the rain's darkening laid over everything after the boards
-  function check(g, mood) {
+  // the frame is finished: where can each board still be seen? raw – the game's picture just
+  // before the palette (Style.frame(); none: read here), mood: [r, g, b, a] – the rain's
+  // darkening laid over everything after the boards
+  function resolve(raw, mood) {
+    if (!list.length) return;
+    const [ux0, uy0, ux1, uy1] = refBox, uw = ux1 - ux0;
+    const refPx = new Uint32Array(rg.getImageData(ux0, uy0, uw, uy1 - uy0).data.buffer);
+    if (!raw && game) raw = new Uint32Array(game.getImageData(0, 0, W, H).data.buffer);   // (the palette off: the picture read here)
+    if (!raw) return;
     const [mr, mgr, mb, ma] = mood || [0, 0, 0, 0];
     for (const b of list) {
-      const now = new Uint32Array(g.getImageData(b.x0, b.y0, b.rw, b.rh).data.buffer), ref = b.ref;
-      const mask = new Uint8Array(now.length);
-      let seen = 0;
-      for (let i = 0; i < now.length; i++) {
-        const r = ref[i], v = now[i];
-        const er = (r & 255) * (1 - ma) + mr * ma, eg = (r >> 8 & 255) * (1 - ma) + mgr * ma, eb = (r >> 16 & 255) * (1 - ma) + mb * ma;
-        if (Math.abs((v & 255) - er) <= TOL && Math.abs((v >> 8 & 255) - eg) <= TOL && Math.abs((v >> 16 & 255) - eb) <= TOL) { mask[i] = 1; seen++; }
+      const mask = new Uint8Array(b.rw * b.rh);
+      let seen = 0, own = 0;
+      for (let y = 0, i = 0; y < b.rh; y++) {
+        for (let x = 0, q = (b.y0 - uy0 + y) * uw + (b.x0 - ux0), p = (b.y0 + y) * W + b.x0; x < b.rw; x++, i++, q++, p++) {
+          const r = refPx[q];
+          if ((r >>> 24) !== 255) continue;                           // (none of the board's own: the clear round a shaped board)
+          own++;
+          const v = raw[p];
+          const er = (r & 255) * (1 - ma) + mr * ma, eg = (r >> 8 & 255) * (1 - ma) + mgr * ma, eb = (r >> 16 & 255) * (1 - ma) + mb * ma;
+          if (Math.abs((v & 255) - er) <= TOL && Math.abs((v >> 8 & 255) - eg) <= TOL && Math.abs((v >> 16 & 255) - eb) <= TOL) { mask[i] = 1; seen++; }
+        }
       }
       b.mask = seen ? mask : null;
-      b.full = seen === now.length;
+      b.full = seen > 0 && seen === own;
     }
   }
 
@@ -60,7 +122,7 @@ const Billboards = (() => {
   function render(fade = 0) {
     let bw = boxW, bh = boxH;
     if (bw < 0) { const rect = canvas.getBoundingClientRect(); bw = rect.width; bh = rect.height; }
-    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const dpr = Util.dpr();
     const cw = Math.round(bw * dpr), ch = Math.round(bh * dpr);
     if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; dirty = []; }
     for (const [x, y, w, h] of dirty) ctx.clearRect(x, y, w, h);      // (only where it drew last time)
@@ -122,7 +184,11 @@ const Billboards = (() => {
     list = [];
   }
 
-  const begin = () => { list = []; };                                // a new frame (drawn or not, the last one's boards are gone)
+  // a new frame (drawn or not, the last one's boards are gone – from ref too)
+  function begin() {
+    list = [];
+    if (refBox) { rg.clearRect(refBox[0], refBox[1], refBox[2] - refBox[0], refBox[3] - refBox[1]); refBox = null; }
+  }
 
-  return { begin, add, check, render };
+  return { begin, draw, resolve, render };
 })();

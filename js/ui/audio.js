@@ -73,14 +73,14 @@ const Sound = (() => {
     if (document.hidden) return;
     makeCtx();
     if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
-    if (started && !muted && music.paused) music.play().catch(() => {});   // (a phone that refused it at the press itself: at the end of the same tap)
+    if (started && !muted && !held && music.paused) music.play().catch(() => {});   // (a phone that refused it at the press itself: at the end of the same tap)
   };
   for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, unlock, true);
 
   // phones: pause the music when the app goes to the background, resume on return
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) music.pause();
-    else if (ctx && !muted) music.play().catch(() => {});
+    else if (started && !muted && !held) music.play().catch(() => {});
     if (ctx) (document.hidden ? ctx.suspend() : ctx.resume()).catch(() => {});
   });
 
@@ -93,7 +93,7 @@ const Sound = (() => {
   function toggleMute() {
     muted = !muted;
     if (muted) { music.pause(); voices.forEach(v => v.stop()); }
-    else if (started) music.play().catch(() => {});   // only resume once the game has been started
+    else if (started && !held) music.play().catch(() => {});   // only resume once the game has been started (and not under a cutscene)
     if (ctx) gain.gain.setTargetAtTime(0, ctx.currentTime, .02);
     showState();
   }
@@ -129,9 +129,21 @@ const Sound = (() => {
   }
   // the game quieter under a cutscene: the music (and the engine's hum) eased down over `slow` seconds
   // – and back up after it
-  let duckRaf = 0;
+  // (iPhones: the page may not set the music's volume at all – there it stops as the picture has gone
+  // black, held under the cutscene, and plays on from there after it)
+  const canVolume = (() => { try { const a = new Audio(); a.volume = .5; return Math.abs(a.volume - .5) < .01; } catch (e) { return false; } })();
+  let duckRaf = 0, held = false, holdTimer = 0;
   function duck(on, slow = 1.6) {
     const target = on ? 1 : 0;
+    if (!musicGain && !canVolume) {
+      if (on) { if (!held && !holdTimer) holdTimer = setTimeout(() => { holdTimer = 0; held = true; music.pause(); }, Math.min(600, slow * 400)); }   // (already on its way: as it is)
+      else {
+        clearTimeout(holdTimer); holdTimer = 0;
+        if (held) { held = false; if (started && !muted && !document.hidden) music.play().catch(() => {}); }
+      }
+      ducked = target;
+      return;
+    }
     if (ducked === target && !duckRaf) return;
     const level = d => MUSIC * (1 - d * (1 - DUCKED));
     if (musicGain && ctx) {

@@ -65,7 +65,7 @@ const Raster = (() => {
     function layout(width, height) {
       cssW = width; cssH = height;
       if (!cssW || !cssH) return false;
-      const dpr = Math.min(devicePixelRatio || 1, 2);
+      const dpr = Util.dpr();
       const cell = Math.max(2, Math.round(R.cell * dpr));               // device px per cell (fine: 2 CSS px on sharp screens)
       cols = Math.max(1, Math.round(cssW * dpr / cell));
       rows = Math.max(1, Math.round(cssH * dpr / cell));

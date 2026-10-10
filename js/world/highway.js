@@ -121,13 +121,7 @@ const Highway = (() => {
       const pw = Math.max(1, Math.round(.07 * View.RW / z)), post = `rgb(${POST.map((v, k) => Math.round(v + (haze[k] - v) * fog)).join(',')})`;
       for (const k of [.22, .78]) Util.rect(ctx, Math.round(left + w * k - pw / 2), Math.round(bottom), pw, Math.ceil(ground - bottom), post);
       const sx = Math.round(left), sy = Math.round(top), sw = Math.round(w), sh = Math.round(h);
-      ctx.globalAlpha = 1 - fog * .3;
-      const smooth = ctx.imageSmoothingEnabled;
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(s.pic, sx, sy, sw, sh);
-      ctx.imageSmoothingEnabled = smooth;
-      ctx.globalAlpha = 1;
-      Billboards.add(ctx, s.pic, sx, sy, sw, sh, fog * .3, crest);
+      Billboards.draw(ctx, s.pic, s.pic, sx, sy, sw, sh, fog * .3, crest);   // (into the game's picture, and sharp over it)
       if (crest < H()) ctx.restore();
     }
   }

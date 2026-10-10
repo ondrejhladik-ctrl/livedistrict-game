@@ -280,11 +280,11 @@ const Loading = (() => {
   function drawLed(t) {
     let cw = ledW, ch = ledH;
     if (cw < 0) { const r = ledCanvas.getBoundingClientRect(); cw = r.width; ch = r.height; }
-    const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(cw * dpr), h = Math.round(ch * dpr);
+    const dpr = Util.dpr(), w = Math.round(cw * dpr), h = Math.round(ch * dpr);
     if (!w || !h) return;
     if (ledCanvas.width !== w || ledCanvas.height !== h) { ledCanvas.width = w; ledCanvas.height = h; }
     ledCtx.clearRect(0, 0, w, h);
-    led.draw(ledCtx, canvas, w, h, dpr, t, LED_ALPHA, 'skyline');
+    led.draw(ledCtx, g2 => g2.drawImage(buf, 0, 0, w, h), w, h, dpr, t, LED_ALPHA, 'skyline');   // (the skyline from its own small picture: the screen is never read back)
   }
 
   // one layer of houses, moved to the left in a loop, with its blinking warning lights

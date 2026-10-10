@@ -28,7 +28,7 @@ const Crt = (() => {
   // the screen, the one of the flat screen it shows (-1: outside the glass)
   function layout(w, h) {
     k = Math.min(devicePixelRatio || 1, 2);
-    while (w * h * k * k > 2.4e6 && k > 1) k -= .25;                   // (not too many pixels to move on a phone)
+    while (w * h * k * k > 1.2e6 && k > 1) k -= .25;                   // (not too many pixels to move on a phone)
     W = Math.round(w * k); H = Math.round(h * k);
     for (const c of [cv, page]) { c.width = W; c.height = H; }
     const mask = Util.canvas(W, H), mg = mask.getContext('2d', { willReadFrequently: true });

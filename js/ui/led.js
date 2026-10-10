@@ -6,7 +6,9 @@
 // a second). The mid tones the cells don't light get their colour darkened (MID); under it all the
 // panel's own dark (BACK) – as deep as the panel is strong there.
 //   const panel = Led.panel();
-//   panel.draw(ctx, src, W, H, dpr, rise, alpha, key, fg)   src: the picture (stretched over W × H),
+//   panel.draw(ctx, src, W, H, dpr, rise, alpha, key, fg)   src: the picture (stretched over W × H) – or
+//     a function painting it (g: as if W × H; called into the panel's small sampling canvas – so the
+//     picture shown on the screen is never read back, which stalls phones),
 //     rise: seconds since it began coming up, alpha: how strong, key: anew at once when it changes,
 //     fg (optional): { draw(g), alpha, key } – something in front (a boy) drawn into g as its shape,
 //     the panel over it this strong instead (split anew when the panel or fg.key changes)
@@ -30,7 +32,8 @@ const Led = (() => {
         if (dsrc.width !== cols || dsrc.height !== rows) { dsrc.width = dcell.width = cols; dsrc.height = dcell.height = rows; }
         dsg.imageSmoothingEnabled = true; dsg.imageSmoothingQuality = 'high';
         dsg.clearRect(0, 0, cols, rows);
-        dsg.drawImage(src, 0, 0, src.width * cols * cell / W, src.height * rows * cell / H, 0, 0, cols, rows);
+        if (typeof src === 'function') { dsg.save(); dsg.scale(1 / cell, 1 / cell); src(dsg); dsg.restore(); }
+        else dsg.drawImage(src, 0, 0, src.width * cols * cell / W, src.height * rows * cell / H, 0, 0, cols, rows);
         const s = dsg.getImageData(0, 0, cols, rows).data, out = dcg.createImageData(cols, rows), o = out.data;
         const T = now / 1000, edge = Math.min(1, rise / RISE) * 1.05, TAU = Math.PI * 2, span = WHITE - BLACK;
         for (let r = 0; r < rows; r++) {

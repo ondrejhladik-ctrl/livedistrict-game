@@ -259,12 +259,12 @@ const Talk = (() => {
 
   // the LED panel over the picture drawn so far (coming up anew with each background)
   const panel = Led.panel();
-  const drawDots = (W, H, dpr, fg) => panel.draw(ctx, canvas, W, H, dpr, bgT, DOT_ALPHA, bgName, fg);
+  const drawDots = (W, H, dpr, fg, paint) => panel.draw(ctx, paint || canvas, W, H, dpr, bgT, DOT_ALPHA, bgName, fg);
 
   function draw() {
     let cw = boxW, ch = boxH;
     if (cw <= 0) { const r = canvas.getBoundingClientRect(); cw = r.width; ch = r.height; }   // (not reported yet – it was hidden)
-    const dpr = Math.min(devicePixelRatio || 1, 2), W = Math.round(cw * dpr), H = Math.round(ch * dpr);
+    const dpr = Util.dpr(), W = Math.round(cw * dpr), H = Math.round(ch * dpr);
     if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
     const L = LINES[line];
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -274,10 +274,12 @@ const Talk = (() => {
     // the picture: as wide as the screen (at least as high), from its top
     const s = Math.max(W / PW, H / PH), ox = (W - PW * s) / 2;
     const bg = img[L.bg];
+    let bgAt = null;
     if (ready(bg)) {                                                   // (zoomed about the screen's middle, slid by the spare width)
       const bw = PW * s * BG_ZOOM, bh = PH * s * BG_ZOOM, spare = (BG_ZOOM - 1) * PW * s / 2, p = Math.min(1, bgT / BG_PAN);
       const bx = (W - bw) / 2 + spare * (2 * p - 1), by = H / 2 * (1 - BG_ZOOM);
       ctx.drawImage(bg, bx, by, bw, bh);
+      bgAt = [bx, by, bw, bh];
     }
     const pose = L.pose[done && t - done > POSE_AFTER ? 1 : 0], sp = img[pose], [x0, y0, x1, y1] = SPRITES[pose];
     if (ready(sp)) {
@@ -307,7 +309,9 @@ const Talk = (() => {
     }
     if (ready(bg)) {                                                   // (the panel over both – fainter over the boy)
       const boy = ready(sp) ? { key: pose + W + 'x' + H, alpha: DOT_ALPHA * DOT_BOY, draw: g => g.drawImage(sp, ox + x0 * s, y0 * s, (x1 - x0) * s, (y1 - y0) * s) } : null;
-      drawDots(W, H, dpr, boy); ctx.imageSmoothingEnabled = true;
+      const spAt = ready(sp) ? [ox + x0 * s, y0 * s, (x1 - x0) * s, (y1 - y0) * s] : null;
+      const paint = g => { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.drawImage(bg, ...bgAt); if (spAt) g.drawImage(sp, ...spAt); };   // (the picture again, small – not read back from the screen)
+      drawDots(W, H, dpr, boy, paint); ctx.imageSmoothingEnabled = true;
     }
     if (t < boxAt) return;                                             // (the box comes a moment later)
     // the dialogue box (its picture: the frame and the portrait – its own lettering covered,
