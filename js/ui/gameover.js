@@ -21,7 +21,7 @@ const GameOver = (() => {
   const HS = { text: 'HIGH SCORES', cap: 30, top: 50 };             // the table's heading in its place (top: of the letters)
   const GAP = .08;                                                  // seconds between two letters popping up
   const T = { cut: 1.7, hold: .2, shrink: .7, barsIn: .6, row: .045, dimIn: .35 };   // GAME OVER for cut seconds; HIGH SCORES holds, shrinks; then the bars, the rows
-  const DIM = .6;                                                   // how much darker the picture goes behind HIGH SCORES
+  const DIM = .82;                                                  // how much darker the picture goes behind HIGH SCORES (the table readable over the bright Pattaya too)
   // the bars as in the intro: out of the slice FOOT of each letter, from a vanishing
   // point VP × cap above the word's top, REACH times as far from it as the feet –
   // fading out from FADE on (the table is under them); GAPS: the light between them

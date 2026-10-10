@@ -325,7 +325,7 @@ const Station = (() => {
       sideStrip(ctx, shop, shop.sx, 1.8, 1.9, SHOP.d0, SHOP.d1, C.neon, dist, wz);
     }
 
-    Style.keep(ctx, () => drawNpc(ctx, dist, side, wz), npcRect(dist, side, wz));   // the smoker by the shop (own colours)
+    // (the smoker by the shop: gone – drawNpc is kept, not drawn)
 
     // islands and pumps, far to near
     for (let i = PUMPS.length - 1; i >= 0; i--) {
@@ -387,6 +387,8 @@ const Station = (() => {
     dev,
     draw, lightAt,
     park: PARK,                                                        // parking spot (road x, depth from wz)
-    item: () => ({ wz: Exit.state.wz, draw }),                         // for City's depth sorting
+    // for City's depth sorting – by its front; the camera at it (under the canopy, parked) – last of all: then
+    // nothing of the street (the houses across it, their billboards) can stand in front of its roof
+    item: dist => ({ wz: dist > Exit.state.wz - 4 ? -Infinity : Exit.state.wz, draw }),
   };
 })();

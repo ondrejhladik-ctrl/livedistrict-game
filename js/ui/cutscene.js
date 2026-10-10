@@ -166,7 +166,7 @@ const Cutscene = (() => {
       g.fillStyle = INK; g.fillRect(0, 0, W, H);
       for (const [c, w, h, al] of shown) { g.globalAlpha = al; g.drawImage(c, 0, 0, w, h); }
       g.globalAlpha = 1;
-    }, W, H, dpr, t, .35, 'logo');
+    }, W, H, dpr, 99, .35, 'logo');   // (99: there whole at once)
     const vig = ctx.createRadialGradient(W / 2, H * .55, H * .3, W / 2, H * .55, W * .62);
     vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,.6)');
     ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);

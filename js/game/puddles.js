@@ -19,10 +19,13 @@ const Puddles = (() => {
       if (timer <= 0) {
         const I = R.puddleEvery;
         timer = Math.max(I.min, I.start - rainTime * I.decay) * Util.rand(.6, 1.4);
-        list.push({ x: Util.rand(-.8, .8), wz: dist + CONFIG.traffic.spawnZ, w: Util.rand(.18, .34), hit: false });
-        if (Math.random() < R.pavementPuddles) {                    // and one on a pavement (between the kerb and the houses)
-          const side = Math.random() < .5 ? -1 : 1, w = Util.rand(.2, .4);
-          list.push({ x: side * Util.rand(CONFIG.road.kerb + w * .6, CONFIG.road.pavement - w * .8), wz: dist + CONFIG.traffic.spawnZ + Util.rand(-2, 2), w, hit: false, pavement: true });
+        const wz = dist + CONFIG.traffic.spawnZ;
+        if (Biome.mix(wz) < .3) {                                     // (only on the wet street: none ahead on the bridge, in the Pattaya sun)
+          list.push({ x: Util.rand(-.8, .8), wz, w: Util.rand(.18, .34), hit: false });
+          if (Math.random() < R.pavementPuddles) {                  // and one on a pavement (between the kerb and the houses)
+            const side = Math.random() < .5 ? -1 : 1, w = Util.rand(.2, .4);
+            list.push({ x: side * Util.rand(CONFIG.road.kerb + w * .6, CONFIG.road.pavement - w * .8), wz: wz + Util.rand(-2, 2), w, hit: false, pavement: true });
+          }
         }
       }
     }

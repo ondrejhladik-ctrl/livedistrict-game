@@ -20,7 +20,9 @@ const Talk = (() => {
     'dori-talk': [400, 88, 2140, 2483], 'dori-smoke': [402, 90, 1735, 2483],   // (Lukas with the cigarette)
     'dori-sober': [1224, 127, 2661, 2483],                            // (Dori sober: lboy-talk without the cigarette – see DERIVED)
     // (Pattaya, in tank tops, with cans: Dori on the right, Lukas on the left)
-    'pt-dori-drink': [1849, 208, 3048, 2480], 'pt-dori-down': [1965, 234, 2974, 2480], 'pt-dori-up': [1739, 232, 2973, 2480],
+    'pt-dori-drink': [1773, 224, 2978, 2480], 'pt-dori-down': [1890, 228, 2984, 2480], 'pt-dori-up': [1742, 223, 2985, 2480],   // (with a bottle of water)
+    'hw-dori-up': [1665, 228, 2980, 2480], 'hw-dori-drink': [1754, 216, 2966, 2480], 'hw-dori-down': [1935, 224, 2978, 2480],   // (in the leather jacket, with the vodka)
+    'pt-lukas-door': [1195, 386, 2374, 2317],                          // (at the shop's door – on bg-door-pt)
     'pt-lukas-out': [427, 226, 1708, 2480], 'pt-lukas-hold': [460, 229, 1521, 2480], 'pt-lukas-drink': [426, 229, 1623, 2480],
   };
   // the dialogue boxes: where they stand in the 3508×2483 picture (x0, y0, x1, y1 – Lboy's
@@ -58,25 +60,30 @@ const Talk = (() => {
       { bg: 'end-bg', pose: ['end-legs', 'end-legs'], box: 'box-a', rows: ['to zní', 'docela dobře.'], drop: 'end-butt' },
     ],
     prague2: [                                                         // (the second petrol station)
+      { bg: 'bg-step-out', pose: [], text: '', hold: 2 },                // (no words: them getting out of the car)
       { bg: 'bg-dori', pose: ['dori-talk', 'dori-smoke'], box: 'box-b', rows: ['nechceš se', 'prohodit ?'] },
       { bg: 'bg-lboy', pose: ['dori-sober', 'dori-sober'], box: 'box-a', rows: ['kámo vzali mi papíry.', 'jsem zpátky na zadní'] },
-      { bg: 'bg-dori', pose: ['dori-smoke', 'dori-talk'], box: 'box-c', rows: ['to je hard', 'to dej do toho intra'] },
     ],
-    highway: [                                                         // (the first petrol station on the motorway: Dori with the vodka)
-      { bg: 'bg-dori', pose: ['pt-lukas-hold', 'pt-lukas-out'], box: 'box-b', rows: ['silná show', 'dneska'] },
-      { bg: 'bg-lboy', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['a ještě víc', 'jich čeká'] },
-      { bg: 'bg-dori', pose: ['pt-lukas-out', 'pt-lukas-drink'], box: 'box-c', rows: ['jaro bude', 'next level'] },
-      { bg: 'bg-lboy', pose: ['pt-dori-drink', 'pt-dori-down'], box: 'box-a', rows: ['okay pome ať', 'stíháme sound check'] },
+    highway: [                                                         // (the first petrol station on the motorway: Dori with the vodka, Lukas with the water)
+      // (at night: the backgrounds in the night's colours, the boys in its light – night)
+      { bg: 'bg-dori-nt', pose: ['water-down', 'water-up'], box: 'box-b', rows: ['silná show', 'včera'], night: true },
+      { bg: 'bg-lboy-nt', pose: ['hw-dori-down', 'hw-dori-down'], box: 'box-a', rows: ['a ještě víc', 'jich čeká'], night: true },
+      { bg: 'bg-dori-nt', pose: ['water-up', 'water-drink'], box: 'box-c', rows: ['jaro bude', 'next level'], night: true },
+      { bg: 'bg-lboy-nt', pose: ['hw-dori-up', 'hw-dori-drink'], box: 'box-a', rows: ['okay pome ať', 'stíháme sound check'], night: true },
+      { bg: 'end-hw-bg', pose: [], text: '', hold: 4.2, drive: true },    // (no words: the empty bottle on the forecourt, the car driving off in its smoke – see DRIVE)
     ],
     pattaya: [                                                         // (the first petrol station in Pattaya)
-      { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['brácho,', 'super trenínk'] },
+      { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['brácho,', 'super trénink'] },
       { bg: 'bg-dori-pt', pose: ['pt-lukas-out', 'pt-lukas-drink'], box: 'box-b', rows: ['už to potřebovalo', 'checkpoint'] },
       { bg: 'bg-lboy-pt', pose: ['pt-dori-down', 'pt-dori-up'], box: 'box-a', rows: ['crazy že se sem', 'vracíme každej rok'] },
       { bg: 'bg-dori-pt', pose: ['pt-lukas-hold', 'pt-lukas-out'], box: 'box-c', rows: ['chceš koupit', 'vodu ?'] },
-      { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['ser na to', 'přines vodku'] },
+      { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['už mám', 'kup vodku'] },
+      // (no words: Lukas goes for the vodka – the shop's door, then him at it; hold: seconds each)
+      { bg: 'bg-door-pt', pose: [], text: '', hold: 1.4 },
+      { bg: 'bg-door-pt', pose: ['pt-lukas-door', 'pt-lukas-door'], text: '', hold: 2.6, onBg: true },
     ],
   };
-  for (const L of Object.values(SCENES).flat()) if (!L.text) L.text = L.rows.join(' ');
+  for (const L of Object.values(SCENES).flat()) if (L.text == null) L.text = L.rows.join(' ');
   // the scenes' dubbing (assets/audio): the voices, and when each line is in it – [the shot comes,
   // the words begin, how long they are said] (seconds into the track); with it the scene goes by
   // the track (the shots, the typing as it is said) and ends with it. Muted: as without it.
@@ -100,11 +107,25 @@ const Talk = (() => {
   const DROP = { from: 1500, at: .25, fall: .75, ground: 1840, dx: 220, hop: 60, bounce: .3, tip: -58, glow: .5, dim: 1.1,
     ember: [2615, 1310], body: [2436, 935, 2672, 1352], ash: [2650, 935, 2672, 1275] };
   let buttBody = null, buttOut = null;
-  for (const n of ['bg-lboy', 'bg-dori', 'end-bg', 'end-butt']) { img[n] = new Image(); img[n].src = A + n + '.webp?v=3'; }
+  for (const n of ['bg-lboy', 'bg-dori', 'end-bg', 'end-butt', 'bg-door-pt', 'bg-step-out', 'end-hw-bg', 'hw-car', 'hw-smoke', 'hw-smoke-cool', 'hw-puff']) { img[n] = new Image(); img[n].src = A + n + (n === 'hw-puff' ? '.png?v=4' : n === 'bg-door-pt' || n === 'end-hw-bg' || n.startsWith('hw-') ? '.webp?v=4' : '.webp?v=3'); }
   // backgrounds repainted in another's colours: each pixel by its brightness onto the ramp,
   // dark to light (in Pattaya: its fresh greens to white – the game's day palette, js/ui/style.js)
   const PATTAYA = ['#0b1a10', '#0b3d1f', '#146b34', '#1f8f45', '#2fb556', '#4fd36b', '#86ec8e', '#c4f7c0', '#f2f2ea'];
-  const RECOLOUR = { 'bg-lboy-pt': ['bg-lboy', PATTAYA], 'bg-dori-pt': ['bg-dori', PATTAYA] };
+  const NIGHT = ['#000000', '#030605', '#070e0a', '#0c1810', '#132417', '#1c3420', '#294a2c', '#3f6a3c', '#6a9558'];   // (the night: black, dark greens, a little lime)
+  const RECOLOUR = { 'bg-lboy-pt': ['bg-lboy', PATTAYA], 'bg-dori-pt': ['bg-dori', PATTAYA], 'bg-lboy-nt': ['bg-lboy', NIGHT], 'bg-dori-nt': ['bg-dori', NIGHT] };
+  // a boy in the night's light (a line's night): his picture darkened and cooled (NIGHT_LIGHT multiplied in), made once
+  const NIGHT_LIGHT = '#8fa3a6', nightOf = {};
+  function inNight(n) {
+    const src = img[n];
+    if (!ready(src)) return src;
+    if (nightOf[n] && nightOf[n].src === src) return nightOf[n].c;
+    const c = Util.canvas(src.naturalWidth || src.width, src.naturalHeight || src.height), g = c.getContext('2d');
+    g.drawImage(src, 0, 0);
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = NIGHT_LIGHT; g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(src, 0, 0);
+    nightOf[n] = { src, c };
+    return c;
+  }
   for (const [n, [from, ramp]] of Object.entries(RECOLOUR)) {
     const im = new Image();
     im.onload = () => {
@@ -143,7 +164,7 @@ const Talk = (() => {
         img[n] = c;
       } else if (SMOKE[n]) cutSmoke(n, im);
     };
-    im.src = A + (D ? D.from : n) + '.webp?v=3';
+    im.src = A + (D ? D.from : n) + (n === 'pt-lukas-door' ? '.webp?v=15' : n.startsWith('pt-dori') ? '.webp?v=4' : '.webp?v=3');
     img[n] = im;
   }
   // the boy without his smoke (img[n]), the smoke on its own (smoke[n]): the light grey
@@ -210,13 +231,20 @@ const Talk = (() => {
   }
   // the boxes, their portraits made a little low-res: blocks of FACE_PX of the picture's
   // pixels, each black, grey or white
+  // (the portraits are the boys' real photos, made the same way – face-a, -b, -c: their heads cut from the
+  // photos' grey, in blocks of FACE_PX, black, grey or white, with light lines where the picture changes
+  // sharply – laid into the box's portrait instead of its drawing)
   const FACE_PX = 5;
   for (const n of Object.keys(BOXES)) {
-    const im = new Image();
+    const im = new Image(), face = new Image();
+    face.src = A + 'face-' + n.slice(-1) + '.png?v=8';
     im.onload = () => {
       const c = Util.canvas(im.width, im.height), g = c.getContext('2d');
       g.drawImage(im, 0, 0);
       const [p0, p1, p2, p3] = PORTRAIT[n], pw = p2 - p0, ph = p3 - p1;
+      const put = () => { g.fillStyle = '#000'; g.fillRect(p0, p1, pw, ph); g.imageSmoothingEnabled = false; g.drawImage(face, p0, p1, pw, ph); img[n] = c; };
+      if (face.complete && face.naturalWidth) { put(); return; }
+      face.onload = put;
       const sm = Util.canvas(Math.ceil(pw / FACE_PX), Math.ceil(ph / FACE_PX)), sg = sm.getContext('2d', { willReadFrequently: true });
       sg.imageSmoothingQuality = 'high';
       sg.drawImage(c, p0, p1, pw, ph, 0, 0, sm.width, sm.height);
@@ -238,6 +266,15 @@ const Talk = (() => {
   // a little bigger than the picture (BG_ZOOM), across its spare width in BG_PAN seconds
   // (from when it comes – one background over more lines goes on, not over again)
   const BG_ZOOM = 1.1, BG_PAN = 10;
+  // the car driving off (a line's drive – the motorway's last shot): the car (its underside drawn in – the art had smoke
+  // there) and the burnout's smoke cut apart (their boxes in the picture), stepped as drawn by hand (FPS). The car spins its
+  // wheels a moment (WAIT – shaking), then goes away from the camera along the ground, faster and faster: its distance
+  // 1 → FAR times in GO s (and on), its size 1/distance, its foot (FOOT) towards the horizon's point (VP) – fading into the
+  // dark at last, its tail lights (LIGHTS) glowing. Puffs of smoke (PUFF: a few of the art's pixels each) are left behind
+  // its tyres (TYRES), growing, drifting, thinning out; the burnout's cloud stays – drifting, waving, its tail-lit red
+  // going grey as the car goes, thinning out
+  const DRIVE = { car: [700, 222, 1584, 706], smoke: [0, 281, 1553, 939], foot: [1142, 700], vp: [1060, 628], far: 7, wait: .5, go: 2.6, fps: 12,
+    tyres: [[782, 696], [1346, 696]], lights: [[801, 474], [1317, 474]], puff: { w: 330, h: 206, life: 1.4, n: 4 } };
   // over the picture (the background and the boy) its LED panel (js/ui/led.js), this strong
   const DOT_ALPHA = .5, DOT_BOY = .7;                               // (over the boy: 30 % fainter)
 
@@ -259,7 +296,63 @@ const Talk = (() => {
 
   // the LED panel over the picture drawn so far (coming up anew with each background)
   const panel = Led.panel();
-  const drawDots = (W, H, dpr, fg, paint) => panel.draw(ctx, paint || canvas, W, H, dpr, bgT, DOT_ALPHA, bgName, fg);
+  const drawDots = (W, H, dpr, fg, paint) => panel.draw(ctx, paint || canvas, W, H, dpr, 99, DOT_ALPHA, bgName, fg);   // (99: there whole at once – not coming up from the bottom)
+
+  // the drive (see DRIVE) into g, over the background where it is on the screen (at: x, y, w, h of the whole picture)
+  function drawDrive(g, at) {
+    const car = img['hw-car'], sm = img['hw-smoke'], cool = img['hw-smoke-cool'], puff = img['hw-puff'];
+    if (!ready(car) || !ready(sm)) return;
+    const kx = at[2] / PW, ky = at[3] / PH, X = x => at[0] + x * kx, Y = y => at[1] + y * ky;
+    const F = DRIVE.fps, n = Math.floor(t * F), tq = n / F, [fx, fy] = DRIVE.foot, [vx, vy] = DRIVE.vp;
+    // the car at a time: how far it has gone (p: 0 → 1 in GO s), its size and where its foot is
+    const where = ti => { const p = Math.max(0, (ti - DRIVE.wait) / DRIVE.go), sc = 1 / (1 + (DRIVE.far - 1) * p * p); return { p, sc, x: vx + (fx - vx) * sc, y: vy + (fy - vy) * sc }; };
+    const now = where(tq), place = (x, y, w = now) => [w.x + (x - fx) * w.sc, w.y + (y - fy) * w.sc];
+    const smoothing = g.imageSmoothingEnabled, op = g.globalCompositeOperation;
+    g.imageSmoothingEnabled = false;
+    // the car (behind the smoke): shaking while its wheels spin, gone into the dark at last
+    const shake = now.p < .2 ? 1 : 0, jx = shake * ((n * 7) % 3 - 1) * 7, jy = shake * (n % 2) * 5;
+    const carA = 1 - .9 * Util.clamp((now.p - 1) / .5, 0, 1);
+    g.globalAlpha = carA;
+    const [p0, p1] = place(DRIVE.car[0] + jx, DRIVE.car[1] + jy), [q0, q1] = place(DRIVE.car[2] + jx, DRIVE.car[3] + jy);
+    g.drawImage(car, X(p0), Y(p1), (q0 - p0) * kx, (q1 - p1) * ky);
+    // the burnout's cloud: in bands, each pushed aside by a wave, drifting off to the left and up, growing, thinning out –
+    // lit red by the tail lights, then (the car gone) grey
+    const [s0, s1, s2, s3] = DRIVE.smoke, sw = s2 - s0, shh = s3 - s1, BAND = 36, grow = 1 + .1 * tq;
+    const dx = -38 * tq, dy = -14 * tq, cx = s0 + sw / 2, cy = s3, A = 1 - .8 * Util.clamp((tq - .3) / 3.2, 0, 1);
+    const cloud = (im, a) => {
+      if (!ready(im) || a <= 0) return;
+      g.globalAlpha = a;
+      for (let j = 0; j < shh; j += BAND) {
+        const h = Math.min(BAND, shh - j), wave = Math.sin(j * .021 + tq * 3.1) * (10 + 9 * tq) + Math.sin(j * .053 - tq * 4.3) * 5;
+        const ya = cy + (s1 + j - cy) * grow + dy, yb = cy + (s1 + j + h - cy) * grow + dy;
+        g.drawImage(im, 0, j * im.height / shh, im.width, h * im.height / shh, X(cx + (s0 - cx) * grow + dx + wave), Y(ya), sw * grow * kx, (yb - ya) * ky + 1);
+      }
+    };
+    const grey = Util.clamp(now.p * 1.6, 0, 1);
+    cloud(sm, A * (1 - grey)); cloud(cool, A * grey);
+    // the puffs left behind the tyres – one each step, from the spinning on until it is far – growing, drifting, thinning out
+    if (ready(puff)) {
+      const P = DRIVE.puff, pw = puff.width / P.n, last = Math.floor((DRIVE.wait + DRIVE.go * .75) * F);
+      for (let k = Math.max(2, n - Math.ceil(P.life * F)); k <= Math.min(n, last); k++) {
+        const ts = k / F, age = tq - ts, w = where(ts), [tx, ty] = DRIVE.tyres[k % 2], [px, py] = place(tx, ty, w);
+        const a = .5 * Math.pow(1 - age / P.life, 1.5);
+        if (a <= 0) continue;
+        const pwid = P.w * w.sc * (.45 + 1.5 * age), phei = P.h * w.sc * (.45 + 1.1 * age);
+        g.globalAlpha = a;
+        g.drawImage(puff, ((k * 7 + 3) % P.n) * pw, 0, pw, puff.height,
+          X(px - pwid / 2 - 90 * age * w.sc), Y(py - phei * .6 - 40 * age * w.sc), pwid * kx, phei * ky);
+      }
+    }
+    // the tail lights' glow (through the smoke)
+    g.globalCompositeOperation = 'lighter';
+    for (const [lx, ly] of DRIVE.lights) {
+      const [x, y] = place(lx + jx, ly + jy), r = ((95 + 12 * (n % 3)) * now.sc + 14) * kx, gr = g.createRadialGradient(X(x), Y(y), 0, X(x), Y(y), r);
+      gr.addColorStop(0, 'rgba(255,50,35,.5)'); gr.addColorStop(.35, 'rgba(200,20,15,.22)'); gr.addColorStop(1, 'rgba(120,0,0,0)');
+      g.globalAlpha = Math.max(carA, .35); g.fillStyle = gr; g.fillRect(X(x) - r, Y(y) - r, 2 * r, 2 * r);
+    }
+    g.globalCompositeOperation = op; g.globalAlpha = 1;
+    g.imageSmoothingEnabled = smoothing;
+  }
 
   function draw() {
     let cw = boxW, ch = boxH;
@@ -281,9 +374,13 @@ const Talk = (() => {
       ctx.drawImage(bg, bx, by, bw, bh);
       bgAt = [bx, by, bw, bh];
     }
-    const pose = L.pose[done && t - done > POSE_AFTER ? 1 : 0], sp = img[pose], [x0, y0, x1, y1] = SPRITES[pose];
+    const pose = L.pose[done && t - done > POSE_AFTER ? 1 : 0], sp = L.night ? inNight(pose) : img[pose], [x0, y0, x1, y1] = SPRITES[pose] || [0, 0, 0, 0];
+    // where the boy is: on the screen as the picture is (standing still while the background drifts)
+    // – or, onBg (a cut-out of the background itself: Lukas in the shop's door), moving with it
+    const bk = L.onBg && bgAt ? BG_ZOOM : 1, bxo = L.onBg && bgAt ? bgAt[0] : ox, byo = L.onBg && bgAt ? bgAt[1] : 0;
+    const spAt = ready(sp) ? [bxo + x0 * s * bk, byo + y0 * s * bk, (x1 - x0) * s * bk, (y1 - y0) * s * bk] : null;
     if (ready(sp)) {
-      ctx.drawImage(sp, ox + x0 * s, y0 * s, (x1 - x0) * s, (y1 - y0) * s);
+      ctx.drawImage(sp, ...spAt);
       if (smoke[pose]) drawSmoke(smoke[pose], ox + x0 * s, y0 * s, (x1 - x0) * s / sp.width);
     }
     const dr = L.drop && img[L.drop];
@@ -307,47 +404,38 @@ const Talk = (() => {
         ctx.restore();
       }
     }
+    if (L.drive && bgAt) drawDrive(ctx, bgAt);
     if (ready(bg)) {                                                   // (the panel over both – fainter over the boy)
-      const boy = ready(sp) ? { key: pose + W + 'x' + H, alpha: DOT_ALPHA * DOT_BOY, draw: g => g.drawImage(sp, ox + x0 * s, y0 * s, (x1 - x0) * s, (y1 - y0) * s) } : null;
-      const spAt = ready(sp) ? [ox + x0 * s, y0 * s, (x1 - x0) * s, (y1 - y0) * s] : null;
-      const paint = g => { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.drawImage(bg, ...bgAt); if (spAt) g.drawImage(sp, ...spAt); };   // (the picture again, small – not read back from the screen)
+      const boy = spAt && !L.onBg ? { key: pose + W + 'x' + H + (L.onBg ? Math.round(spAt[0]) : ''), alpha: DOT_ALPHA * DOT_BOY, draw: g => g.drawImage(sp, ...spAt) } : null;
+      const paint = g => { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.drawImage(bg, ...bgAt); if (spAt) g.drawImage(sp, ...spAt); if (L.drive) drawDrive(g, bgAt); };   // (the picture again, small – not read back from the screen)
       drawDots(W, H, dpr, boy, paint); ctx.imageSmoothingEnabled = true;
     }
-    if (t < boxAt) return;                                             // (the box comes a moment later)
-    // the dialogue box (its picture: the frame and the portrait – its own lettering covered,
-    // the box is black under it) with the line typed out in the game's lettering (VT323)
+    if (t < boxAt || !L.box) return;                                   // (the box comes a moment later; a shot without words: none)
+    // the dialogue box, as wide as its line needs: its picture's left part (the frame and the portrait), its
+    // right edge, and between them the frame's top and bottom stretched (a column of the picture just right of
+    // the portrait – nothing of its own lettering there) – the box held to its side of the screen (Dori's on the
+    // left, Lukas's on the right); the line in the game's lettering (VT323), a third of the box high (smaller
+    // only if the widest box would not hold it)
     const bx = img[L.box], [b0, b1, b2, b3] = BOXES[L.box];
-    const X = ox + b0 * s, Y = H - (PH - b1) * s, BW = (b2 - b0) * s, BH = (b3 - b1) * s;
-    if (ready(bx)) ctx.drawImage(bx, X, Y, BW, BH);
-    else { ctx.fillStyle = '#000'; ctx.fillRect(X, Y, BW, BH); }
-    const TX = TEXT[L.box], sx = BW / TX.size[0], sy = BH / TX.size[1], cover = TX.rows;
+    const X0 = ox + b0 * s, Y = H - (PH - b1) * s, BWmax = (b2 - b0) * s, BH = (b3 - b1) * s;
+    const TX = TEXT[L.box], sx = BWmax / TX.size[0], sy = BH / TX.size[1], cover = TX.rows;
     const rows = L.rows ? L.rows.map((w, i) => [...cover[i].slice(0, 4), w]) : cover;
-    if (typeof Intro !== 'undefined' && Intro.grain) {                // the title's grain on the portrait, a little, boiling (a new place every 0.1 s)
-      if (!grain) grain = ctx.createPattern(Intro.grain, 'repeat');
-      const [p0, p1, p2, p3] = PORTRAIT[L.box], gs = Math.max(1, Math.round(H / 360));
-      ctx.save();
-      ctx.beginPath(); ctx.rect(X + p0 * sx, Y + p1 * sy, (p2 - p0) * sx, (p3 - p1) * sy); ctx.clip();
-      const step = Math.floor(performance.now() / 100);
-      ctx.translate(-((step * 113) % 256) * gs, -((step * 57) % 256) * gs); ctx.scale(gs, gs);
-      ctx.globalAlpha = .95; ctx.imageSmoothingEnabled = false;
-      ctx.fillStyle = grain; ctx.fillRect(0, 0, (W + 512 * gs) / gs, (H + 512 * gs) / gs);
-      ctx.restore();
-    }
-    const ax = Math.min(...cover.map(r => r[0])), ay = Math.min(...cover.map(r => r[1])), bx2 = Math.max(...cover.map(r => r[2])), by2 = Math.max(...cover.map(r => r[3]));
-    ctx.fillStyle = '#000';
-    ctx.fillRect(X + (ax - 14) * sx, Y + (ay - 12) * sy, (Math.min(TX.size[0] - 20, bx2 + 40) - ax + 14) * sx, (by2 - ay + 24) * sy);
-    // one size for every box (a third of its height), smaller only if a line would not fit
-    const room = (Math.min(TX.size[0] - 40, bx2 + 30) - ax) * sx;
+    const P2 = PORTRAIT[L.box][2], LEFT = P2 + 20, RIGHT = 24;             // (the picture's px: the left part, the right edge)
+    const gap = BH * .2, roomMax = BWmax - P2 * sx - gap * 2 - RIGHT * sx;
     let size = BH * .33;
     ctx.font = `${size}px 'VT323', monospace`;
-    const widest = Math.max(...rows.map(r => ctx.measureText(r[4]).width));
-    if (widest > room) size *= room / widest;
-    ctx.font = `${size}px 'VT323', monospace`;
+    let fullW = Math.max(...rows.map(r => ctx.measureText(r[4]).width));
+    if (fullW > roomMax) { size *= roomMax / fullW; ctx.font = `${size}px 'VT323', monospace`; fullW = roomMax; }
+    const BW = Math.min(BWmax, Math.max(LEFT * sx + RIGHT * sx + gap, P2 * sx + gap * 2 + fullW + RIGHT * sx));
+    const X = b0 + b2 < PW ? X0 : X0 + BWmax - BW;                           // (Dori's box from the left edge, Lukas's from the right)
+    if (ready(bx)) {
+      const iw = bx.width, ik = iw / TX.size[0], midW = BW - (LEFT + RIGHT) * sx;
+      ctx.drawImage(bx, 0, 0, LEFT * ik, bx.height, X, Y, LEFT * sx, BH);
+      if (midW > 0) ctx.drawImage(bx, (P2 + 14) * ik, 0, 2 * ik, bx.height, X + LEFT * sx - .5, Y, midW + 1, BH);
+      ctx.drawImage(bx, iw - RIGHT * ik, 0, RIGHT * ik, bx.height, X + BW - RIGHT * sx, Y, RIGHT * sx, BH);
+    } else { ctx.fillStyle = '#000'; ctx.fillRect(X, Y, BW, BH); }
     ctx.fillStyle = '#fff'; ctx.textBaseline = 'alphabetic';
-    // the lines as a block in the middle of the space right of the portrait
-    const fullW = Math.max(...rows.map(r => ctx.measureText(r[4]).width));
-    const areaL = X + PORTRAIT[L.box][2] * sx, areaR = X + BW;
-    const tx = Math.max(areaL, areaL + (areaR - areaL - fullW) / 2);
+    const tx = X + P2 * sx + gap + Math.max(0, (BW - P2 * sx - gap * 2 - RIGHT * sx - fullW) / 2);
     let left = typed;
     for (const row of rows) {
       const words = row[4], shown = Math.max(0, Math.min(words.length, left));
@@ -394,7 +482,7 @@ const Talk = (() => {
       const want = Math.min(n, Math.floor((t - boxAt) * CPS));
       while (typed < want) { typed++; if (L.text[typed - 1] !== ' ') Sound.type(); }
       if (typed === n) { done = t; Sound.ding(); }
-    } else if (t - done > HOLD) { next(); if (line < 0) return; }
+    } else if (t - done > (L.hold != null ? L.hold : HOLD)) { next(); if (line < 0) return; }
     paint();
   }
 

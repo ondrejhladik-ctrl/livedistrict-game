@@ -260,7 +260,10 @@ const Game = (() => {
     const i = state.nextStop, B = CONFIG.biome;
     const scene = i === 0 ? 'prague' : i === 1 && Biome.stop(1) <= B.bridgeStart ? 'prague2' : Biome.stop(i) > B.bridgeEnd && Biome.stop(i - 1) <= B.bridgeEnd ? 'pattaya'
       : Biome.stop(i) >= B.highway && Biome.stop(i - 1) < B.highway ? 'highway' : null;
-    if (scene) Talk.start(state.quickStop ? swipeOut : () => { state.fade = 1; }, scene);
+    // (after the motorway's talk – the car driving off in its last shot – the game goes on with the car already pulling out
+    // onto the road by itself; after the others it waits at the pump)
+    const after = scene === 'highway' ? () => { state.fade = 1; state.mode = 'leaving'; Hud.showStationHint(false); Input.clearTouches(); } : () => { state.fade = 1; };
+    if (scene) Talk.start(state.quickStop ? swipeOut : after, scene);
     else Cutscene.start(state.score);                                 // ...the others: the CHECKPOINT logo and the score (js/ui/cutscene.js)
   }
   function swipeOut() {

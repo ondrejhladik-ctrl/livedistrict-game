@@ -119,7 +119,7 @@ const Style = (() => {
       Math.min(c.width, Math.ceil(xb) + pad), Math.min(c.height, Math.ceil(yb) + pad)];
   }
   function keep(ctx, draw, rect, covers = false, flat = false) {
-    const hd = { total: 0, seen: 0, flat, shown: () => (on ? (hd.total ? hd.seen / hd.total : 0) : 1) };
+    const hd = { total: 0, seen: 0, flat, surface: !draw && covers, shown: () => (on ? (hd.total ? hd.seen / hd.total : 0) : 1) };   // (surface: the road – Style.over)
     if (!on) { if (draw) draw(); return hd; }
     const c = ctx.canvas, w = c.width, h = c.height;
     const [x0, y0, x1, y1] = region(ctx, rect, covers ? 0 : 2), rw = x1 - x0, rh = y1 - y0;
@@ -170,9 +170,12 @@ const Style = (() => {
     }
     const rw = x1 - x0, rh = y1 - y0, w = cw;
     const id = ctx.getImageData(x0, y0, rw, rh), after = new Uint32Array(id.data.buffer), col = kept.col, by = kept.by;
+    // the road's surface on each row (Road.spans, in drawing coordinates: shifted with the shake) – a tint only there
+    const sp = typeof Road !== 'undefined' ? Road.spans : null, tf = ctx.getTransform(), ry = Math.round(tf.f), rx = tf.e;
     let restored = false;
-    for (let y = 0, j = 0; y < rh; y++)
-      for (let i = (y0 + y) * w + x0, end = i + rw; i < end; i++, j++) {
+    for (let y = 0, j = 0; y < rh; y++) {
+      const dy = y0 + y - ry, inRow = sp && dy >= 0 && dy < ch, sa = inRow ? sp[dy * 2] + rx : -1e9, sb = inRow ? sp[dy * 2 + 1] + rx : 1e9;
+      for (let i = (y0 + y) * w + x0, end = i + rw, x = x0; i < end; i++, j++, x++) {
         const k = by[i];
         if (!k) continue;
         const a = after[j], b = col[i];
@@ -184,9 +187,10 @@ const Style = (() => {
         const dr = (a & 255) - (b & 255), dg = (a >> 8 & 255) - (b >> 8 & 255), db = (a >> 16 & 255) - (b >> 16 & 255);
         const d = Math.max(Math.abs(dr), Math.abs(dg), Math.abs(db));
         if (haze === 'off' || (haze && dr + dg + db > 0 && d <= HAZE)) { after[j] = b; restored = true; }   // no grey haze on the road
-        else if (d <= TINT) col[i] = a;
+        else if (d <= TINT && (!handles[k - 1].surface || (x >= sa && x < sb))) col[i] = a;   // (on the road: only on its surface)
         else by[i] = 0;
       }
+    }
     if (restored) ctx.putImageData(id, x0, y0);
   }
 

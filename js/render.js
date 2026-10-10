@@ -238,7 +238,7 @@ const Renderer = (() => {
   }
 
   function drawOverRoad(state, dist, shift) {
-    City.draw(ctx, dist, Exit.state.active ? [Station.item()] : []);   // petrol station among the houses
+    City.draw(ctx, dist, Exit.state.active ? [Station.item(dist)] : []);   // petrol station among the houses
     Bridge.draw(ctx, dist);            // the bridge: boats below, railings, pylons and cables
     Props.draw(ctx, dist);             // litter and smokers on the pavements
     Puddles.draw(ctx, dist);

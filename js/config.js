@@ -138,7 +138,7 @@ const CONFIG = {
   // biomes: Prague → a bridge over the water (the environment changes) → Pattaya
   // …and from highway on: only the motorway through meadows, for ever
   // towers: from here on Pattaya's second row of tall towers stands behind the shophouses
-  biome: { bridgeStart: 1400, bridgeEnd: 2000, towers: 2250, highway: 5000, night: 6000, nightLen: 300 },   // metres (night: on the motorway the day turns into the green night again, over nightLen)
+  biome: { bridgeStart: 1400, bridgeEnd: 2000, towers: 2250, highway: 5000, night: 5100, nightLen: 300 },   // metres (night: on the motorway the day turns into the green night again, over nightLen – night before its first petrol station)
 
   // dev: buttons at the side to jump to places on the track (false = hidden)
   devButtons: true,

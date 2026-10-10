@@ -102,6 +102,10 @@ const Road = (() => {
   // (behind a crest it is hidden). top: the topmost row drawn; crest(z): the
   // topmost row of the ground nearer than z (what is behind it shows only above).
   let top = HORIZON + 1;
+  // each row's road surface (the asphalt, the kerbs, the pavements, the deck, the shoulder, the side road to a
+  // station): x from, x to – what lies beyond (the ground the houses stand on) is no road: drawn over, it takes
+  // the palette like anything else (Style.over), however little its colour changed (a dark house on the dark ground)
+  const spans = new Float32Array(H * 2);
   const crestZ = [], crestY = [];
   function crest(z) {
     if (!crestZ.length || z <= crestZ[0]) return H;
@@ -120,6 +124,7 @@ const Road = (() => {
     };
     crestZ.length = crestY.length = 0;
     top = HORIZON + 1;
+    for (let y = 0; y < H; y++) { spans[y * 2] = 0; spans[y * 2 + 1] = W; }   // (rows not drawn row by row: all of it, as before)
     if (!View.hilly()) {
       for (let y = HORIZON + 1; y < H; y++) {
         const z = View.depthOfRow(y);
@@ -159,6 +164,13 @@ const Road = (() => {
     const band = Math.floor(worldZ / 3) % 2;           // alternating stripes = sense of speed
     const lineW = Math.max(1, .03 * hw);
     const zone = Biome.zone(worldZ), P = zone === 'thai' ? THAI : C;
+    {
+      const ext = zone === 'highway' ? 1.08 : zone === 'bridge' ? DECK : R.pavement, r = Exit.reach(worldZ), side = Exit.state.side;
+      let a = cx - hw * ext, b = cx + hw * ext;
+      if (r > 50) { if (side > 0) b = W; else a = 0; }
+      else if (r) { if (side > 0) b = Math.max(b, cx + hw * r); else a = Math.min(a, cx - hw * r); }
+      if (y >= 0 && y < H) { spans[y * 2] = a - 1; spans[y * 2 + 1] = b + 1; }
+    }
 
     if (zone === 'highway') {
       // the motorway: meadow up to a narrow pale shoulder, grey asphalt, white lines
@@ -248,5 +260,5 @@ const Road = (() => {
     }
   }
 
-  return { draw, drawTop, crest, top: () => top };
+  return { draw, drawTop, crest, top: () => top, spans };
 })();

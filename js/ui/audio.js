@@ -3,7 +3,7 @@
 const Sound = (() => {
   let ctx = null, osc, gain, muted = false;
   let musicGain = null, ducked = 0;                                   // (the music through the engine: its volume eased – ducked: 0 … 1)
-  const MUSIC = .6, DUCKED = .18;                                     // the music's volume; how much of it is left under a cutscene
+  const MUSIC = .6;                                                   // the music's volume
   try { localStorage.removeItem('znr.muted'); } catch (e) {}           // (no longer remembered: with no speaker button a muted visit could never get its sound back – the M key mutes for this visit)
 
   // background beat – loops for as long as the game runs (M or the speaker button mutes it)
@@ -31,7 +31,7 @@ const Sound = (() => {
       // (not from a file – there the browser would silence it – and not on iPhones / Safari: routed so, their
       // music can go silent; there it plays as it is, and is not eased under the cutscenes)
       if (/^https?:$/.test(location.protocol) && !document.documentElement.classList.contains('webkit')) try {
-        musicGain = ctx.createGain(); musicGain.gain.value = MUSIC * (1 - ducked * (1 - DUCKED));
+        musicGain = ctx.createGain(); musicGain.gain.value = MUSIC * (1 - ducked);
         ctx.createMediaElementSource(music).connect(musicGain).connect(ctx.destination);
         music.volume = 1;
       } catch (e) { musicGain = null; }
@@ -51,7 +51,7 @@ const Sound = (() => {
   // quiet engine hum under the music
   function engine(running, speed) {
     if (!ctx) return;
-    gain.gain.setTargetAtTime(running && !muted ? .018 * (1 - ducked * .8) : 0, ctx.currentTime, .05);
+    gain.gain.setTargetAtTime(running && !muted ? .018 * (1 - ducked) : 0, ctx.currentTime, .05);
     osc.frequency.setTargetAtTime(38 + speed * 3.2, ctx.currentTime, .1);
   }
 
@@ -127,25 +127,18 @@ const Sound = (() => {
     g.connect(ctx.destination);
     for (const fr of [2093, 4186]) { const o = ctx.createOscillator(); o.frequency.value = fr; o.connect(g); o.start(t); o.stop(t + .7); }
   }
-  // the game quieter under a cutscene: the music (and the engine's hum) eased down over `slow` seconds
-  // – and back up after it
-  // (iPhones: the page may not set the music's volume at all – there it stops as the picture has gone
-  // black, held under the cutscene, and plays on from there after it)
+  // the game's music stopped under a cutscene: faded out over `slow` seconds (where the page may set its volume)
+  // and paused – held – the engine's hum silent too; after it, played on from there (faded back in)
+  // (iPhones: the page may not set the music's volume at all – there it stops at once as the picture has gone black)
   const canVolume = (() => { try { const a = new Audio(); a.volume = .5; return Math.abs(a.volume - .5) < .01; } catch (e) { return false; } })();
   let duckRaf = 0, held = false, holdTimer = 0;
   function duck(on, slow = 1.6) {
-    const target = on ? 1 : 0;
-    if (!musicGain && !canVolume) {
-      if (on) { if (!held && !holdTimer) holdTimer = setTimeout(() => { holdTimer = 0; held = true; music.pause(); }, Math.min(600, slow * 400)); }   // (already on its way: as it is)
-      else {
-        clearTimeout(holdTimer); holdTimer = 0;
-        if (held) { held = false; if (started && !muted && !document.hidden) music.play().catch(() => {}); }
-      }
-      ducked = target;
-      return;
-    }
+    const target = on ? 1 : 0, level = d => MUSIC * (1 - d), fades = !!(musicGain && ctx) || canVolume;
+    clearTimeout(holdTimer); holdTimer = 0;
+    if (on && !held) holdTimer = setTimeout(() => { holdTimer = 0; held = true; music.pause(); }, fades ? slow * 1000 + 60 : Math.min(600, slow * 400));
+    if (!on && held) { held = false; if (started && !muted && !document.hidden) music.play().catch(() => {}); }
+    if (!fades) { ducked = target; return; }
     if (ducked === target && !duckRaf) return;
-    const level = d => MUSIC * (1 - d * (1 - DUCKED));
     if (musicGain && ctx) {
       ducked = target;
       const g = musicGain.gain, now = ctx.currentTime;
