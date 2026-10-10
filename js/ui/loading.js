@@ -16,9 +16,9 @@ const Loading = (() => {
   const W = 320, H = 180;
   const DURATION = 3.2;                        // seconds before a click can continue
   const SKY_DOWN = 32;                         // the game's sky sits lower here: the horizon behind the low houses
-  const FOG = '24,44,36';                      // a darker version of the game's fog colour (44,78,64)
+  const FOG = '12,36,22';                      // a darker, greener version of the game's fog colour (44,78,64)
   const TOWER_RIGHT = 110;                     // the sky is shifted right: the Žižkov tower stands at the right
-  const SKY_DARK = .38;                        // the sky is darker here than in the game
+  const SKY_DARK = .5;                         // the sky is darker here than in the game
   const SMOG = [78, 86, 88];                   // grey smog over the nearer houses
   const el = document.getElementById('loading');
   const startText = document.getElementById('loading-start');
@@ -96,8 +96,8 @@ const Loading = (() => {
   // right end is drawn again at the left). fog: how much the night haze covers it,
   // smog: how grey and washed-out the grey smog makes it, dusk: how much it sinks into the dark.
   const LAYERS = [
-    { speed: 6, width: 520, base: 150, h: [12, 32], fog: .72, dusk: .35, kinds: [classic, prague, tower] },
-    { speed: 14, width: 600, base: 168, h: [22, 52], fog: .28, smog: .85, dusk: .5, kinds: [classic, prague, modern, tower, tower], signs: true },
+    { speed: 6, width: 520, base: 150, h: [12, 32], fog: .6, dusk: .3, kinds: [classic, prague, prague, modern] },
+    { speed: 14, width: 600, base: 168, h: [22, 52], fog: .12, dusk: .12, kinds: [classic, prague, prague, modern, modern], signs: true, palette: true },
     { speed: 30, width: 680, base: 186, h: [12, 30], fog: 0, smog: .75, dusk: .3, kinds: [dark] },
   ].map(L => {
     const strip = Util.canvas(L.width, H), sg = strip.getContext('2d'), lights = [], boards = [];
@@ -106,7 +106,7 @@ const Loading = (() => {
       // now and then (at least every ~110 px) a wide dark house carrying a billboard
       // on its facade: the date with the horse, or the shield
       const sign = L.signs && x - lastSign > Util.rand(70, 110) && x < L.width - 40;
-      const kind = sign ? Util.pick([classic, tower]) : Util.pick(L.kinds);
+      const kind = sign ? Util.pick([classic, modern]) : Util.pick(L.kinds);
       const w = sign ? ri(30, 36) : kind === tower ? ri(14, 24) : ri(16, 34);
       const pic = kind(w, sign ? ri(40, 52) : ri(...L.h) + (kind === tower ? 10 : 0));
       const y = L.base - pic.height;
@@ -149,7 +149,7 @@ const Loading = (() => {
   // outlines of the front houses pass in front. The lamps' glow
   // is added every frame, so it shines through the smog.
   const GROUND = LAYERS[1].base;
-  const LAMP_COLORS = [CONFIG.lamps.rgb, CONFIG.lamps.rgb, '220,235,255', '120,180,255', '100,225,200', '200,255,190'];   // green (as in the game), cold white, blue, teal, warm
+  const LAMP_COLORS = [CONFIG.lamps.rgb, CONFIG.lamps.rgb, CONFIG.lamps.rgb, '150,240,150', '100,225,170', '200,255,160'];   // greens (as in the game), a mint, a pale lime
   // a flickering lamp: mostly on, a short blackout, and now and then a stutter
   function lampOn(light, t) {
     if (!light || !light.flicker) return true;
@@ -273,7 +273,7 @@ const Loading = (() => {
   const blit = () => ctx.drawImage(buf, 0, 0, canvas.width, canvas.height);
   // a faint LED panel over the skyline (as the boys' talk, js/ui/led.js): coming up from the bottom
   // when the screen comes, bands going up it, flickering – on its own canvas, as sharp as the screen
-  const LED_ALPHA = .3, ledCanvas = document.getElementById('loading-led'), ledCtx = ledCanvas.getContext('2d'), led = Led.panel();
+  const LED_ALPHA = .5, ledCanvas = document.getElementById('loading-led'), ledCtx = ledCanvas.getContext('2d'), led = Led.panel();
   let ledW = -1, ledH = -1;
   if (typeof ResizeObserver !== 'undefined')
     new ResizeObserver(es => { const r = es[es.length - 1].contentRect; ledW = r.width; ledH = r.height; }).observe(ledCanvas);
@@ -335,6 +335,12 @@ const Loading = (() => {
   }
 
   function drawLayer(L, t) {
+    if (L.palette && !L.painted && typeof Style !== 'undefined') {   // (once: in the game's night palette with its dots, as the houses in Prague – then darker and greener)
+      Style.apply(L.strip, 0); L.painted = true;
+      const sg = L.strip.getContext('2d'), id = sg.getImageData(0, 0, L.width, H), d = id.data;
+      for (let i = 0; i < d.length; i += 4) { d[i] *= .45; d[i + 1] *= .78; d[i + 2] *= .5; }
+      sg.putImageData(id, 0, 0);
+    }
     const off = (t * L.speed) % L.width;
     g.drawImage(L.strip, -off, 0);
     g.drawImage(L.strip, L.width - off, 0);

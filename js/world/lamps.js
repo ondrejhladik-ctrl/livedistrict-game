@@ -7,7 +7,13 @@ const Lamps = (() => {
   let firstWz = Infinity;                 // world depth of the first lamp (Infinity = no lamps yet)
 
   function reset() { firstWz = Infinity; }
-  const onBridge = wz => Biome.zone(wz) !== 'city';             // lamps only in Prague: none on the bridge, in Pattaya or on the motorway
+  // lamps only in Prague: none on the bridge, in Pattaya or on the motorway – and none round a petrol station
+  // (from the turn-off's widening to past the forecourt)
+  const nearStation = wz => {
+    const o = Biome.origin(), MU = CONFIG.metersPerUnit, X = CONFIG.exit, m = (wz - o) * MU;
+    return Biome.stops(m - 400, m + 400).some(st => { const t = o + st / MU + X.ahead; return wz > t - X.taper - 4 && wz < t + X.length + 4; });
+  };
+  const onBridge = wz => Biome.zone(wz) !== 'city' || nearStation(wz);
 
   // switch the lamps on: the first ones appear far ahead, in the fog
   function activate(dist) {

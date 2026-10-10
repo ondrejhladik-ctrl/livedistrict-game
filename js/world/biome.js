@@ -26,7 +26,13 @@ const Biome = (() => {
     return u * u * (3 - 2 * u);
   }
   const ramp = (dist, at, len) => { const u = Util.clamp((dist - origin - at / MU) / (len / MU), 0, 1); return u * u * (3 - 2 * u); };
-  const night = dist => ramp(dist, B.night, B.nightLen);
+  // the motorway's night: from B.night on, then the day again at B.day, night again B.cycle after it began… (each turn over nightLen)
+  function night(dist) {
+    const m = (dist - origin) * MU - B.night;
+    if (m < 0) return 0;
+    const p = m % B.cycle, dark = B.day - B.night, sm = u => { u = Util.clamp(u, 0, 1); return u * u * (3 - 2 * u); };
+    return p < dark ? sm(p / B.nightLen) : 1 - sm((p - dark) / B.nightLen);
+  }
   function mix(dist) {
     const u = Util.clamp((dist - start() + 6) / (end() - start() - 12), 0, 1);
     return u * u * (3 - 2 * u) * (1 - night(dist));

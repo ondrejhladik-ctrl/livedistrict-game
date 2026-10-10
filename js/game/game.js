@@ -336,6 +336,11 @@ const Game = (() => {
 
   // back onto the road: accelerate, steer to the middle lane, camera back to the centre
   function updateLeaving(dt) {
+    if (!state.trafficBack) {                                         // pulling out: the road's traffic comes back – out of the far haze
+      state.trafficBack = true;
+      Traffic.reset();
+      Traffic.seed(state.speed, state.dist);
+    }
     // slowly while still on the forecourt, full speed once back on the road
     state.speed = easeTo(state.speed, Math.abs(state.px) > 1 ? 4 : SP.start, dt * 1.2);
     steerTo(dt, 0, 1);
@@ -345,7 +350,7 @@ const Game = (() => {
       state.mode = 'play'; state.quickStop = false;
       state.nextStop++;                                        // on to the next petrol station
       state.camX = 0;
-      Traffic.reset();
+      state.trafficBack = false;
       Puddles.reset();
     }
   }
@@ -511,7 +516,7 @@ const Game = (() => {
     if (state.mode === 'over' && state.crashed) crashSmoke(dt);          // the wreck keeps smoking
     if (['play', 'crash', 'exit', 'station', 'leaving'].includes(state.mode)) {
       state.dist += state.speed * dt;
-      Traffic.update(dt, state.speed, state.elapsed, state.mode === 'play' && !introSteering(), state.dist);
+      Traffic.update(dt, state.speed, state.elapsed, (state.mode === 'play' || state.mode === 'leaving') && !introSteering(), state.dist);
       // it rains from RAIN.startAt until the car is back on the road after the petrol station RAIN.endAfterStop
       const rain = raining();
       Puddles.update(dt, state.dist, state.levelTime, state.mode === 'play' && rain);

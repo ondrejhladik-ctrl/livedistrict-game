@@ -15,15 +15,15 @@ const Traffic = (() => {
   // seconds until a car reaches the player (at the current speed)
   const arrival = (car, playerSpeed) => (car.z - CONFIG.player.z) / Math.max(.5, playerSpeed - car.speed);
 
-  function trySpawn(playerSpeed, dist) {
+  function trySpawn(playerSpeed, dist, z = T.spawnZ) {
     const lane = Math.floor(Math.random() * 3);
     const thai = Biome.zone(dist + T.spawnZ) === 'thai', bike = thai && Math.random() < .5;
     const car = {
-      lane, x: CONFIG.road.lanes[lane] + (bike ? Util.rand(-.18, .18) : 0), z: T.spawnZ,
+      lane, x: CONFIG.road.lanes[lane] + (bike ? Util.rand(-.18, .18) : 0), z,
       speed: T.baseSpeed * T.laneSpeed[lane] + Util.rand(-.4, .4) + (bike ? Util.rand(0, 1) : 0),
       model: bike ? TrafficCars.bike() : thai ? TrafficCars.thai() : TrafficCars.random(), light: 0, bike,
     };
-    if (cars.some(c => c.lane === lane && c.z > T.spawnZ - T.minGap)) return;
+    if (cars.some(c => c.lane === lane && Math.abs(c.z - z) < T.minGap)) return;
 
     // never close all three lanes at the same moment
     const t = arrival(car, playerSpeed), blocked = new Set([lane]);
@@ -56,8 +56,15 @@ const Traffic = (() => {
     for (let i = cars.length - 1; i >= 0; i--) if (cars[i].z < .35) cars.splice(i, 1);
   }
 
+  // pulling out of a petrol station: a few cars already on the road, far off in the haze (where new
+  // ones appear – none popping up in plain view), so the first ones come soon, not after many seconds
+  function seed(playerSpeed, dist, n = 3) {
+    for (let i = 0; i < n * 3 && cars.length < n; i++) trySpawn(playerSpeed, dist, Util.rand(T.spawnZ - 14, T.spawnZ));
+    spawnTimer = T.firstSpawn;
+  }
+
   const hit = playerX => cars.find(c =>
     Math.abs(c.z - CONFIG.player.z) < T.hitDepth && Math.abs(c.x - playerX) < T.hitWidth * (c.bike ? .6 : 1));
 
-  return { cars, reset, update, hit };
+  return { cars, reset, seed, update, hit };
 })();
