@@ -18,6 +18,8 @@ const Talk = (() => {
     // (the last shot: the legs and the butt dropped to the ground – it falls in, see DROP)
     'end-legs': [0, 0, 3508, 2483], 'end-butt': [2429, 327, 2744, 1446],
     'dori-talk': [400, 88, 2140, 2483], 'dori-smoke': [402, 90, 1735, 2483],   // (Lukas with the cigarette)
+    'lb-sober-1': [240, 232, 1378, 2480], 'lb-sober-2': [227, 232, 1721, 2480], 'lb-sober-3': [224, 234, 1597, 2480],   // (Lukas sober, no cigarette: still, a hand out, both hands)
+    'dr-sober-1': [1942, 224, 2978, 2480], 'dr-sober-2': [1628, 209, 2992, 2480], 'dr-sober-3': [1910, 215, 3001, 2480],   // (Dori sober: still with the bottle, a hand up, a hand at his chest)
     'dori-sober': [1224, 127, 2661, 2483],                            // (Dori sober: lboy-talk without the cigarette – see DERIVED)
     // (Pattaya, in tank tops, with cans: Dori on the right, Lukas on the left)
     'pt-dori-drink': [1773, 224, 2978, 2480], 'pt-dori-down': [1890, 228, 2984, 2480], 'pt-dori-up': [1742, 223, 2985, 2480],   // (with a bottle of water)
@@ -61,8 +63,8 @@ const Talk = (() => {
     ],
     prague2: [                                                         // (the second petrol station)
       { bg: 'bg-step-out', pose: [], text: '', hold: 2 },                // (no words: them getting out of the car)
-      { bg: 'bg-dori', pose: ['dori-talk', 'dori-smoke'], box: 'box-b', rows: ['nechceš se', 'prohodit ?'] },
-      { bg: 'bg-lboy', pose: ['dori-sober', 'dori-sober'], box: 'box-a', rows: ['kámo vzali mi papíry.', 'jsem zpátky na zadní'] },
+      { bg: 'bg-dori', pose: ['lb-sober-1', 'lb-sober-2', 'lb-sober-3'], box: 'box-b', rows: ['nechceš se', 'prohodit ?'] },   // (three poses: typing, half typed, after it)
+      { bg: 'bg-lboy', pose: ['dr-sober-1', 'dr-sober-2', 'dr-sober-3'], box: 'box-a', rows: ['kámo vzali mi papíry.', 'jsem zpátky na zadní'] },
     ],
     highway: [                                                         // (the first petrol station on the motorway: Dori with the vodka, Lukas with the water)
       // (at night: the backgrounds in the night's colours, the boys in its light – night)
@@ -374,7 +376,7 @@ const Talk = (() => {
       ctx.drawImage(bg, bx, by, bw, bh);
       bgAt = [bx, by, bw, bh];
     }
-    const pose = L.pose[done && t - done > POSE_AFTER ? 1 : 0], sp = L.night ? inNight(pose) : img[pose], [x0, y0, x1, y1] = SPRITES[pose] || [0, 0, 0, 0];
+    const pose = L.pose[L.pose.length > 2 ? (done ? (t - done > POSE_AFTER ? 2 : 1) : typed >= L.text.length / 2 ? 1 : 0) : done && t - done > POSE_AFTER ? 1 : 0], sp = L.night ? inNight(pose) : img[pose], [x0, y0, x1, y1] = SPRITES[pose] || [0, 0, 0, 0];
     // where the boy is: on the screen as the picture is (standing still while the background drifts)
     // – or, onBg (a cut-out of the background itself: Lukas in the shop's door), moving with it
     const bk = L.onBg && bgAt ? BG_ZOOM : 1, bxo = L.onBg && bgAt ? bgAt[0] : ox, byo = L.onBg && bgAt ? bgAt[1] : 0;
