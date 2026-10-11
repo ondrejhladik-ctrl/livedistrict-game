@@ -59,7 +59,7 @@
     if (!panel && typeof Led !== 'undefined' && typeof Util !== 'undefined') { panel = Led.panel(); t0 = performance.now(); }
     if (panel) {
       lg.globalCompositeOperation = 'source-over'; lg.clearRect(0, 0, W, H);
-      panel.draw(lg, pic, W, H, dpr, 99, 1, 'gate');   // (99: there whole at once – not coming up from the bottom)
+      panel.draw(lg, pic, W, H, fs * dpr / 190, 99, 1, 'gate');   // (the cells as big against the digits as on a computer – 190 px digits at 1×: the same look on a phone)   // (99: there whole at once – not coming up from the bottom)
       lg.globalCompositeOperation = 'destination-in'; lg.drawImage(pic, 0, 0);
       ctx.globalAlpha = LED_ALPHA; ctx.drawImage(led, 0, 0); ctx.globalAlpha = 1;
     }
