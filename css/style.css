@@ -498,12 +498,18 @@ body.raster .dots { display: block; }
 #gate-open { color: #3f6a1a; margin-left: calc(max(56px, min(190px, 14vw)) * .15); }   /* (darker, at the digits' left edge) */
 .gate-link.small { font-size: clamp(16px, 2vw, 22px); color: #4f7a1c; }
 .gate-link:hover, #gate-open:hover { color: var(--neon); }
-#gate-input {
-  font: inherit; font-size: clamp(24px, 3.4vw, 38px); letter-spacing: .12em; text-align: center; width: min(72vw, 11em);
-  color: var(--neon); background: transparent; border: 0; border-bottom: 2px solid #6cb820; outline: none; padding: .1em 0;
-  user-select: text; -webkit-user-select: text; touch-action: manipulation; caret-color: var(--neon);
+#gate-form { align-items: flex-start; gap: .5em; }
+#gate-input, #gate-form button {                                    /* the password and "vstoupit": one size, one left edge */
+  font: inherit; font-size: clamp(24px, 3.4vw, 38px); letter-spacing: .12em; text-align: left;
 }
-#gate-input::placeholder { color: #2f5a12; }
+#gate-input {
+  width: min(72vw, 11em); color: var(--neon); background: transparent; border: 0; outline: none; padding: 0;
+  user-select: text; -webkit-user-select: text; touch-action: manipulation; caret-color: transparent;   /* (no line under it, no blinking caret) */
+}
+#gate-input::placeholder { color: #2f5a12; opacity: 1; }
+#gate-form button { color: #8fd42a; text-transform: lowercase; background: none; border: 0; padding: 0; cursor: pointer; }
+#gate-form button:hover { color: var(--neon); }
+#gate-back { margin-top: 1.2em; }
 .gate-err { min-height: 1.2em; font-size: clamp(16px, 2vw, 22px); color: #ff8a8a; }
 #gate-form.shake { animation: gate-shake .4s; }
 @keyframes gate-shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }

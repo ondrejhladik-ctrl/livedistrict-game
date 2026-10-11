@@ -67,6 +67,13 @@
   if (document.fonts) document.fonts.load('100px Anton').catch(() => {});
   raf = requestAnimationFrame(frame);
 
+  // the field's "heslo": typed out letter by letter, held, gone – over and over (while nothing is typed into it)
+  const WORD = 'heslo';
+  let typeT = 0;
+  const typing = setInterval(() => {
+    typeT = (typeT + 1) % (WORD.length + 9);                         // (each step 180 ms: the letters, then a pause with all of it, then empty a moment)
+    input.placeholder = WORD.slice(0, Math.min(WORD.length, typeT));
+  }, 180);
   const view = pass => {
     count.classList.toggle('hidden', pass);
     form.classList.toggle('hidden', !pass);
@@ -102,7 +109,7 @@
   function open() {
     if (!active) return;
     active = false; window.__gate = false;
-    cancelAnimationFrame(raf);
+    cancelAnimationFrame(raf); clearInterval(typing);
     for (const ev of EVENTS) removeEventListener(ev, block, true);
     if (document.activeElement) document.activeElement.blur();
     gate.classList.add('gone');
