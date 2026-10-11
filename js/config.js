@@ -105,7 +105,7 @@ const CONFIG = {
   // Empty = local mode: sign-up form and leaderboard work, but only on this device.
   // enabled: false = no sign-up (nickname, e-mail) and no leaderboard.
   // demo: the table's empty places filled with made-up players (to see how it looks; false = dashes)
-  leaderboard: { enabled: true, api: '', top: 10, demo: true },
+  leaderboard: { enabled: true, api: 'https://api.checkpointgame.eu', top: 10, demo: false },
 
   // dot raster over the picture (the klauzury website's effect, js/ui/raster.js)
   raster: {

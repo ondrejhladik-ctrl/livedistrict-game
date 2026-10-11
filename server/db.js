@@ -74,6 +74,7 @@ function openDb(file) {
     del: q('DELETE FROM players WHERE email = ?'),
     delTest: q('DELETE FROM players WHERE email LIKE ?'),
     count: q('SELECT COUNT(*) AS n FROM players'),
+    everyone: q('SELECT nickname, email, best, created_at FROM players ORDER BY created_at ASC, id ASC'),
     stats: q(`SELECT (SELECT COUNT(*) FROM players) AS players,
                      (SELECT COUNT(*) FROM players WHERE best > 0) AS ranked,
                      (SELECT COALESCE(SUM(runs), 0) FROM players) AS runs,
@@ -118,6 +119,7 @@ function openDb(file) {
     deleteByEmail: e => Number(s.del.run(e.toLowerCase()).changes),
     deleteTestPlayers: () => Number(s.delTest.run(TEST_EMAILS).changes),
     count: () => s.count.get().n,
+    everyone: () => s.everyone.all(),
     stats: () => s.stats.get(Date.now() - 10 * 60_000, TEST_EMAILS),
     flagged: n => s.flagged.all(n),
     // a consistent copy of the whole database (safe while the server runs)

@@ -4,6 +4,7 @@
 //   node admin.js top 10              best players with e-mails (CSV) – the winners
 //   node admin.js delete email@x.cz   delete a player and all their data (GDPR request)
 //   node admin.js flagged 20          refused runs (score impossible in that time)
+//   node admin.js all                 every player with e-mail (CSV), in order of signing up
 //   node admin.js count               number of registered players
 //   node admin.js backup zaloha.db    copy of the database (works while the server runs)
 'use strict';
@@ -38,9 +39,14 @@ switch (cmd) {
     console.log('Saved ' + arg);
     break;
   }
+  case 'all': {
+    console.log('nickname,email,best_score,signed_up');
+    db.everyone().forEach(p => console.log([p.nickname, p.email, p.best, p.created_at].map(csv).join(',')));
+    break;
+  }
   case 'count':
     console.log(db.count());
     break;
   default:
-    console.log('Commands: top [n] | delete <email> | flagged [n] | count | backup <file>');
+    console.log('Commands: all | top [n] | delete <email> | flagged [n] | count | backup <file>');
 }
