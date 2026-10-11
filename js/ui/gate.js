@@ -28,21 +28,44 @@
   const $ = id => document.getElementById(id);
   const time = $('gate-time'), count = $('gate-count'), form = $('gate-form'), input = $('gate-input'), err = $('gate-err');
 
-  // the time left: hours (all of them), minutes, seconds – each digit in a box of its own width
-  // (the lettering's digits are not all as wide: the numbers would jiggle)
-  let shown = '';
-  function tick() {
+  // the time left: hours (all of them), minutes, seconds – in CHECKPOINT's lettering (Anton, the game's green,
+  // a soft glow), each digit in a slot of its own width (the digits are not all as wide: the numbers would
+  // jiggle) – drawn into a canvas with the cutscenes' LED panel over it (js/ui/led.js, once it is there)
+  const GREEN = '#6cb820', FONT = "Anton, Impact, 'Arial Narrow', sans-serif", LED_ALPHA = .85;
+  const pic = document.createElement('canvas'), pg = pic.getContext('2d'), ctx = time.getContext('2d');
+  const led = document.createElement('canvas'), lg = led.getContext('2d');   // (the panel – then cut to the letters: nothing of it round them)
+  let panel = null, t0 = performance.now(), raf = 0, text = '';
+  function frame() {
+    raf = requestAnimationFrame(frame);
     const left = Math.max(0, AT - Date.now());
     if (!left) { open(); return; }
     const s = Math.floor(left / 1000), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, sec = s % 60;
-    const text = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-    if (text === shown) return;
-    shown = text;
-    time.textContent = '';
-    for (const ch of text) time.append(Object.assign(document.createElement('span'), { className: ch === ':' ? 'colon' : 'digit', textContent: ch }));
+    text = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    const fs = Math.max(56, Math.min(190, innerWidth * .14)), dpr = Math.min(devicePixelRatio || 1, 2);
+    pg.setTransform(1, 0, 0, 1, 0, 0); pg.font = `${fs}px ${FONT}`;
+    const dw = Math.max(...'0123456789'.split('').map(c => pg.measureText(c).width)) * 1.06, colon = pg.measureText(':').width * 1.5;   // (the slots as the font is: Anton, or a wider stand-in until it loads)
+    const slot = ch => (ch === ':' ? colon : dw), cw = [...text].reduce((a, ch) => a + slot(ch), 0) + fs * .3, chh = fs * 1.25;
+    const W = Math.round(cw * dpr), H = Math.round(chh * dpr);
+    if (time.width !== W || time.height !== H) { time.width = pic.width = led.width = W; time.height = pic.height = led.height = H; time.style.width = cw + 'px'; time.style.height = chh + 'px'; }
+    pg.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pg.clearRect(0, 0, cw, chh);
+    pg.font = `${fs}px ${FONT}`; pg.textAlign = 'center'; pg.textBaseline = 'alphabetic';
+    pg.fillStyle = GREEN;
+    let x = fs * .15;
+    for (const ch of text) { pg.fillText(ch, x + slot(ch) / 2, fs * 1.02); x += slot(ch); }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(pic, 0, 0);
+    if (!panel && typeof Led !== 'undefined' && typeof Util !== 'undefined') { panel = Led.panel(); t0 = performance.now(); }
+    if (panel) {
+      lg.globalCompositeOperation = 'source-over'; lg.clearRect(0, 0, W, H);
+      panel.draw(lg, pic, W, H, dpr, 99, 1, 'gate');   // (99: there whole at once – not coming up from the bottom)
+      lg.globalCompositeOperation = 'destination-in'; lg.drawImage(pic, 0, 0);
+      ctx.globalAlpha = LED_ALPHA; ctx.drawImage(led, 0, 0); ctx.globalAlpha = 1;
+    }
   }
-  tick();
-  const timer = setInterval(tick, 250);
+  if (document.fonts) document.fonts.load('100px Anton').catch(() => {});
+  raf = requestAnimationFrame(frame);
 
   const view = pass => {
     count.classList.toggle('hidden', pass);
@@ -79,7 +102,7 @@
   function open() {
     if (!active) return;
     active = false; window.__gate = false;
-    clearInterval(timer);
+    cancelAnimationFrame(raf);
     for (const ev of EVENTS) removeEventListener(ev, block, true);
     if (document.activeElement) document.activeElement.blur();
     gate.classList.add('gone');
