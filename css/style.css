@@ -480,3 +480,37 @@ body.raster .dots { display: block; }
 #talk-dots { z-index: 23; }
 #logo-scene { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 22; pointer-events: none; image-rendering: auto; }
 
+
+/* ---------- the gate until the premiere (js/ui/gate.js) ---------- */
+#gate {
+  position: fixed; inset: 0; z-index: 300; background: #000; display: flex; align-items: center; justify-content: center;
+  pointer-events: auto; touch-action: manipulation; transition: opacity .5s;
+}
+#gate.gone { opacity: 0; pointer-events: none; }
+.gate-view { display: flex; flex-direction: column; align-items: center; gap: 1.4em; }
+.gate-time {                       /* CHECKPOINT's lettering: Anton in the game's green, the thin dark cut across, the printed grain */
+  display: flex; font-family: Anton, Impact, 'Arial Narrow', sans-serif; font-size: clamp(56px, 14vw, 190px); line-height: 1.05;
+  filter: drop-shadow(0 0 12px rgba(108, 184, 32, .35));
+}
+.gate-time span {
+  color: transparent; text-align: center;
+  background-image: var(--grain, none), linear-gradient(to bottom, #6cb820 0 63%, #0a0806 63% 66%, #6cb820 66%);
+  background-size: calc(min(100vw, 177.78vh) * .4), auto; -webkit-background-clip: text; background-clip: text;
+}
+.gate-time .digit { width: .56em; }
+.gate-time .colon { width: .3em; }
+.gate-link {
+  font: inherit; font-size: clamp(20px, 2.6vw, 30px); letter-spacing: .08em; color: #8fd42a; text-transform: lowercase;
+  background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: .2em;
+}
+.gate-link.small { font-size: clamp(16px, 2vw, 22px); color: #4f7a1c; }
+.gate-link:hover { color: var(--neon); }
+#gate-input {
+  font: inherit; font-size: clamp(24px, 3.4vw, 38px); letter-spacing: .12em; text-align: center; width: min(72vw, 11em);
+  color: var(--neon); background: transparent; border: 0; border-bottom: 2px solid #6cb820; outline: none; padding: .1em 0;
+  user-select: text; -webkit-user-select: text; touch-action: manipulation; caret-color: var(--neon);
+}
+#gate-input::placeholder { color: #2f5a12; }
+.gate-err { min-height: 1.2em; font-size: clamp(16px, 2vw, 22px); color: #ff8a8a; }
+#gate-form.shake { animation: gate-shake .4s; }
+@keyframes gate-shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }

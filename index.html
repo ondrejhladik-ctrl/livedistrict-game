@@ -33,9 +33,23 @@
 <title>CHECKPOINT demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261009perf">
+<link rel="stylesheet" href="css/style.css?v=20261011gate">
 </head>
 <body>
+<!-- the gate until the premiere (js/ui/gate.js): the time left, "znám heslo" and the password's field -->
+<div id="gate" role="dialog" aria-label="CHECKPOINT">
+  <div id="gate-count" class="gate-view">
+    <div id="gate-time" class="gate-time" aria-live="off"></div>
+    <a href="#" id="gate-open" class="gate-link">znám heslo</a>
+  </div>
+  <form id="gate-form" class="gate-view hidden" autocomplete="off">
+    <input id="gate-input" type="password" placeholder="heslo" aria-label="heslo" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <button type="submit" class="gate-link">vstoupit</button>
+    <div id="gate-err" class="gate-err"></div>
+    <a href="#" id="gate-back" class="gate-link small">zpět</a>
+  </form>
+</div>
+<script src="js/ui/gate.js?v=20261011gate"></script>
 <!-- pixelate filter for the lettering (css: .lettering) – the centre of every 3×3 block, grown back over it -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <!-- an old TV's screen (css: .crt-screen): every edge bulging out, the corners rounded – in the box's own 0…1 -->
