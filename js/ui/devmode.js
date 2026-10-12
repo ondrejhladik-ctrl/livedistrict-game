@@ -13,6 +13,7 @@ const Dev = (() => {
   addEventListener('keydown', e => {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLButtonElement) return;                                           // typing into the sign-up form
     if (e.code === 'KeyO') {
+      if (!CONFIG.devButtons) return;                                // (dev tools off)
       if (typeof Loading !== 'undefined' && !Loading.isDone()) return;   // not over the loading screen
       on = !on;
       if (on) Object.assign(cam, { dist: Game.state.dist, x: Game.state.camX, h: 1, yaw: 0 });
