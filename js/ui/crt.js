@@ -70,7 +70,8 @@ const Crt = (() => {
   const STEPS = [[0, 0], [-113, -57], [-41, -171], [-187, -89]];
   function grain(g, x, y, w, h, scale = 1) {
     if (typeof Intro === 'undefined' || !Intro.grain) return;
-    const stage = document.getElementById('stage').getBoundingClientRect().width, tile = stage * .4 * k * scale / 256;
+    const stage = document.getElementById('stage').getBoundingClientRect().height * 16 / 9,   // (the 16:9 picture's width – css: 177.78cqh)
+      tile = stage * .4 * k * scale / 256;
     const [ox, oy] = STEPS[Math.floor(performance.now() / 100) % 4];
     g.save();
     g.globalCompositeOperation = 'source-atop'; g.globalAlpha = .6;

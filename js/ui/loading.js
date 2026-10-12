@@ -284,7 +284,7 @@ const Loading = (() => {
     if (!w || !h) return;
     if (ledCanvas.width !== w || ledCanvas.height !== h) { ledCanvas.width = w; ledCanvas.height = h; }
     ledCtx.clearRect(0, 0, w, h);
-    led.draw(ledCtx, g2 => g2.drawImage(buf, 0, 0, w, h), w, h, dpr, t, LED_ALPHA, 'skyline');   // (the skyline from its own small picture: the screen is never read back)
+    led.draw(ledCtx, g2 => g2.drawImage(buf, (w - h * 16 / 9) / 2, 0, h * 16 / 9, h), w, h, dpr, t, LED_ALPHA, 'skyline');   // (the 16:9 skyline's middle, as the canvas under it: object-fit cover)   // (the skyline from its own small picture: the screen is never read back)
   }
 
   // one layer of houses, moved to the left in a loop, with its blinking warning lights

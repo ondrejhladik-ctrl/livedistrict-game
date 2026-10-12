@@ -267,7 +267,7 @@ const GameOver = (() => {
         }
         if (!box.classList.contains('scores')) {                         // the table: as wide as the word, the rows one after another
           box.classList.add('scores');
-          board.style.width = (wd.width * HS.cap / W * 100).toFixed(2) + '%';
+          board.style.width = (wd.width * HS.cap / W * 100 * 16 / 9).toFixed(2) + 'cqh';   // (of the 16:9 picture's width: 177.78cqh)
           rows = [...board.children];
           shownRows = -1;
         }

@@ -429,7 +429,7 @@ const Talk = (() => {
     let fullW = Math.max(...rows.map(r => ctx.measureText(r[4]).width));
     if (fullW > roomMax) { size *= roomMax / fullW; ctx.font = `${size}px 'VT323', monospace`; fullW = roomMax; }
     const BW = Math.min(BWmax, Math.max(LEFT * sx + RIGHT * sx + gap, P2 * sx + gap * 2 + fullW + RIGHT * sx));
-    const X = b0 + b2 < PW ? X0 : X0 + BWmax - BW;                           // (Dori's box from the left edge, Lukas's from the right)
+    const X = Util.clamp(b0 + b2 < PW ? X0 : X0 + BWmax - BW, W * .02, W * .98 - BW);   // (Dori's box from the left edge, Lukas's from the right – on the screen)
     if (ready(bx)) {
       const iw = bx.width, ik = iw / TX.size[0], midW = BW - (LEFT + RIGHT) * sx;
       ctx.drawImage(bx, 0, 0, LEFT * ik, bx.height, X, Y, LEFT * sx, BH);

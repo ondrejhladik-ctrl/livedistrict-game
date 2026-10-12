@@ -18,7 +18,8 @@ const Intro = (() => {
   const GREEN = '#6cb820', INK = '#0a0806';     // the letters: the game's neon green…
   const TOWARDS = [[0, GREEN], [.5, '#86ec8e'], [1, '#e2fde0']];   // …the bars going light towards the viewer, nearly white (the Pattaya greens)
   const WORD = 'CHECKPOINT', FONT = "Anton, Impact, 'Arial Narrow', sans-serif";
-  const CAP = 74;                        // letter height (px)
+  const CAP0 = 74, FIT = 440;            // letter height (px) – smaller if the word would be wider than FIT px (the 4:3 screen shows
+  let CAP = CAP0, GROW = 1;              // the middle 480 of the 640); GROW: how much bigger it is at first (as big as the date – as fits)
   const FOOT = [.08, .2];                // the slice of each letter the bars grow out of (share of the height above the baseline)
   // where the vanishing point and the word's top are: at first (like the poster –
   // the vanishing point above the picture, the bars spreading as they come
@@ -28,7 +29,7 @@ const Intro = (() => {
   const RAISE = 40;
   const VP = [-70, HORIZON - RAISE], TOP = [66, HORIZON + 10 - RAISE];
   // the opening card before it all: the date, big, in the same lettering
-  const DATE = { text: '23. 10.', cap: 96, show: [.15, 1.55], len: 1.85 };   // cap: letter height (px); show: from, to (seconds); len: the whole card
+  const DATE = { text: '23. 10.', cap: 96, CAP0: 96, show: [.15, 1.55], len: 1.85 };   // cap: letter height (px) – as CHECKPOINT's, at most CAP0 (see layout); show: from, to (seconds); len: the whole card
   DATE.base = (H + DATE.cap) / 2;                                    // its baseline: in the middle of the screen
   const T = {                            // the timeline (seconds, after the date card)
     gap: .13,                            // one letter after another, each popping up at once with its bars
@@ -44,7 +45,7 @@ const Intro = (() => {
   const REACH = 3.2;                     // how far out the bars reach (times the distance of the word from the vanishing point)
   const GAPS = .35;                      // how much of the light shows in the gaps between the bars (0 = black gaps, 1 = none)
   const BLUR = 'filter' in CanvasRenderingContext2D.prototype;
-  if (document.fonts) document.fonts.load(`${CAP}px ${FONT}`).catch(() => {});   // fetch the title font while the loading screen runs
+  if (document.fonts) document.fonts.load(`${CAP0}px ${FONT}`).catch(() => {});   // fetch the title font while the loading screen runs
 
   const layer = (w, h) => { const c = Util.canvas(w, h); return [c, c.getContext('2d')]; };
   const [face, fg] = layer(W, H);                     // the letters' faces, with the thin cut across
@@ -111,6 +112,10 @@ const Intro = (() => {
     const [c, g] = layer(4, 4);
     g.font = `100px ${FONT}`;
     const cap = g.measureText('H').actualBoundingBoxAscent || 73;
+    const wordAt = h => { g.font = `${100 * h / cap}px ${FONT}`; return [...WORD].reduce((a, ch) => a + g.measureText(ch).width, 0) + h * .07 * (WORD.length - 1); };
+    CAP = Math.min(CAP0, CAP0 * FIT / wordAt(CAP0));
+    GROW = Math.max(1, Math.min(DATE.CAP0 / CAP, (FIT + 30) / wordAt(CAP)));
+    DATE.cap = CAP * GROW; DATE.base = (H + DATE.cap) / 2; DATE.px = 0;   // (the date as big as CHECKPOINT comes after it)
     fontPx = 100 * CAP / cap;
     g.font = `${fontPx}px ${FONT}`;
     const gap = CAP * .07, ws = [...WORD].map(ch => g.measureText(ch).width);
@@ -222,13 +227,13 @@ const Intro = (() => {
     // At first the word is as big as the date before it (as if nearer: scaled
     // towards the vanishing point the other way), shrinking to its size as the
     // camera tilts down.
-    const grow = 1 + (DATE.cap / CAP - 1) * (1 - tilt);
+    const grow = 1 + (GROW - 1) * (1 - tilt);
     const back = part(tl, T.back), q = grow / (1 + 20 * back ** 2.5);
     const base = vy + (base0 - vy) * q;                                // the word's baseline, backed off
     // while it is big the word stands where the date stood (moved down onto the
     // date's baseline), sliding into its place as it shrinks; the bars are still
     // dark then, so they need not follow
-    const atDate = DATE.base - (VP[0] + (TOP[0] + CAP - VP[0]) * DATE.cap / CAP);
+    const atDate = DATE.base - (VP[0] + (TOP[0] + CAP - VP[0]) * GROW);
     const lift = atDate * (1 - tilt);
     const shown = i => tl >= i * T.gap;
     // 1) the letters, one after another
