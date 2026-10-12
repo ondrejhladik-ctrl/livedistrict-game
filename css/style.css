@@ -21,11 +21,14 @@ html, body {
    the 16:9 picture's width (the sizes of the lettering, the grain go by it) */
 #stage { position: relative; aspect-ratio: 4 / 3; width: min(100%, 133.33vh); width: min(100%, 133.33dvh); overflow: hidden; container-type: size; }
 #view { position: absolute; top: 0; bottom: 0; left: 50%; aspect-ratio: 16 / 9; transform: translateX(calc(-50% - var(--pan, 0) * 1%)); }
-/* phones: the same 4:3 picture as on a computer – as big as the screen (inside its notch-safe
-   area) allows, black bars at the sides */
+/* phones: the game in 16:9 – the whole picture, as big as the screen (inside its notch-safe area)
+   allows, black bars at the sides; only the cutscenes (the talk, the logo) in 4:3 in its middle,
+   black round them */
 @media (pointer: coarse) {
   #wrap { container-type: size; }
-  #stage { aspect-ratio: auto; width: min(100cqw, 133.33cqh); height: min(100cqh, 75cqw); }
+  #stage { aspect-ratio: auto; width: min(100cqw, 177.78cqh); height: min(100cqh, 56.25cqw); }
+  #view { left: 0; right: 0; transform: none; }
+  #stage > #talk, #stage > #talk-dots, #stage > #logo-scene { left: 12.5%; right: 12.5%; width: 75%; box-shadow: 0 0 0 100vmax #000; }   /* (ids twice: over the rules further down) */
   #mute { width: clamp(40px, 6vw, 56px); }
   #skip { font-size: clamp(16px, 2.6vw, 24px); }
 }
