@@ -193,7 +193,7 @@ const Account = (() => {
       closeForm();
     } catch (err) {
       if (err.code) fail(ERRORS[err.code] || err.message);
-      else { fail('Server s žebříčkem neodpovídá.'); el.offline.classList.remove('hidden'); }
+      else { fail('Server se žebříčkem neodpovídá.'); el.offline.classList.remove('hidden'); }
     } finally { el.submit.disabled = false; }
   }
 

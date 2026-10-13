@@ -11,8 +11,8 @@ const Highway = (() => {
   const POST = [58, 68, 80];
   const LIME = '#6cb820', INK = '#0a0806', FONT = "Anton, Impact, 'Arial Narrow', sans-serif";   // (the billboards' colours and lettering)
   // [the board's big line, its small line, the song (for the car radio)]: the tracklist
-  const TRACKS = ['BACKSEAT', 'BIG', 'NUDIM SE', 'OMW2THETOP', 'MRAKY', 'OMAMENY', 'ROOMIE', 'SHOXX',
-    'SLEPÝ', 'TICHO', 'KYSLIK', 'MÍNUS', 'LA VIE', 'DEJAVU', 'KROKY (OUTRO)'];
+  const TRACKS = ['BACKSEAT', 'BIG', 'NUDÍM SE', 'OMW2THETOP', 'MRAKY', 'OMÁMENÝ', 'ROOMIE', 'SHOXX',
+    'SLEPÝ', 'TICHO', 'KYSLÍK', 'MÍNUS', 'LA VIE', 'DEJAVU', 'KROKY (OUTRO)'];
   const EGGS = TRACKS.map((t, i) => [t, `TRACK ${i + 1} / ${TRACKS.length}`, `${i + 1}. ${t}`]);
   // a board in the billboards' colours: a dark board in a lime frame, lime letters in
   // the title's lettering – the big line as big as fits, a smaller line under it

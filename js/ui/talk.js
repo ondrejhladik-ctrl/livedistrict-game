@@ -34,9 +34,9 @@ const Talk = (() => {
   const BOXES = { 'box-a': [81, 2022, 1826, 2401], 'box-b': [1636, 1960, 3373, 2368], 'box-c': [1673, 1973, 3410, 2381] };
   const PORTRAIT = { 'box-a': [12, 12, 340, 367], 'box-b': [12, 12, 458, 396], 'box-c': [12, 12, 443, 396] };
   const TEXT = {
-    'box-a': { size: [1745, 379], rows: [[372, 70, 1671, 175, 'tak kolik dáme tracků'], [379, 201, 1175, 295, 'na to album ?']] },
+    'box-a': { size: [1745, 379], rows: [[372, 70, 1671, 175, 'tak kolik dáme tracků'], [379, 201, 1175, 295, 'na to album?']] },
     'box-b': { size: [1737, 408], rows: [[546, 71, 1634, 200, 'kámo, drive by'], [546, 200, 1634, 338, 'mělo 14...']] },
-    'box-c': { size: [1737, 408], rows: [[513, 70, 1693, 200, 'chekpoint dáme'], [513, 200, 1693, 331, '15 tracků']] },
+    'box-c': { size: [1737, 408], rows: [[513, 70, 1693, 200, 'checkpoint dáme'], [513, 200, 1693, 331, '15 tracků']] },
   };
   // the smoke over each boy's cigarette: where it is in the picture (x0, y0, x1, y1 – only
   // smoke in them, the cigarette just under the lowest) and the size of the art's pixels
@@ -56,30 +56,30 @@ const Talk = (() => {
   // instead of its picture's own (a row each)
   const SCENES = {
     prague: [                                                          // (the first petrol station)
-      { text: 'tak kolik dáme tracků na to album ?', bg: 'bg-lboy', pose: ['lboy-talk', 'lboy-smoke'], box: 'box-a' },
+      { text: 'tak kolik dáme tracků na to album?', bg: 'bg-lboy', pose: ['lboy-talk', 'lboy-smoke'], box: 'box-a' },
       { text: 'kámo, drive by mělo 14...', bg: 'bg-dori', pose: ['water-up', 'water-drink'], box: 'box-b' },
-      { text: 'chekpoint dáme 15 tracků', bg: 'bg-dori', pose: ['water-down', 'water-down'], box: 'box-c' },
+      { text: 'checkpoint dáme 15 tracků', bg: 'bg-dori', pose: ['water-down', 'water-down'], box: 'box-c' },
       { bg: 'end-bg', pose: ['end-legs', 'end-legs'], box: 'box-a', rows: ['to zní', 'docela dobře.'], drop: 'end-butt' },
     ],
     prague2: [                                                         // (the second petrol station)
       { bg: 'bg-step-out', pose: [], text: '', hold: 2 },                // (no words: them getting out of the car)
-      { bg: 'bg-dori', pose: ['lb-sober-1', 'lb-sober-2', 'lb-sober-3'], box: 'box-b', rows: ['nechceš se', 'prohodit ?'] },   // (three poses: typing, half typed, after it)
-      { bg: 'bg-lboy', pose: ['dr-sober-1', 'dr-sober-2', 'dr-sober-3'], box: 'box-a', rows: ['kámo vzali mi papíry.', 'jsem zpátky na zadní'] },
+      { bg: 'bg-dori', pose: ['lb-sober-1', 'lb-sober-2', 'lb-sober-3'], box: 'box-b', rows: ['nechceš se', 'prohodit?'] },   // (three poses: typing, half typed, after it)
+      { bg: 'bg-lboy', pose: ['dr-sober-1', 'dr-sober-2', 'dr-sober-3'], box: 'box-a', rows: ['kámo, vzali mi papíry.', 'jsem zpátky na zadní'] },
     ],
     highway: [                                                         // (the first petrol station on the motorway: Dori with the vodka, Lukas with the water)
       // (at night: the backgrounds in the night's colours, the boys in its light – night)
       { bg: 'bg-dori-nt', pose: ['water-down', 'water-up'], box: 'box-b', rows: ['silná show', 'včera'], night: true },
       { bg: 'bg-lboy-nt', pose: ['hw-dori-down', 'hw-dori-down'], box: 'box-a', rows: ['a ještě víc', 'jich čeká'], night: true },
       { bg: 'bg-dori-nt', pose: ['water-up', 'water-drink'], box: 'box-c', rows: ['jaro bude', 'next level'], night: true },
-      { bg: 'bg-lboy-nt', pose: ['hw-dori-up', 'hw-dori-drink'], box: 'box-a', rows: ['okay pome ať', 'stíháme sound check'], night: true },
+      { bg: 'bg-lboy-nt', pose: ['hw-dori-up', 'hw-dori-drink'], box: 'box-a', rows: ['okay, pome, ať', 'stíháme soundcheck'], night: true },
       { bg: 'end-hw-bg', pose: [], text: '', hold: 4.2, drive: true },    // (no words: the empty bottle on the forecourt, the car driving off in its smoke – see DRIVE)
     ],
     pattaya: [                                                         // (the first petrol station in Pattaya)
       { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['brácho,', 'super trénink'] },
       { bg: 'bg-dori-pt', pose: ['pt-lukas-out', 'pt-lukas-drink'], box: 'box-b', rows: ['už to potřebovalo', 'checkpoint'] },
-      { bg: 'bg-lboy-pt', pose: ['pt-dori-down', 'pt-dori-up'], box: 'box-a', rows: ['crazy že se sem', 'vracíme každej rok'] },
-      { bg: 'bg-dori-pt', pose: ['pt-lukas-hold', 'pt-lukas-out'], box: 'box-c', rows: ['chceš koupit', 'vodu ?'] },
-      { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['už mám', 'kup vodku'] },
+      { bg: 'bg-lboy-pt', pose: ['pt-dori-down', 'pt-dori-up'], box: 'box-a', rows: ['crazy, že se sem', 'vracíme každej rok'] },
+      { bg: 'bg-dori-pt', pose: ['pt-lukas-hold', 'pt-lukas-out'], box: 'box-c', rows: ['chceš koupit', 'vodu?'] },
+      { bg: 'bg-lboy-pt', pose: ['pt-dori-up', 'pt-dori-drink'], box: 'box-a', rows: ['už mám,', 'kup vodku'] },
       // (no words: Lukas goes for the vodka – the shop's door, then him at it; hold: seconds each)
       { bg: 'bg-door-pt', pose: [], text: '', hold: 1.4 },
       { bg: 'bg-door-pt', pose: ['pt-lukas-door', 'pt-lukas-door'], text: '', hold: 2.6, onBg: true },

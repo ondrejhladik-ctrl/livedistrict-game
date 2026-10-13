@@ -25,17 +25,6 @@
     if (count >= 90) { const avg = spent / count; half = half ? avg > 9 : avg > 14; spent = count = 0; }
   }
 
-  // the 4:3 stage shows the middle of the 16:9 picture: panned sideways after the car (eased), so that it is
-  // never cut off in an outer lane or up on the pavement – as far as the picture goes (css: #view, --pan)
-  const view = document.getElementById('view'), { W } = CONFIG.screen, SPARE = (W - W * .75) / 2;
-  let pan = 0, panShown = 0;
-  function follow(dt, s) {
-    const car = View.x(s.px, CONFIG.player.z) - W / 2;
-    const want = Loading.isDone() ? Util.clamp(car * .6, -SPARE, SPARE) : 0;
-    pan += (want - pan) * Math.min(1, dt * 3.5);
-    if (Math.abs(pan - panShown) > .02) { panShown = pan; view.style.setProperty('--pan', (pan / W * 100).toFixed(3)); }
-  }
-
   function frame(now) {
     if (half) { skip = !skip; if (skip) { requestAnimationFrame(frame); return; } }   // (this frame skipped: the next one moves on by both)
     const t0 = performance.now();
@@ -57,7 +46,6 @@
     }
 
     const s = Game.state;
-    follow(dt, s);
     Hud.update(s.score, Math.round(s.speed * CONFIG.speed.toKmh), s.best);
     Sound.engine(['play', 'exit', 'station', 'leaving'].includes(s.mode), s.speed);
     if (Loading.isDone() && !Talk.active() && !Cutscene.active()) measured(performance.now() - t0);

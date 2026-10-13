@@ -1,5 +1,5 @@
 // The gate before the game (until the premiere): over everything, black – the time left to it
-// (Wednesday 14. 10. 12:00, Prague time) in CHECKPOINT's lettering, and under it "znám heslo",
+// (Wednesday 14. 10. 17:00, Prague time) in CHECKPOINT's lettering, and under it "znám heslo",
 // which opens a field for the password. The password itself is not here: only what PBKDF2
 // makes of it (HASH) – the typed one is put through the same and compared. Once right (or once
 // the time has come) the gate is gone, on this device for good (localStorage).
@@ -9,7 +9,7 @@
 (() => {
   const HASH = 'd8d9ba68a0cba96a86c75194707156c218fa0fc8715b4df701b0a9a20039cb10';
   const SALT = 'checkpoint/14.10/gate', ITER = 150000, KEY = 'znr.gate';
-  const AT = new Date('2026-10-14T12:00:00+02:00').getTime();      // the premiere
+  const AT = new Date('2026-10-14T17:00:00+02:00').getTime();      // the premiere
   const gate = document.getElementById('gate');
   if (!gate) return;
   const store = {

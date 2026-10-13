@@ -16,11 +16,11 @@ html, body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   box-sizing: border-box;
 }
-/* the stage is 4:3 (as an old TV); the game's 16:9 picture as high as it, its middle shown – panned
-   sideways after the car (--pan: % of the picture's width, js/main.js). Inside the stage, 177.78cqh is
-   the 16:9 picture's width (the sizes of the lettering, the grain go by it) */
+/* the stage is 4:3 (as an old TV); the game's 16:9 picture as high as it, its middle shown (still – the
+   camera does not follow the car sideways). Inside the stage, 177.78cqh is the 16:9 picture's width
+   (the sizes of the lettering, the grain go by it) */
 #stage { position: relative; aspect-ratio: 4 / 3; width: min(100%, 133.33vh); width: min(100%, 133.33dvh); overflow: hidden; container-type: size; }
-#view { position: absolute; top: 0; bottom: 0; left: 50%; aspect-ratio: 16 / 9; transform: translateX(calc(-50% - var(--pan, 0) * 1%)); }
+#view { position: absolute; top: 0; bottom: 0; left: 50%; aspect-ratio: 16 / 9; transform: translateX(-50%); }
 /* phones: the game in 16:9 – the whole picture, as big as the screen (inside its notch-safe area)
    allows, black bars at the sides; only the cutscenes (the talk, the logo) in 4:3 in its middle,
    black round them */
