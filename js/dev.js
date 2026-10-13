@@ -1,7 +1,8 @@
 // The developer's own computer: the dev tools (the jump buttons, the O key's free camera) and skipping the
 // cutscenes – only there. It is unlocked once by opening the game with its key in the address
-// (…/#dev=KEY); the browser keeps the key (localStorage) and every later visit checks it against
-// HASH (SHA-256 of the key – the key itself is not in the code). …/#nodev locks it again.
+// (…/#dev=KEY) – or by Ctrl+Shift+D and the key pasted in; the browser keeps the key (localStorage) and
+// every later visit checks it against HASH (SHA-256 of the key – the key itself is not in the code).
+// …/#nodev (or Ctrl+Shift+D again) locks it.
 //   window.DEV: true on the developer's computer
 (() => {
   const HASH = 'f3acfdb370cc5bffd1ebf1c12d25c2cd148f11ce7b76153b57e46166b2ae2750', KEY = 'znr.dev';
@@ -39,7 +40,16 @@
     else if (m[2] && sha256(m[2].toLowerCase()) === HASH) store.set(m[2].toLowerCase());
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}   // (the key out of the address bar)
   }
-  addEventListener('hashchange', () => { if (/^#(no)?dev/i.test(location.hash)) location.reload(); });   // (the link opened in a tab with the game already open)
+  addEventListener('hashchange', () => { if (/^#(no)?dev/i.test(location.hash)) location.reload(); });   // (the link opened in a tab with the game already open)
+  // ...or without the link: Ctrl+Shift+D asks for the key (pasted in) - a wrong one does nothing; on the
+  // developer's computer the same keys switch it off again
+  addEventListener('keydown', e => {
+    if (!(e.ctrlKey && e.shiftKey && e.code === 'KeyD')) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (window.DEV) { if (confirm('Vypnout dev mode?')) { store.set(null); location.reload(); } return; }
+    const k = (prompt('') || '').trim().toLowerCase();
+    if (/^[0-9a-f]{8,64}$/.test(k) && sha256(k) === HASH) { store.set(k); location.reload(); }
+  }, true);
   const key = store.get();
   window.DEV = !!key && sha256(key) === HASH;
   if (typeof CONFIG !== 'undefined') CONFIG.devButtons = window.DEV;
