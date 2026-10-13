@@ -32,7 +32,7 @@
   }
   const store = {
     get: () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } },
-    set: v => { try { if (v === null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, v); } catch (e) {} },
+    set: v => { try { if (v === null) { localStorage.removeItem(KEY); localStorage.setItem('znr.nodev', '1'); } else { localStorage.setItem(KEY, v); localStorage.removeItem('znr.nodev'); } } catch (e) {} },
   };
   const m = location.hash.match(/^#(no)?dev(?:=([0-9a-f]{8,64}))?$/i), had = !!store.get();
   if (m) {
@@ -56,7 +56,11 @@
   // for dev.html (the page to switch it on and off): check a key, keep it / drop it
   window.DevKey = { check: k => /^[0-9a-f]{8,64}$/.test(k) && sha256(k) === HASH, set: k => store.set(k), off: () => store.set(null) };
   const key = store.get();
-  window.DEV = !!key && sha256(key) === HASH;
+  // …and, without any key: the browser in which the gate's password was typed (js/ui/gate.js keeps it – the
+  // password only the developer knows; after the premiere nobody else types it) – unless switched off here
+  let gate = false, off = false;
+  try { gate = localStorage.getItem('znr.gate') === 'd8d9ba68a0cba96a86c75194707156c218fa0fc8715b4df701b0a9a20039cb10'; off = localStorage.getItem('znr.nodev') === '1'; } catch (e) {}
+  window.DEV = (!!key && sha256(key) === HASH) || (gate && !off);
   if (typeof CONFIG !== 'undefined') CONFIG.devButtons = window.DEV;
   // on the developer's computer: a small DEV in the bottom left corner (that it is on) – and a moment of
   // "DEV MODE ZAPNUTÝ" / "VYPNUTÝ" right after the link
@@ -65,7 +69,7 @@
     if (!stage) return;
     if (window.DEV) {
       const b = Object.assign(document.createElement('div'), { textContent: 'DEV' });
-      b.style.cssText = 'position:absolute;left:1%;bottom:1%;z-index:60;font:12px VT323,monospace;color:#b8ff4a;opacity:.6;pointer-events:none;letter-spacing:.1em';
+      b.style.cssText = 'position:absolute;left:1%;bottom:1%;z-index:60;font:16px VT323,monospace;color:#b8ff4a;opacity:.8;pointer-events:none;letter-spacing:.1em';
       stage.appendChild(b);
     }
     if ((m || q) && (window.DEV || (m && m[1] && had))) {                         // (only for the developer: nothing at all for anyone else – a wrong key says nothing)
