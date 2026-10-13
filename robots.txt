@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /server/
+Disallow: /dev.html
 
 Sitemap: https://checkpointgame.eu/sitemap.xml

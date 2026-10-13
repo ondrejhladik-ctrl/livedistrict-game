@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>CHECKPOINT GAME</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #b8ff4a; font: 22px VT323, monospace; letter-spacing: .08em; }
+  body { display: flex; align-items: center; justify-content: center; }
+  form { display: flex; flex-direction: column; gap: .7em; align-items: flex-start; }
+  input { font: inherit; color: #b8ff4a; background: transparent; border: 0; border-bottom: 1px solid #2f5a12; outline: none; width: 20em; caret-color: #b8ff4a; }
+  button { font: inherit; color: #000; background: #6cb820; border: 0; padding: .1em .8em; cursor: pointer; }
+  a { color: #6cb820; }
+  #msg { min-height: 1.2em; }
+</style>
+</head>
+<body>
+<form id="f" autocomplete="off">
+  <div id="state"></div>
+  <input id="k" type="password" placeholder="klíč" aria-label="klíč" spellcheck="false">
+  <button id="b" type="submit">ok</button>
+  <div id="msg"></div>
+  <a href="./">zpět do hry</a>
+</form>
+<script src="js/dev.js?v=20261013page"></script>
+<script>
+  // switching the developer's tools on (the key) and off – js/dev.js keeps it in this browser
+  const state = document.getElementById('state'), k = document.getElementById('k'), b = document.getElementById('b'), msg = document.getElementById('msg');
+  const show = () => { state.textContent = window.DEV ? 'DEV MODE JE ZAPNUTÝ' : ''; k.style.display = window.DEV ? 'none' : ''; b.textContent = window.DEV ? 'vypnout' : 'ok'; };
+  show();
+  document.getElementById('f').addEventListener('submit', e => {
+    e.preventDefault();
+    if (window.DEV) { DevKey.off(); window.DEV = false; msg.textContent = 'vypnuto'; show(); return; }
+    const v = k.value.trim().toLowerCase();
+    if (DevKey.check(v)) { DevKey.set(v); location.href = './'; }
+    else { k.value = ''; }
+  });
+  k.focus();
+</script>
+</body>
+</html>

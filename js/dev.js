@@ -50,6 +50,11 @@
     const k = (prompt('') || '').trim().toLowerCase();
     if (/^[0-9a-f]{8,64}$/.test(k) && sha256(k) === HASH) { store.set(k); location.reload(); }
   }, true);
+  // …or …/?dev=KEY (a new address: never a stale copy of the page from the cache)
+  const q = location.search.match(/[?&]dev=([0-9a-f]{8,64})/i);
+  if (q && sha256(q[1].toLowerCase()) === HASH) { store.set(q[1].toLowerCase()); try { history.replaceState(null, '', location.pathname); } catch (e) {} }
+  // for dev.html (the page to switch it on and off): check a key, keep it / drop it
+  window.DevKey = { check: k => /^[0-9a-f]{8,64}$/.test(k) && sha256(k) === HASH, set: k => store.set(k), off: () => store.set(null) };
   const key = store.get();
   window.DEV = !!key && sha256(key) === HASH;
   if (typeof CONFIG !== 'undefined') CONFIG.devButtons = window.DEV;
@@ -63,7 +68,7 @@
       b.style.cssText = 'position:absolute;left:1%;bottom:1%;z-index:60;font:12px VT323,monospace;color:#b8ff4a;opacity:.6;pointer-events:none;letter-spacing:.1em';
       stage.appendChild(b);
     }
-    if (m && (window.DEV || (m[1] && had))) {                         // (only for the developer: nothing at all for anyone else – a wrong key says nothing)
+    if ((m || q) && (window.DEV || (m && m[1] && had))) {                         // (only for the developer: nothing at all for anyone else – a wrong key says nothing)
       const t = Object.assign(document.createElement('div'), { textContent: window.DEV ? 'DEV MODE ZAPNUTÝ' : 'DEV MODE VYPNUTÝ' });
       t.style.cssText = 'position:fixed;left:50%;top:12%;transform:translateX(-50%);z-index:400;font:22px VT323,monospace;color:#b8ff4a;background:#000;padding:.3em .8em;pointer-events:none;letter-spacing:.1em';
       document.body.appendChild(t);
