@@ -33,7 +33,7 @@
     get: () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } },
     set: v => { try { if (v === null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, v); } catch (e) {} },
   };
-  const m = location.hash.match(/^#(no)?dev(?:=([0-9a-f]{8,64}))?$/i);
+  const m = location.hash.match(/^#(no)?dev(?:=([0-9a-f]{8,64}))?$/i), had = !!store.get();
   if (m) {
     if (m[1]) store.set(null);
     else if (m[2] && sha256(m[2].toLowerCase()) === HASH) store.set(m[2].toLowerCase());
@@ -43,4 +43,22 @@
   const key = store.get();
   window.DEV = !!key && sha256(key) === HASH;
   if (typeof CONFIG !== 'undefined') CONFIG.devButtons = window.DEV;
+  // on the developer's computer: a small DEV in the bottom left corner (that it is on) – and a moment of
+  // "DEV MODE ZAPNUTÝ" / "VYPNUTÝ" right after the link
+  const mark = () => {
+    const stage = document.getElementById('stage');
+    if (!stage) return;
+    if (window.DEV) {
+      const b = Object.assign(document.createElement('div'), { textContent: 'DEV' });
+      b.style.cssText = 'position:absolute;left:1%;bottom:1%;z-index:60;font:12px VT323,monospace;color:#b8ff4a;opacity:.6;pointer-events:none;letter-spacing:.1em';
+      stage.appendChild(b);
+    }
+    if (m && (window.DEV || (m[1] && had))) {                         // (only for the developer: nothing at all for anyone else – a wrong key says nothing)
+      const t = Object.assign(document.createElement('div'), { textContent: window.DEV ? 'DEV MODE ZAPNUTÝ' : 'DEV MODE VYPNUTÝ' });
+      t.style.cssText = 'position:fixed;left:50%;top:12%;transform:translateX(-50%);z-index:400;font:22px VT323,monospace;color:#b8ff4a;background:#000;padding:.3em .8em;pointer-events:none;letter-spacing:.1em';
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3500);
+    }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mark); else mark();
 })();

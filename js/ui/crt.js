@@ -20,7 +20,8 @@ const Crt = (() => {
   const BULGE = .06, PIX = 3, GREEN = '#6cb820', INK = '#0a0806', NEON = '#b8ff4a';
   const $ = id => document.getElementById(id);
   const form = $('acc-form'), title = form.querySelector('.acc-title'), fields = [$('acc-nick'), $('acc-email')];
-  const consent = $('acc-consent'), terms = $('acc-terms'), err = $('acc-error'), submit = $('acc-submit'), offline = $('acc-offline');
+  const consent = $('acc-consent'), terms = $('acc-terms'), err = $('acc-error'), submit = $('acc-submit'), offline = $('acc-offline'), change = $('acc-change');
+  const shown = el => el.getClientRects().length > 0;                  // (signed up: the e-mail and the consent are not there)
   let W = 0, H = 0, k = 1, map = null, outId = null;
 
   // the bulge (as #crt-bulge: each point drawn from a little further out, the more the nearer a
@@ -107,6 +108,7 @@ const Crt = (() => {
       g.imageSmoothingEnabled = false; g.drawImage(low, 0, 0, bw, bh, t.x, t.y, tw, th);
       // the fields: what is typed (or the hint), the caret
       for (const f of fields) {
+        if (!shown(f)) continue;
         const r = rectOf(f), cs = css(f), typed = f.value;
         g.save(); g.beginPath(); g.rect(r.x, r.y, r.w, r.h); g.clip();
         g.fillStyle = typed ? NEON : root.classList.contains('touch') ? '#4a9a22' : '#2f6a18';
@@ -119,15 +121,17 @@ const Crt = (() => {
         g.restore();
       }
       // the consent: its square and its (underlined) words
-      const c = rectOf(consent), ccs = css(consent);
-      g.fillStyle = ccs.backgroundColor; g.fillRect(c.x, c.y, c.w, c.h);
-      const lr = rectOf(terms), lcs = css(terms);
-      g.fillStyle = lcs.color;
-      const lend = text(g, terms.textContent, lr.x, lr.y + lr.h / 2, lcs);
-      g.fillRect(lr.x, lr.y + lr.h * .5 + parseFloat(lcs.fontSize) * k * .42, lend - lr.x, Math.max(1, k));
+      if (shown(consent)) {
+        const c = rectOf(consent), ccs = css(consent);
+        g.fillStyle = ccs.backgroundColor; g.fillRect(c.x, c.y, c.w, c.h);
+        const lr = rectOf(terms), lcs = css(terms);
+        g.fillStyle = lcs.color;
+        const lend = text(g, terms.textContent, lr.x, lr.y + lr.h / 2, lcs);
+        g.fillRect(lr.x, lr.y + lr.h * .5 + parseFloat(lcs.fontSize) * k * .42, lend - lr.x, Math.max(1, k));
+      }
       // the error, the offline link
-      for (const el of [err, offline]) {
-        if (!el.textContent || el.classList.contains('hidden')) continue;
+      for (const el of [err, offline, change]) {
+        if (!el || !el.textContent || el.classList.contains('hidden') || !shown(el)) continue;
         const r = rectOf(el), cs = css(el);
         g.fillStyle = cs.color; g.textAlign = 'left';
         const w = (g.font = fontOf(cs).replace(/[\d.]+px/, m => parseFloat(m) * k + 'px'), g.measureText(el.textContent).width);

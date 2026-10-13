@@ -168,8 +168,21 @@ const Account = (() => {
   function showForm(visible) {
     formOpen = visible;
     el.form.classList.toggle('hidden', !visible);
-    if (visible) { el.error.textContent = ''; el.offline.classList.add('hidden'); setTimeout(() => el.nick.focus(), 50); }
+    el.skip.classList.toggle('hidden', !window.DEV);                  // (playing without signing up: only on the developer's computer – js/dev.js)
+    if (visible) { el.error.textContent = ''; el.offline.classList.add('hidden'); setTimeout(() => (signed ? el.submit : el.nick).focus(), 50); }
   }
+  // signed up already (this browser keeps it): the TV says PŘIHLÁŠENO with the nickname and "hrát" – or back to the form
+  const accForm = $('acc-form'), accTitle = accForm.querySelector('.acc-title'), change = $('acc-change');
+  let signed = false;
+  function showSigned(on) {
+    signed = on;
+    accForm.classList.toggle('signed', on);
+    accTitle.textContent = on ? 'PŘIHLÁŠENO' : 'LEADERBOARD SIGN UP';
+    el.nick.readOnly = on;
+    el.nick.value = on ? nickname : '';
+  }
+  change.addEventListener('pointerdown', e => e.stopPropagation());
+  change.addEventListener('click', e => { e.preventDefault(); forget(); showSigned(false); el.email.value = ''; setTimeout(() => el.nick.focus(), 50); });
 
   function forget() {
     token = nickname = null;
@@ -179,6 +192,7 @@ const Account = (() => {
 
   async function register(e) {
     e.preventDefault();
+    if (signed) { closeForm(); return; }                             // (signed up already: just on)
     const nick = el.nick.value.trim().replace(/\s+/g, ' '), email = el.email.value.trim();
     const fail = msg => { el.error.textContent = msg; };
     if (!NICK_RE.test(nick)) return fail(ERRORS.bad_nickname);
@@ -403,11 +417,12 @@ const Account = (() => {
   return {
     // may the game start? (not while the form is open – signing up is optional)
     ready: () => !formOpen,
-    // after the click on the loading screen (before the title sequence): offer the sign-up
-    // (unless already signed up), then continue with done()
+    // after the click on the loading screen (before the title sequence): the sign-up – or, signed up
+    // already, PŘIHLÁŠENO with the nickname – then continue with done()
     offerSignUp(done) {
-      if (!enabled() || token) { done(); return; }
+      if (!enabled()) { done(); return; }
       afterForm = done;
+      showSigned(!!(token && nickname));
       showForm(true);
     },
     startRun, finishRun,

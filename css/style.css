@@ -240,6 +240,10 @@ body.raster .dots { display: block; }
 #acc-submit:hover, #acc-submit:focus-visible { background-color: var(--neon); }   /* the lighter green (like the ticked consent) */
 #acc-submit:disabled { opacity: .5; }
 .acc-offline { color: #8fd42a; font-size: .75em; text-align: center; }
+/* signed up already (js/ui/account.js): the TV says PŘIHLÁŠENO, the nickname in its field, only "hrát" – and a way to change it */
+#acc-form.signed #acc-email, #acc-form.signed .acc-consent, #acc-form.signed .acc-error { display: none; }
+#acc-form.signed #acc-nick { pointer-events: none; color: var(--neon); }
+#acc-form:not(.signed) #acc-change { display: none; }
 /* the form on an old TV's screen, on black: no frame – just the glass, every edge bulging out
    (the clip path #crt-shape in index.html), nearly square (4:3), black; now and then a green
    glitch on it (js/ui/account.js) – and the red light under it */
