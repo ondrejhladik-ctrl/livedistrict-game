@@ -45,6 +45,7 @@ const CONFIG = {
     minGap: 6,                    // min depth gap to the last car in the same lane
     keepDistance: 3,              // cars slow down behind a slower car in lane
     firstSpawn: .4,
+    meetFirst: [120, 570],        // metres: where the first car is met – on the ride, and past the first petrol station
     interval: { start: 1.4, min: .55, decay: .01 },   // seconds between new cars: at first, at least (later on), how fast it shortens – lighter traffic than it was (1 / .3 / .012)
     hitDepth: .55,                // collision: depth overlap …
     hitWidth: .44,                // … and sideways overlap
@@ -141,7 +142,7 @@ const CONFIG = {
   biome: { bridgeStart: 1400, bridgeEnd: 2000, towers: 2250, highway: 5000, night: 5100, nightLen: 300, day: 6200, cycle: 1900 },   // metres (night: on the motorway the day turns into the green night again, over nightLen – night before its first petrol station; day: the day again; cycle: and so on – night, day – every cycle metres)
 
   // dev: buttons at the side to jump to places on the track (false = hidden)
-  devButtons: false,              // (off for the public: true brings back the jump buttons and the O key's free camera)
+  devButtons: false,              // (the jump buttons and the O key's free camera – switched on by js/dev.js on the developer's computer)
 
   // the simple 8-bit look (js/ui/style.js): a small palette, a drifting car
   // drift: px the car's tail swings out in a hard turn; dither: the halftone – every

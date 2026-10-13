@@ -179,8 +179,9 @@ const Road = (() => {
       Util.rect(pens[1], cx - hw * 1.08, y, hw * 2.16, 1, P2.shoulder);
       Util.rect(pens[6], cx - hw, y, hw * 2, 1, P2.asphalt[band]);
       if (worldZ % 4 < 2) for (const lx of [-1 / 3, 1 / 3]) Util.rect(pens[7], cx + lx * hw - lineW / 2, y, lineW, 1, P2.dash);
-      Util.rect(pens[8], cx - hw * .96 - lineW / 2, y, lineW, 1, P2.edge);
-      Util.rect(pens[8], cx + hw * .96 - lineW / 2, y, lineW, 1, P2.edge);
+      const open = Exit.reach(worldZ) ? Exit.state.side : 0;
+      if (open !== -1) Util.rect(pens[8], cx - hw * .96 - lineW / 2, y, lineW, 1, P2.edge);
+      if (open !== 1) Util.rect(pens[8], cx + hw * .96 - lineW / 2, y, lineW, 1, P2.edge);
       Exit.drawRow(pens[9], y, worldZ, hw, cx, P2.asphalt[band], P2.edge, pens[10]);   // the side road to the petrol station
       fog(z, y);
       return;
@@ -215,8 +216,9 @@ const Road = (() => {
 
     if (worldZ % 4 < 2)                                   // dashed lane lines
       for (const lx of [-1 / 3, 1 / 3]) Util.rect(pens[7], cx + lx * hw - lineW / 2, y, lineW, 1, P.dash);
-    Util.rect(pens[8], cx - hw * .96 - lineW / 2, y, lineW, 1, P.edge);
-    Util.rect(pens[8], cx + hw * .96 - lineW / 2, y, lineW, 1, P.edge);
+    const open = Exit.reach(worldZ) ? Exit.state.side : 0;   // (where the side road to a station joins: no edge line on that side)
+    if (open !== -1) Util.rect(pens[8], cx - hw * .96 - lineW / 2, y, lineW, 1, P.edge);
+    if (open !== 1) Util.rect(pens[8], cx + hw * .96 - lineW / 2, y, lineW, 1, P.edge);
 
     Exit.drawRow(pens[9], y, worldZ, hw, cx, P.asphalt[band], P.edge, pens[10]);   // the side road to the petrol station
 

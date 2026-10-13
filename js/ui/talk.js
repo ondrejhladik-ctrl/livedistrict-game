@@ -283,10 +283,10 @@ const Talk = (() => {
   const canvas = document.getElementById('talk'), ctx = canvas.getContext('2d');
   const hud = document.getElementById('hud'), skipBtn = document.getElementById('skip');
   // skipping it all: into black at once, then on (the button, or Esc)
-  const skip = () => { if (line >= 0 && closing < 0) closing = 0; };
+  const skip = () => { if (window.DEV && line >= 0 && closing < 0) closing = 0; };   // (only on the developer's computer – js/dev.js)
   skipBtn.addEventListener('pointerdown', e => e.stopPropagation());   // (not a press of the talk, nor steering)
   skipBtn.addEventListener('click', e => { e.preventDefault(); skip(); skipBtn.blur(); });
-  addEventListener('keydown', e => { if (e.code === 'Escape') skip(); });
+  addEventListener('keydown', e => { if (e.code === 'Escape' && window.DEV) skip(); });   // (skipping: only on the developer's computer – js/dev.js)
   let line = -1, t = 0, typed = 0, done = 0, raf = 0, last = 0, onEnd = null, grain = null;
   let boxAt = BOX_T;                                                 // (when the box comes, into the line)
   let bgName = null, bgT = 0;                                       // the background shown and for how long
@@ -515,7 +515,7 @@ const Talk = (() => {
       const key = SCENES[scene] ? scene : 'prague';
       dub = DUBS[key] && !Sound.muted() ? DUBS[key] : null; voice = dub ? voices[key] : null;
       if (voice) voice.play(0);
-      canvas.classList.remove('hidden'); hud.classList.add('hidden'); skipBtn.classList.remove('hidden');
+      canvas.classList.remove('hidden'); hud.classList.add('hidden'); skipBtn.classList.toggle('hidden', !window.DEV);
       Sound.duck(true);
       bgName = null; age = 0; closing = -1;
       show(0);

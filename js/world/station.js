@@ -327,6 +327,9 @@ const Station = (() => {
 
     // (the smoker by the shop: gone – drawNpc is kept, not drawn)
 
+    // posts, far to near: the outer ones (further from the road than the pumps – behind them) first…
+    const posts = POSTS.slice().sort((a, b) => b.d0 - a.d0), outer = posts.filter(p => p.x0 > PUMPS[0].x1);
+    for (const post of outer) box(ctx, dist, side, wz, post, { front: C.post });
     // islands and pumps, far to near
     for (let i = PUMPS.length - 1; i >= 0; i--) {
       box(ctx, dist, side, wz, ISLANDS[i], { front: C.island, top: '#8a8e98' });
@@ -334,8 +337,8 @@ const Station = (() => {
       if (p && p.sx !== null) sideStrip(ctx, p, p.sx, .32, .46, PUMPS[i].d0 + .08, PUMPS[i].d1 - .08, C.display, dist, wz);
     }
 
-    // posts, far to near
-    for (const post of POSTS.slice().sort((a, b) => b.d0 - a.d0)) box(ctx, dist, side, wz, post, { front: C.post });
+    // …the inner ones (by the road, in front of the pumps) after them
+    for (const post of posts) if (!outer.includes(post)) box(ctx, dist, side, wz, post, { front: C.post });
 
     // canopy: dark underside with light panels, neon fascia
     const can = box(ctx, dist, side, wz, CANOPY, { front: C.canopy, side: C.canopy, under: C.under });

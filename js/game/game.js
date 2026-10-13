@@ -54,6 +54,7 @@ const Game = (() => {
       nextStop: 0, stationT: 0, camX: 0, fade: 0,
       crashed: false, crashT: 0, crashDir: 1, smokeTimer: 0,
       walkT: 0, forcedBack: false, devRun: false, tutorial: 0, grey: 0, quickStop: false, pendingScene: false,
+      firstCar: false,
     });
     Hud.showTutorial(0);
     Biome.setOrigin(0);                                      // the ride counts from the start (see the intro)
@@ -326,12 +327,20 @@ const Game = (() => {
   }
 
   function leaveStation() {
-    if (Talk.active()) { Talk.press(); return; }                      // the talk: the line at once / the next one
-    if (Cutscene.active()) { Cutscene.stop(); if (state.quickStop) swipeOut(); else state.fade = 1; return; }   // skip the cutscene
+    // the scenes run by themselves – pressed through or skipped only on the developer's computer (js/dev.js)
+    if (Talk.active()) { if (window.DEV) Talk.press(); return; }      // the talk: the line at once / the next one
+    if (Cutscene.active()) { if (window.DEV) { Cutscene.stop(); if (state.quickStop) swipeOut(); else state.fade = 1; } return; }   // skip the cutscene
     if (state.stationT < .6) return;
     state.mode = 'leaving';
     Hud.showStationHint(false);
     Input.clearTouches();
+  }
+
+  // a car put on the road so that it is met at these metres (if they are still ahead)
+  function meetAt(meters) {
+    const D = (meters - state.dist * CONFIG.metersPerUnit) / CONFIG.metersPerUnit;
+    const v = Math.max(state.speed, Math.min(SP.max, SP.start + state.elapsed * SP.accel));   // (the speed it is getting up to)
+    if (D > 3) Traffic.placeFor(D, v, SP.accel, state.speed, state.dist);
   }
 
   // back onto the road: accelerate, steer to the middle lane, camera back to the centre
@@ -349,6 +358,7 @@ const Game = (() => {
     if (Math.abs(state.px) < .12 && Math.abs(state.camX) < .03) {
       state.mode = 'play'; state.quickStop = false;
       state.nextStop++;                                        // on to the next petrol station
+      if (state.nextStop === 1) meetAt(CONFIG.traffic.meetFirst[1]);   // (past the first one: a car met soon)
       state.camX = 0;
       state.trafficBack = false;
       Puddles.reset();
@@ -516,7 +526,9 @@ const Game = (() => {
     if (state.mode === 'over' && state.crashed) crashSmoke(dt);          // the wreck keeps smoking
     if (['play', 'crash', 'exit', 'station', 'leaving'].includes(state.mode)) {
       state.dist += state.speed * dt;
-      Traffic.update(dt, state.speed, state.elapsed, (state.mode === 'play' || state.mode === 'leaving') && !introSteering(), state.dist);
+      const spawning = (state.mode === 'play' || state.mode === 'leaving') && !introSteering();
+      if (spawning && state.mode === 'play' && !state.firstCar) { state.firstCar = true; meetAt(CONFIG.traffic.meetFirst[0]); }   // (the ride's first car not too late)
+      Traffic.update(dt, state.speed, state.elapsed, spawning, state.dist);
       // it rains from RAIN.startAt until the car is back on the road after the petrol station RAIN.endAfterStop
       const rain = raining();
       Puddles.update(dt, state.dist, state.levelTime, state.mode === 'play' && rain);

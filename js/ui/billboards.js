@@ -21,6 +21,7 @@ const Billboards = (() => {
   const maskC = document.createElement('canvas'), mg = maskC.getContext('2d');
   let maskData = null;
   const TOL = 6;                                                      // (how much a pixel may differ and still be the board)
+  const SLIVER = .35;                                                // (less of a board than this to be seen: no sharp picture laid over it)
   let list = [], dirty = [];
   // ref: the boards alone, exactly as drawn into the game (tmp: one board, at its size, before
   // it is laid into both); refBox: where it has anything (cleared at the next frame)
@@ -113,7 +114,7 @@ const Billboards = (() => {
           if (Math.abs((v & 255) - er) <= TOL && Math.abs((v >> 8 & 255) - eg) <= TOL && Math.abs((v >> 16 & 255) - eb) <= TOL) { mask[i] = 1; seen++; }
         }
       }
-      b.mask = seen ? mask : null;
+      b.mask = seen && seen >= own * SLIVER ? mask : null;            // (only a sliver of it to be seen: the game's own pixels there, no sharp edges)
       b.full = seen > 0 && seen === own;
     }
   }
