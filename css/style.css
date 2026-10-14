@@ -165,15 +165,29 @@ body.raster .dots { display: block; }
 #account.diving #acc-full { visibility: hidden; }
 /* phones not on the whole screen: the word before the sign-up (js/ui/account.js) – on black, in the
    loading screen's letters (as LOADING…: the light green, spaced, the soft glow), sized by the stage */
-#full-notice { background: #000; pointer-events: auto; z-index: 26; padding: 0 16px; }
+#full-notice { background: #000; pointer-events: auto; z-index: 26; padding: 0 16px; gap: 0; font-size: clamp(16px, 6cqh, 38px); }
 .full-notice-text {
-  color: var(--neon); font-size: clamp(16px, 6cqh, 38px); line-height: 1.5;
+  color: var(--neon); line-height: 1.5;
   letter-spacing: .14em; padding-left: .14em;   /* (the spacing comes after the last letter too: balanced on the left) */
   text-shadow: 2px 2px 0 #000, 0 0 8px rgba(150, 235, 70, .35);
-  animation: fadein .5s .3s both;
 }
-#full-notice.out .full-notice-text { animation: fadeout .4s both; }
-@keyframes fadeout { to { opacity: 0; } }
+.full-notice-text, .full-notice-buttons { animation: fadein .5s .3s both; }
+/* under it: the whole screen at once (the sign-up's "hrát" box: the heading's green, its grain) – or on without it */
+.full-notice-buttons { display: flex; align-items: center; justify-content: center; gap: 1.6em; margin-top: 1.1em; }
+.full-notice-buttons button { font: inherit; font-size: .8em; letter-spacing: .12em; border: 0; cursor: pointer; touch-action: manipulation; }
+#notice-full {
+  display: flex; align-items: center; gap: .5em; padding: .2em .9em .2em .8em; color: #000;
+  background: #6cb820 var(--grain-soft, none); background-size: calc(177.78cqh * .4); image-rendering: pixelated;
+  animation: grain .4s steps(1) infinite;
+}
+#notice-full:hover, #notice-full:focus-visible { background-color: var(--neon); }
+#notice-full svg { height: .9em; width: .9em; fill: currentColor; }
+#notice-on { color: var(--neon); background: none; padding: .2em 0; text-shadow: 1px 1px 0 #000, 0 0 4px #000; }
+#notice-hint {                      /* (iPhones) under the buttons: how to get the game on the whole screen */
+  max-width: 24em; margin-top: 1em; text-align: left; font-size: .6em; line-height: 1.35; color: var(--neon);
+  padding: .5em .8em; border-left: 2px solid var(--neon);
+}
+#notice-hint svg { height: .95em; width: .85em; fill: currentColor; vertical-align: -.1em; }
 #acc-skip {                        /* white, in the top right corner of the screen (the speaker is in the bottom one) */
   position: absolute; right: 2.5%; top: 3%; z-index: 36; text-shadow: 1px 1px 0 #000, 0 0 4px #000;
   font: inherit; font-size: .85em; color: #fff; background: none; border: 0; cursor: pointer; padding: 0;

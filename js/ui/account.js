@@ -396,44 +396,49 @@ const Account = (() => {
   const canFull = touch && !homeScreen && (fsApi || root.classList.contains('ios')), hint = $('acc-full-hint');
   const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
   const showFull = () => full && full.classList.toggle('hidden', !canFull || isFull());
+  // a press on a "CELÁ OBRAZOVKA" button: the whole screen – or, where a page cannot have it (an iPhone)
+  // or it is refused, its hint: how to do it instead
+  function goFull(hint) {
+    if (!fsApi) { if (hint) hint.classList.toggle('hidden'); return; }  // (an iPhone: how to do it instead)
+    const failed = () => { if (hint && !isFull()) hint.classList.remove('hidden'); };   // (refused: how to do it instead)
+    try {
+      const p = (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: 'hide' });
+      if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(failed);
+      else setTimeout(failed, 500);
+    } catch (err) { failed(); }
+  }
   if (full) {
     full.addEventListener('pointerdown', e => e.stopPropagation());
-    full.addEventListener('click', e => {
-      e.preventDefault();
-      if (!fsApi) { if (hint) hint.classList.toggle('hidden'); return; }  // (an iPhone: how to do it instead)
-      const failed = () => { if (hint && !isFull()) hint.classList.remove('hidden'); };   // (refused: how to do it instead)
-      try {
-        const p = (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: 'hide' });
-        if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(failed);
-        else setTimeout(failed, 500);
-      } catch (err) { failed(); }
-    });
+    full.addEventListener('click', e => { e.preventDefault(); goFull(hint); });
     document.addEventListener('fullscreenchange', showFull);
     document.addEventListener('webkitfullscreenchange', showFull);
     showFull();
   }
-  // where the button is (a phone not on the whole screen): before the sign-up a moment of black saying
-  // so (#full-notice), then on – at once on a tap or a key, or once the game is on the whole screen
-  // (on Android the loading screen's tap asks for it – js/ui/input.js – and it comes a moment later)
-  const notice = $('full-notice'), NOTICE_S = 3.8;
+  // where the button is (a phone not on the whole screen): before the sign-up black saying so
+  // (#full-notice) with the way to it at once – CELÁ OBRAZOVKA – or POKRAČOVAT (or a key) without it;
+  // on by itself once the game is on the whole screen (on Android the loading screen's tap asks for
+  // it – js/ui/input.js – and it comes a moment later)
+  const notice = $('full-notice'), noticeHint = $('notice-hint');
   function fullNotice(then) {
     if (!notice || !canFull || isFull()) { then(); return; }
-    let timer = 0, over = false;
+    let over = false;
     const go = () => {
       if (over) return;
-      over = true; clearTimeout(timer);
+      over = true;
       removeEventListener('keydown', key, true);
       document.removeEventListener('fullscreenchange', whole); document.removeEventListener('webkitfullscreenchange', whole);
-      notice.classList.add('hidden'); notice.classList.remove('out');
+      notice.classList.add('hidden');
       then();
     };
     const key = e => { e.stopImmediatePropagation(); e.preventDefault(); go(); };
     const whole = () => { if (isFull()) go(); };
-    notice.onpointerdown = e => { e.stopPropagation(); go(); };   // (not steering / start)
+    notice.onpointerdown = e => e.stopPropagation();                  // (taps here are not steering / start)
+    $('notice-full').onclick = e => { e.preventDefault(); goFull(noticeHint); };
+    $('notice-on').onclick = e => { e.preventDefault(); go(); };
     addEventListener('keydown', key, true);
     document.addEventListener('fullscreenchange', whole); document.addEventListener('webkitfullscreenchange', whole);
+    if (noticeHint) noticeHint.classList.add('hidden');
     notice.classList.remove('hidden');
-    timer = setTimeout(() => { notice.classList.add('out'); timer = setTimeout(go, 400); }, NOTICE_S * 1000);   // (the words fade, then the sign-up)
   }
   Loading.onDone(() => { showWho(); refreshBoards(); });
 
