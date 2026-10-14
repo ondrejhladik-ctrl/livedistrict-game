@@ -6,6 +6,7 @@
 //   POST /api/runs/:id/finish     (Bearer token) { score }      → { best, rank }
 //   GET  /api/leaderboard?limit=10 (Bearer token optional)      → { top: [{ rank, nickname, score }], me }
 //   GET  /api/health
+//   POST /api/hit                 { ref, src, touch, app }      → {}  (a visit to the page – see visit())
 //
 // E-mails never leave the server through the API – only nickname + score are
 // public. Winners are exported on the server with admin.js.
@@ -140,6 +141,53 @@ function player(req) {
   return p;
 }
 
+// ---------- visits ----------
+// The page reports each visit (js/visit.js) and it is counted per day under a few keys:
+// "views" every time; once a day per visitor "unique" and where they came from (the app
+// whose browser opened the page, the referring site, or ?utm_source), the system, phone or
+// computer, opened from the home screen. A visitor is told apart only by a hash of their IP
+// and browser with a salt that lives in memory and changes every day – nothing about
+// anyone is kept (and no cookies). Only visits from the game's own pages (Origin), no bots.
+const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Prague' });   // (YYYY-MM-DD)
+const BOT_RE = /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|preview/i;
+const APPS = [[/Instagram/, 'instagram'], [/FBAN|FBAV|FB_IAB|FBIOS|FB4A|Messenger/, 'facebook'], [/musical_ly|BytedanceWebview|TikTok/i, 'tiktok'],
+  [/Snapchat/, 'snapchat'], [/Twitter/, 'x'], [/LinkedInApp/, 'linkedin']];
+const SITES = [[/(^|\.)instagram\.com$/, 'instagram'], [/(^|\.)(facebook\.com|fb\.com|fb\.me|messenger\.com)$/, 'facebook'],
+  [/(^|\.)(t\.co|twitter\.com|x\.com)$/, 'x'], [/(^|\.)tiktok\.com$/, 'tiktok'], [/(^|\.)(youtube\.com|youtu\.be)$/, 'youtube'],
+  [/(^|\.)google\.[a-z.]+$/, 'google'], [/(^|\.)seznam\.cz$/, 'seznam'], [/(^|\.)bing\.com$/, 'bing'], [/(^|\.)linktr\.ee$/, 'linktree'],
+  [/(^|\.)checkpointgame\.eu$/, 'direct']];
+function source(ua, ref, src) {
+  const tag = String(src || '').toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 30);
+  if (tag) return tag;
+  for (const [re, name] of APPS) if (re.test(ua)) return name;
+  let host = '';
+  try { host = new URL(String(ref || '')).hostname.toLowerCase(); } catch { /* none */ }
+  if (!host) return 'direct';
+  for (const [re, name] of SITES) if (re.test(host)) return name;
+  return host.replace(/^www\./, '').replace(/[^a-z0-9.-]/g, '').slice(0, 60) || 'other';
+}
+const system = ua => (/iPhone|iPod/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows'
+  : /Macintosh|Mac OS X/.test(ua) ? 'Mac' : /Linux|CrOS/.test(ua) ? 'Linux' : 'other');
+let seenDay = '', seen = new Set(), salt = '';
+async function visit(req, allowed) {
+  limit('hit:' + clientIp(req), 600, 60_000);
+  const body = await readJson(req);
+  const ua = String(req.headers['user-agent'] || '');
+  if (!allowed || !ua || BOT_RE.test(ua)) return {};                  // (not from the game's pages, or a bot: not counted)
+  const day = today();
+  if (day !== seenDay) { seenDay = day; seen = new Set(); salt = crypto.randomBytes(16).toString('hex'); }
+  const who = hash(salt + '|' + clientIp(req) + '|' + ua), keys = ['views'];
+  if (!seen.has(who)) {
+    seen.add(who);
+    const touch = body.touch === true, os = system(ua);
+    keys.push('unique', 'from:' + source(ua, body.ref, body.src), 'os:' + (os === 'Mac' && touch ? 'iPad' : os),   // (an iPad says it is a Mac)
+      'device:' + (touch ? 'phone/tablet' : 'computer'));
+    if (body.app === true) keys.push('homescreen');
+  }
+  db.addVisit(day, keys);
+  return {};
+}
+
 // ---------- routes ----------
 // After the last await everything runs in one go (node:sqlite is synchronous), so
 // two requests of one player can never mix their reads and writes.
@@ -213,6 +261,7 @@ const server = http.createServer(async (req, res) => {
     else if (req.method === 'POST' && p === '/api/register') out = await register(req);
     else if (req.method === 'POST' && p === '/api/runs') out = startRun(req);
     else if (req.method === 'POST' && /^\/api\/runs\/[a-f0-9]{32}\/finish$/.test(p)) out = await finishRun(req, p.split('/')[3]);
+    else if (req.method === 'POST' && p === '/api/hit') out = await visit(req, allowed);
     else throw new HttpError(404, 'not_found', 'Not found');
     send(res, 200, out, allowed);
   } catch (e) {

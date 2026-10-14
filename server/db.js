@@ -6,6 +6,8 @@
 //            ones (score not possible in that time – admin.js flagged). A run that
 //            counted is deleted when it ends, so the table stays small however
 //            many runs are played.
+//   visits:  the page's visits, counted per day under a few keys (server.js visit()) –
+//            numbers only, nothing about any visitor
 'use strict';
 const { DatabaseSync } = require('node:sqlite');
 
@@ -39,6 +41,12 @@ function openDb(file) {
       plausible   INTEGER
     );
     CREATE INDEX IF NOT EXISTS runs_player ON runs (player_id);
+    CREATE TABLE IF NOT EXISTS visits (
+      day         TEXT NOT NULL,          -- YYYY-MM-DD, Prague time
+      key         TEXT NOT NULL,          -- views, unique, from:…, os:…, device:…, homescreen
+      n           INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (day, key)
+    ) WITHOUT ROWID;
   `);
   migrate(db);
   db.exec(`
@@ -67,6 +75,8 @@ function openDb(file) {
     refuse: q('UPDATE runs SET finished_at = ?, score = ?, plausible = 0 WHERE id = ?'),
     dropOpen: q('DELETE FROM runs WHERE finished_at IS NULL AND started_at < ?'),
     ranking: q('SELECT id, nickname, best, best_at FROM players WHERE best > 0 ORDER BY best DESC, best_at ASC, id ASC'),
+    visit: q('INSERT INTO visits (day, key, n) VALUES (?, ?, 1) ON CONFLICT (day, key) DO UPDATE SET n = n + 1'),
+    visits: q('SELECT day, key, n FROM visits WHERE day >= ? ORDER BY day, n DESC, key'),
     version: q('PRAGMA data_version'),
     ping: q('SELECT 1 AS ok'),
     // admin.js only – these include e-mails
@@ -106,6 +116,8 @@ function openDb(file) {
     refuseRun: (id, at, score) => s.refuse.run(at, score, id),
     dropOldRuns: before => Number(s.dropOpen.run(before).changes),
     rankingRows: () => s.ranking.all(),
+    // a visit to the page: one more under each of its keys that day
+    addVisit: (day, keys) => transaction(() => { for (const k of keys) s.visit.run(day, k); }),
     // has another process (admin.js) changed the database since the last call?
     changedElsewhere() {
       const v = s.version.get().data_version, changed = v !== version;
@@ -122,6 +134,7 @@ function openDb(file) {
     everyone: () => s.everyone.all(),
     stats: () => s.stats.get(Date.now() - 10 * 60_000, TEST_EMAILS),
     flagged: n => s.flagged.all(n),
+    visits: fromDay => s.visits.all(fromDay),
     // a consistent copy of the whole database (safe while the server runs)
     backupTo: file => db.exec(`VACUUM INTO '${String(file).replace(/'/g, "''")}'`),
   };

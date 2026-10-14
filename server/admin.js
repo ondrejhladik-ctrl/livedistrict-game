@@ -7,6 +7,7 @@
 //   node admin.js all                 every player with e-mail (CSV), in order of signing up
 //   node admin.js count               number of registered players
 //   node admin.js backup zaloha.db    copy of the database (works while the server runs)
+//   node admin.js visits 7            the page's visits per day (counts only – no one's data)
 'use strict';
 const path = require('node:path');
 const { openDb } = require('./db');
@@ -52,6 +53,22 @@ switch (cmd) {
   case 'count':
     console.log(db.count());
     break;
+  case 'visits': {
+    const days = Number(arg) || 7;
+    const from = new Date(Date.now() - (days - 1) * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Prague' });
+    const byDay = new Map();
+    for (const r of db.visits(from)) { if (!byDay.has(r.day)) byDay.set(r.day, []); byDay.get(r.day).push(r); }
+    if (!byDay.size) console.log('No visits counted yet.');
+    for (const [day, rows] of byDay) {
+      const n = k => (rows.find(r => r.key === k) || { n: 0 }).n;
+      const group = pre => rows.filter(r => r.key.startsWith(pre)).map(r => `${r.key.slice(pre.length)} ${r.n}`).join(', ') || '-';
+      console.log(`${day}  views ${n('views')}  visitors ${n('unique')}  from the home screen ${n('homescreen')}`);
+      console.log(`  from:    ${group('from:')}`);
+      console.log(`  system:  ${group('os:')}`);
+      console.log(`  device:  ${group('device:')}`);
+    }
+    break;
+  }
   default:
-    console.log('Commands: all | top [n] | delete <email> | flagged [n] | count | backup <file>');
+    console.log('Commands: all | top [n] | delete <email> | flagged [n] | count | visits [days] | backup <file>');
 }
