@@ -2,9 +2,9 @@
 (() => {
   let last = performance.now();
 
-  // dev: the jump buttons at the side (CONFIG.devButtons)
+  // dev: the jump buttons at the side (CONFIG.devButtons – and CONFIG.devJump: switched off for now)
   const jump = document.getElementById('devjump');
-  if (CONFIG.devButtons) {
+  if (CONFIG.devButtons && CONFIG.devJump) {
     const showJump = () => jump.classList.remove('hidden');
     if (Loading.isDone()) showJump(); else Loading.onDone(showJump);
     jump.addEventListener('pointerdown', e => e.stopPropagation());     // not steering, not starting

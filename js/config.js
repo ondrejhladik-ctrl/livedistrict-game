@@ -143,6 +143,7 @@ const CONFIG = {
 
   // dev: buttons at the side to jump to places on the track (false = hidden)
   devButtons: false,              // (the jump buttons and the O key's free camera – switched on by js/dev.js on the developer's computer)
+  devJump: false,                 // the jump buttons themselves (teleporting the car): off even there – true brings them back
 
   // the simple 8-bit look (js/ui/style.js): a small palette, a drifting car
   // drift: px the car's tail swings out in a hard turn; dither: the halftone – every
