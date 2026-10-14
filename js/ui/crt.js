@@ -17,7 +17,7 @@ const Crt = (() => {
   const out = cv.getContext('2d');
   const page = Util.canvas(1, 1), pg = page.getContext('2d', { willReadFrequently: true });   // the screen, flat
   const tmp = Util.canvas(1, 1), tg = tmp.getContext('2d', { willReadFrequently: true }), low = Util.canvas(1, 1), lg = low.getContext('2d');
-  const BULGE = .06, PIX = 3, GREEN = '#6cb820', INK = '#0a0806', NEON = '#b8ff4a';
+  const BULGE = .06, PIX = 3, GREEN = '#6cb820', NEON = '#b8ff4a';
   const $ = id => document.getElementById(id);
   const form = $('acc-form'), title = form.querySelector('.acc-title'), fields = [$('acc-nick'), $('acc-email')];
   const consent = $('acc-consent'), terms = $('acc-terms'), err = $('acc-error'), submit = $('acc-submit'), offline = $('acc-offline'), change = $('acc-change');
@@ -90,16 +90,17 @@ const Crt = (() => {
     g.fillStyle = 'rgba(108, 184, 32, .07)';                           // the glass's faint lines (css .crt-screen::before)
     for (let y = 0; y < H; y += 5 * k) g.fillRect(0, y, W, 2 * k);
     if (css(form).visibility !== 'hidden' && css(form).display !== 'none') {
-      // the heading: in a canvas of its own (the grain), pixelated, then the cut across
-      const t = rectOf(title), tcs = css(title), pad = parseFloat(tcs.paddingTop) * k, padL = parseFloat(tcs.paddingLeft) * k;
-      const tw = Math.ceil(t.w), th = Math.ceil(t.h);
+      // the heading: in a canvas of its own (the grain), then pixelated
+      const t = rectOf(title), tcs = css(title), padL = parseFloat(tcs.paddingLeft) * k;
+      const pad = parseFloat(tcs.paddingTop) * k, tw = Math.ceil(t.w), th = Math.ceil(t.h);
       if (tmp.width !== tw || tmp.height !== th) { tmp.width = tw; tmp.height = th; }
       tg.clearRect(0, 0, tw, th);
       tg.fillStyle = GREEN;
       text(tg, title.textContent, padL, pad + (th - pad) / 2, tcs);
       grain(tg, 0, 0, tw, th, 1);
-      // pixelated as the css filter does it (index.html #pixelate): each 3×3 block the brightest of
-      // its middle px – the letters keep their weight (a single pixel taken broke them up)
+      // pixelated as the page's css filter shows it (index.html #pixelate, worked out a css px at a
+      // time): each 3×3 block the mean of its middle px – whole letters, the grain in them; no thin cut
+      // (at this size it is not seen on the page either – drawn here it broke the letters into strips)
       const B = PIX * k, bw = Math.ceil(tw / B), bh = Math.ceil(th / B);
       if (low.width !== bw || low.height !== bh) { low.width = bw; low.height = bh; }
       const sd = tg.getImageData(0, 0, tw, th).data, lo = lg.createImageData(bw, bh), ld = lo.data;
@@ -107,21 +108,16 @@ const Crt = (() => {
         const y0 = Math.floor(by * B + k), y1 = Math.min(th, Math.max(y0 + 1, Math.floor(by * B + 2 * k)));
         for (let bx = 0; bx < bw; bx++, o += 4) {
           const x0 = Math.floor(bx * B + k), x1 = Math.min(tw, Math.max(x0 + 1, Math.floor(bx * B + 2 * k)));
-          let r = 0, gr = 0, b = 0, a = 0;
-          for (let y = y0; y < y1; y++) for (let i = (y * tw + x0) * 4, e = (y * tw + x1) * 4; i < e; i += 4) {
-            if (sd[i] > r) r = sd[i]; if (sd[i + 1] > gr) gr = sd[i + 1]; if (sd[i + 2] > b) b = sd[i + 2]; if (sd[i + 3] > a) a = sd[i + 3];
+          let r = 0, gr = 0, b = 0, a = 0, n = 0;
+          for (let y = y0; y < y1; y++) for (let i = (y * tw + x0) * 4, e = (y * tw + x1) * 4; i < e; i += 4, n++) {
+            const al = sd[i + 3]; r += sd[i] * al; gr += sd[i + 1] * al; b += sd[i + 2] * al; a += al;
           }
-          ld[o] = r; ld[o + 1] = gr; ld[o + 2] = b; ld[o + 3] = a;
+          if (a) { ld[o] = r / a; ld[o + 1] = gr / a; ld[o + 2] = b / a; ld[o + 3] = a / n; }
         }
       }
       lg.putImageData(lo, 0, 0);
       tg.clearRect(0, 0, tw, th);
       tg.imageSmoothingEnabled = false; tg.drawImage(low, 0, 0, bw, bh, 0, 0, bw * B, bh * B);
-      // the thin cut across, over the blocks (in them, a whole row of blocks went dark: a thick band)
-      const ch = th - pad;
-      tg.globalCompositeOperation = 'source-atop';
-      tg.fillStyle = INK; tg.fillRect(0, Math.round(pad + ch * .667), tw, Math.max(1, Math.round(ch * .026)));
-      tg.globalCompositeOperation = 'source-over';
       g.drawImage(tmp, t.x, t.y);
       // the fields: what is typed (or the hint), the caret
       for (const f of fields) {

@@ -388,15 +388,14 @@ const Account = (() => {
   el.form.addEventListener('pointerdown', e => e.stopPropagation());   // taps on the form are not steering / start
   el.offline.addEventListener('click', e => { e.preventDefault(); offline = true; closeForm(); });
   el.skip.addEventListener('click', e => { e.preventDefault(); closeForm(); });   // optional: play without signing up
-  // phones: the game on the whole screen (and turned to landscape where it can be locked) – the button
-  // only where the browser can do it (not on iPhones), and gone once it is so
-  const full = $('acc-full'), root = document.documentElement;
+  // phones: the game on the whole screen (and turned to landscape where it can be locked) – offered
+  // before the sign-up (#full-notice, below) where the browser can do it, or say how (iPhones)
+  const root = document.documentElement;
   const fsApi = !!(root.requestFullscreen || root.webkitRequestFullscreen), touch = matchMedia('(pointer: coarse)').matches;
   const homeScreen = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;   // (opened from the home screen: whole already)
-  const canFull = touch && !homeScreen && (fsApi || root.classList.contains('ios')), hint = $('acc-full-hint');
+  const canFull = touch && !homeScreen && (fsApi || root.classList.contains('ios'));
   const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
-  const showFull = () => full && full.classList.toggle('hidden', !canFull || isFull());
-  // a press on a "CELÁ OBRAZOVKA" button: the whole screen – or, where a page cannot have it (an iPhone)
+  // a press on CELÁ OBRAZOVKA: the whole screen – or, where a page cannot have it (an iPhone)
   // or it is refused, its hint: how to do it instead
   function goFull(hint) {
     if (!fsApi) { if (hint) hint.classList.toggle('hidden'); return; }  // (an iPhone: how to do it instead)
@@ -407,14 +406,7 @@ const Account = (() => {
       else setTimeout(failed, 500);
     } catch (err) { failed(); }
   }
-  if (full) {
-    full.addEventListener('pointerdown', e => e.stopPropagation());
-    full.addEventListener('click', e => { e.preventDefault(); goFull(hint); });
-    document.addEventListener('fullscreenchange', showFull);
-    document.addEventListener('webkitfullscreenchange', showFull);
-    showFull();
-  }
-  // where the button is (a phone not on the whole screen): before the sign-up black saying so
+  // a phone not on the whole screen (canFull): before the sign-up black saying so
   // (#full-notice) with the way to it at once – CELÁ OBRAZOVKA – or POKRAČOVAT (or a key) without it;
   // on by itself once the game is on the whole screen (on Android the loading screen's tap asks for
   // it – js/ui/input.js – and it comes a moment later)
