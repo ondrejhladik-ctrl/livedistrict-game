@@ -163,6 +163,17 @@ body.raster .dots { display: block; }
 #acc-full-hint svg { height: .95em; width: .85em; fill: currentColor; vertical-align: -.1em; }
 #acc-full-hint.hidden { display: none; }
 #account.diving #acc-full { visibility: hidden; }
+/* phones not on the whole screen: the word before the sign-up (js/ui/account.js) – on black, in the
+   loading screen's letters (as LOADING…: the light green, spaced, the soft glow), sized by the stage */
+#full-notice { background: #000; pointer-events: auto; z-index: 26; padding: 0 16px; }
+.full-notice-text {
+  color: var(--neon); font-size: clamp(16px, 6cqh, 38px); line-height: 1.5;
+  letter-spacing: .14em; padding-left: .14em;   /* (the spacing comes after the last letter too: balanced on the left) */
+  text-shadow: 2px 2px 0 #000, 0 0 8px rgba(150, 235, 70, .35);
+  animation: fadein .5s .3s both;
+}
+#full-notice.out .full-notice-text { animation: fadeout .4s both; }
+@keyframes fadeout { to { opacity: 0; } }
 #acc-skip {                        /* white, in the top right corner of the screen (the speaker is in the bottom one) */
   position: absolute; right: 2.5%; top: 3%; z-index: 36; text-shadow: 1px 1px 0 #000, 0 0 4px #000;
   font: inherit; font-size: .85em; color: #fff; background: none; border: 0; cursor: pointer; padding: 0;

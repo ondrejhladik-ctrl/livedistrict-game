@@ -412,6 +412,29 @@ const Account = (() => {
     document.addEventListener('webkitfullscreenchange', showFull);
     showFull();
   }
+  // where the button is (a phone not on the whole screen): before the sign-up a moment of black saying
+  // so (#full-notice), then on – at once on a tap or a key, or once the game is on the whole screen
+  // (on Android the loading screen's tap asks for it – js/ui/input.js – and it comes a moment later)
+  const notice = $('full-notice'), NOTICE_S = 3.8;
+  function fullNotice(then) {
+    if (!notice || !canFull || isFull()) { then(); return; }
+    let timer = 0, over = false;
+    const go = () => {
+      if (over) return;
+      over = true; clearTimeout(timer);
+      removeEventListener('keydown', key, true);
+      document.removeEventListener('fullscreenchange', whole); document.removeEventListener('webkitfullscreenchange', whole);
+      notice.classList.add('hidden'); notice.classList.remove('out');
+      then();
+    };
+    const key = e => { e.stopImmediatePropagation(); e.preventDefault(); go(); };
+    const whole = () => { if (isFull()) go(); };
+    notice.onpointerdown = e => { e.stopPropagation(); go(); };   // (not steering / start)
+    addEventListener('keydown', key, true);
+    document.addEventListener('fullscreenchange', whole); document.addEventListener('webkitfullscreenchange', whole);
+    notice.classList.remove('hidden');
+    timer = setTimeout(() => { notice.classList.add('out'); timer = setTimeout(go, 400); }, NOTICE_S * 1000);   // (the words fade, then the sign-up)
+  }
   Loading.onDone(() => { showWho(); refreshBoards(); });
 
   return {
@@ -420,10 +443,12 @@ const Account = (() => {
     // after the click on the loading screen (before the title sequence): the sign-up – or, signed up
     // already, PŘIHLÁŠENO with the nickname – then continue with done()
     offerSignUp(done) {
-      if (!enabled()) { done(); return; }
-      afterForm = done;
-      showSigned(!!(token && nickname));
-      showForm(true);
+      fullNotice(() => {                                               // (a phone not on the whole screen: first the word about it)
+        if (!enabled()) { done(); return; }
+        afterForm = done;
+        showSigned(!!(token && nickname));
+        showForm(true);
+      });
     },
     startRun, finishRun,
   };
