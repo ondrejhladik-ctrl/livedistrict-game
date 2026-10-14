@@ -89,11 +89,12 @@ const Talk = (() => {
   // the scenes' dubbing (assets/audio): the voices, and when each line is in it – [the shot comes,
   // the words begin, how long they are said] (seconds into the track); with it the scene goes by
   // the track (the shots, the typing as it is said) and ends with it. Muted: as without it.
+  // off: true – the scene with the typewriter alone (the track not even downloaded); the dubbing kept for later
   const DUBS = {
-    prague: { src: 'assets/audio/dabing-cutscene1.wav', cues: [[0, .45, 2.1], [4.6, 5.2, 1.1], [6.4, 6.95, 3.1], [10.2, 13.5, .8]] },
+    prague: { src: 'assets/audio/dabing-cutscene1.wav', cues: [[0, .45, 2.1], [4.6, 5.2, 1.1], [6.4, 6.95, 3.1], [10.2, 13.5, .8]], off: true },
   };
   const voices = {};
-  for (const k in DUBS) voices[k] = Sound.voice(DUBS[k].src);
+  for (const k in DUBS) if (!DUBS[k].off) voices[k] = Sound.voice(DUBS[k].src);
   let dub = null, voice = null;   // (typed as one: the rows and a space between)
   let LINES = SCENES.prague;                                        // (the scene playing)
   if (document.fonts) document.fonts.load("40px 'VT323'").catch(() => {});   // (the boxes' lettering ready before the first line)
@@ -513,7 +514,7 @@ const Talk = (() => {
       onEnd = done;
       LINES = SCENES[scene] || SCENES.prague;
       const key = SCENES[scene] ? scene : 'prague';
-      dub = DUBS[key] && !Sound.muted() ? DUBS[key] : null; voice = dub ? voices[key] : null;
+      dub = voices[key] && !Sound.muted() ? DUBS[key] : null; voice = dub ? voices[key] : null;
       if (voice) voice.play(0);
       canvas.classList.remove('hidden'); hud.classList.add('hidden'); skipBtn.classList.toggle('hidden', !window.DEV);
       Sound.duck(true);
