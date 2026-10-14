@@ -69,7 +69,7 @@ const Talk = (() => {
     highway: [                                                         // (the first petrol station on the motorway: Dori with the vodka, Lukas with the water)
       // (at night: the backgrounds in the night's colours, the boys in its light – night)
       { bg: 'bg-dori-nt', pose: ['water-down', 'water-up'], box: 'box-b', rows: ['silná show', 'včera'], night: true },
-      { bg: 'bg-lboy-nt', pose: ['hw-dori-down', 'hw-dori-down'], box: 'box-a', rows: ['a ještě víc', 'jich čeká'], night: true },
+      { bg: 'bg-lboy-nt', pose: ['hw-dori-down', 'hw-dori-down'], box: 'box-a', rows: ['a ještě víc nás', 'jich čeká'], night: true },
       { bg: 'bg-dori-nt', pose: ['water-up', 'water-drink'], box: 'box-c', rows: ['jaro bude', 'next level'], night: true },
       { bg: 'bg-lboy-nt', pose: ['hw-dori-up', 'hw-dori-drink'], box: 'box-a', rows: ['okay, pome, ať', 'stíháme soundcheck'], night: true },
       { bg: 'end-hw-bg', pose: [], text: '', hold: 4.2, drive: true },    // (no words: the empty bottle on the forecourt, the car driving off in its smoke – see DRIVE)
@@ -90,8 +90,13 @@ const Talk = (() => {
   // the words begin, how long they are said] (seconds into the track); with it the scene goes by
   // the track (the shots, the typing as it is said) and ends with it. Muted: as without it.
   // off: true – the scene with the typewriter alone (the track not even downloaded); the dubbing kept for later
+  // (the shots with no words: the words "begin" with the shot, said in no time; a 4th number: when the
+  // boy's second pose comes – Dori's sip of the vodka, heard in the track – instead of after the words)
   const DUBS = {
-    prague: { src: 'assets/audio/dabing-cutscene1.wav', cues: [[0, .45, 2.1], [4.6, 5.2, 1.1], [6.4, 6.95, 3.1], [10.2, 13.5, .8]], off: true },
+    prague: { src: 'assets/audio/dabing-prague.mp3', cues: [[0, .4, 2.2], [4.6, 5.1, 2], [7.5, 8, 2.7], [11.2, 13.5, .8]] },
+    prague2: { src: 'assets/audio/dabing-prague2.mp3', cues: [[0, 0, .1], [2.5, 3, 1.4], [6.2, 6.8, 2.7]] },
+    highway: { src: 'assets/audio/dabing-highway.mp3', cues: [[0, .9, 1], [3.9, 4.4, 1], [7.5, 8.1, 1.9], [11.3, 11.85, 1.7, 13.62], [15.2, 15.2, .1]] },
+    pattaya: { src: 'assets/audio/dabing-pattaya.mp3', cues: [[0, .9, 2.2], [4.2, 4.8, 1.7], [8.2, 8.8, 2.5], [12.4, 13, 1], [16, 16.6, 1.5], [19.2, 19.2, .1], [20.4, 20.4, .1]] },
   };
   const voices = {};
   for (const k in DUBS) if (!DUBS[k].off) voices[k] = Sound.voice(DUBS[k].src);
@@ -377,7 +382,8 @@ const Talk = (() => {
       ctx.drawImage(bg, bx, by, bw, bh);
       bgAt = [bx, by, bw, bh];
     }
-    const pose = L.pose[L.pose.length > 2 ? (done ? (t - done > POSE_AFTER ? 2 : 1) : typed >= L.text.length / 2 ? 1 : 0) : done && t - done > POSE_AFTER ? 1 : 0], sp = L.night ? inNight(pose) : img[pose], [x0, y0, x1, y1] = SPRITES[pose] || [0, 0, 0, 0];
+    const cue = dub && dub.cues[line], after = cue && cue[3] != null ? t >= cue[3] - cue[0] : done && t - done > POSE_AFTER;   // (the dubbing may say when: a sip heard in it)
+    const pose = L.pose[L.pose.length > 2 ? (done ? (t - done > POSE_AFTER ? 2 : 1) : typed >= L.text.length / 2 ? 1 : 0) : after ? 1 : 0], sp = L.night ? inNight(pose) : img[pose], [x0, y0, x1, y1] = SPRITES[pose] || [0, 0, 0, 0];
     // where the boy is: on the screen as the picture is (standing still while the background drifts)
     // – or, onBg (a cut-out of the background itself: Lukas in the shop's door), moving with it
     const bk = L.onBg && bgAt ? BG_ZOOM : 1, bxo = L.onBg && bgAt ? bgAt[0] : ox, byo = L.onBg && bgAt ? bgAt[1] : 0;
