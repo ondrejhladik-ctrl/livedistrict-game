@@ -166,14 +166,15 @@ body.raster .dots { display: block; }
 /* phones not on the whole screen: the word before the sign-up (js/ui/account.js) – on black, in the
    loading screen's letters (as LOADING…: the light green, spaced, the soft glow), sized by the stage */
 #full-notice { background: #000; pointer-events: auto; z-index: 26; padding: 0 16px; gap: 0; font-size: clamp(16px, 6cqh, 38px); }
+/* (all of it in the middle, but each line from the left – where PRO LEPŠÍ ZÁŽITEK begins) */
+.full-notice-box { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
 .full-notice-text {
-  color: var(--neon); line-height: 1.5;
-  letter-spacing: .14em; padding-left: .14em;   /* (the spacing comes after the last letter too: balanced on the left) */
+  color: var(--neon); line-height: 1.5; letter-spacing: .14em;
   text-shadow: 2px 2px 0 #000, 0 0 8px rgba(150, 235, 70, .35);
 }
 .full-notice-text, .full-notice-buttons { animation: fadein .5s .3s both; }
 /* under it: the whole screen at once (the sign-up's "hrát" box: the heading's green, its grain) – or on without it */
-.full-notice-buttons { display: flex; align-items: center; justify-content: center; gap: 1.6em; margin-top: 1.1em; }
+.full-notice-buttons { display: flex; align-items: center; gap: 1.6em; margin-top: 1.1em; }
 .full-notice-buttons button { font: inherit; font-size: .8em; letter-spacing: .12em; border: 0; cursor: pointer; touch-action: manipulation; }
 #notice-full {
   display: flex; align-items: center; gap: .5em; padding: .2em .9em .2em .8em; color: #000;
