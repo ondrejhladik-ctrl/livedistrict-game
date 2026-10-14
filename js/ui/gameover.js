@@ -243,7 +243,7 @@ const GameOver = (() => {
   }
 
   // ---------- the sequence ----------
-  let raf = 0, t0 = 0, hsAt = null, drawn = '', rows = [], shownRows = -1, settled = false, odd = false;
+  let raf = 0, t0 = 0, hsAt = null, drawn = '', rows = [], shownRows = -1, settled = false, odd = false, shade = 0;
   function frame() {
     raf = requestAnimationFrame(frame);
     if (settled && (odd = !odd)) return;                               // all in place: every other frame is enough (the grain, the road)
@@ -297,13 +297,18 @@ const GameOver = (() => {
         settled = (!BARS || barsA >= 1) && k >= rows.length;
       }
     }
-    // the picture: the bars with the road's lines, the letters, the grain on all of it
+    // the picture darker behind HIGH SCORES: the overlay's own background – all of the stage, and
+    // round it as far as the screen goes (a browser that shows any of the picture outside the
+    // stage, or does not stretch the canvas over it, had it bright round a dark middle)
+    if (dim !== shade) {
+      shade = dim;
+      const c = `rgba(10,8,6,${dim.toFixed(3)})`;
+      box.style.background = dim > 0 ? c : '';
+      box.style.boxShadow = dim > 0 ? `0 0 0 100vmax ${c}` : '';
+    }
+    // the canvas: the bars with the road's lines, the letters, the grain on them
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, W * R, H * R);
-    if (dim > 0) {
-      ctx.fillStyle = `rgba(10,8,6,${dim.toFixed(3)})`;
-      ctx.fillRect(0, 0, W * R, H * R);
-    }
     if (barsA > 0) {
       ctx.globalAlpha = barsA;
       ctx.imageSmoothingEnabled = true;
@@ -339,6 +344,7 @@ const GameOver = (() => {
     cancelAnimationFrame(raf);
     raf = 0;
     box.classList.remove('plain', 'scores', 'done');
+    box.style.background = box.style.boxShadow = ''; shade = 0;
     for (const r of rows) r.style.visibility = '';
     rows = [];
     ctx.setTransform(1, 0, 0, 1, 0, 0);
