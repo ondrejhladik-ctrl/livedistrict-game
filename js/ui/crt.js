@@ -16,7 +16,7 @@ const Crt = (() => {
   tv.append(cv);
   const out = cv.getContext('2d');
   const page = Util.canvas(1, 1), pg = page.getContext('2d', { willReadFrequently: true });   // the screen, flat
-  const tmp = Util.canvas(1, 1), tg = tmp.getContext('2d'), low = Util.canvas(1, 1), lg = low.getContext('2d');
+  const tmp = Util.canvas(1, 1), tg = tmp.getContext('2d', { willReadFrequently: true }), low = Util.canvas(1, 1), lg = low.getContext('2d');
   const BULGE = .06, PIX = 3, GREEN = '#6cb820', INK = '#0a0806', NEON = '#b8ff4a';
   const $ = id => document.getElementById(id);
   const form = $('acc-form'), title = form.querySelector('.acc-title'), fields = [$('acc-nick'), $('acc-email')];
@@ -28,8 +28,8 @@ const Crt = (() => {
   // corner) and the glass's shape (as #crt-shape) – worked out once for a size: for each pixel on
   // the screen, the one of the flat screen it shows (-1: outside the glass)
   function layout(w, h) {
-    k = Math.min(devicePixelRatio || 1, 2);
-    while (w * h * k * k > 1.2e6 && k > 1) k -= .25;                   // (not too many pixels to move on a phone)
+    k = Math.min(devicePixelRatio || 1, 3);                            // (as sharp as the screen: an iPhone's is 3×)
+    while (w * h * k * k > 1.7e6 && k > 1) k -= .25;                   // (not too many pixels to move on a phone)
     W = Math.round(w * k); H = Math.round(h * k);
     for (const c of [cv, page]) { c.width = W; c.height = H; }
     const mask = Util.canvas(W, H), mg = mask.getContext('2d', { willReadFrequently: true });
@@ -90,22 +90,39 @@ const Crt = (() => {
     g.fillStyle = 'rgba(108, 184, 32, .07)';                           // the glass's faint lines (css .crt-screen::before)
     for (let y = 0; y < H; y += 5 * k) g.fillRect(0, y, W, 2 * k);
     if (css(form).visibility !== 'hidden' && css(form).display !== 'none') {
-      // the heading: in a canvas of its own (the grain, the cut), then pixelated
+      // the heading: in a canvas of its own (the grain), pixelated, then the cut across
       const t = rectOf(title), tcs = css(title), pad = parseFloat(tcs.paddingTop) * k, padL = parseFloat(tcs.paddingLeft) * k;
       const tw = Math.ceil(t.w), th = Math.ceil(t.h);
       if (tmp.width !== tw || tmp.height !== th) { tmp.width = tw; tmp.height = th; }
       tg.clearRect(0, 0, tw, th);
       tg.fillStyle = GREEN;
       text(tg, title.textContent, padL, pad + (th - pad) / 2, tcs);
-      tg.globalCompositeOperation = 'source-atop';
-      const ch = th - pad;
-      tg.fillStyle = INK; tg.fillRect(0, pad + ch * .667, tw, ch * .026 + 1);   // the thin cut across
-      tg.globalCompositeOperation = 'source-over';
       grain(tg, 0, 0, tw, th, 1);
-      const bw = Math.max(1, Math.round(tw / (PIX * k))), bh = Math.max(1, Math.round(th / (PIX * k)));
+      // pixelated as the css filter does it (index.html #pixelate): each 3×3 block the brightest of
+      // its middle px – the letters keep their weight (a single pixel taken broke them up)
+      const B = PIX * k, bw = Math.ceil(tw / B), bh = Math.ceil(th / B);
       if (low.width !== bw || low.height !== bh) { low.width = bw; low.height = bh; }
-      lg.imageSmoothingEnabled = false; lg.clearRect(0, 0, bw, bh); lg.drawImage(tmp, 0, 0, bw, bh);
-      g.imageSmoothingEnabled = false; g.drawImage(low, 0, 0, bw, bh, t.x, t.y, tw, th);
+      const sd = tg.getImageData(0, 0, tw, th).data, lo = lg.createImageData(bw, bh), ld = lo.data;
+      for (let by = 0, o = 0; by < bh; by++) {
+        const y0 = Math.floor(by * B + k), y1 = Math.min(th, Math.max(y0 + 1, Math.floor(by * B + 2 * k)));
+        for (let bx = 0; bx < bw; bx++, o += 4) {
+          const x0 = Math.floor(bx * B + k), x1 = Math.min(tw, Math.max(x0 + 1, Math.floor(bx * B + 2 * k)));
+          let r = 0, gr = 0, b = 0, a = 0;
+          for (let y = y0; y < y1; y++) for (let i = (y * tw + x0) * 4, e = (y * tw + x1) * 4; i < e; i += 4) {
+            if (sd[i] > r) r = sd[i]; if (sd[i + 1] > gr) gr = sd[i + 1]; if (sd[i + 2] > b) b = sd[i + 2]; if (sd[i + 3] > a) a = sd[i + 3];
+          }
+          ld[o] = r; ld[o + 1] = gr; ld[o + 2] = b; ld[o + 3] = a;
+        }
+      }
+      lg.putImageData(lo, 0, 0);
+      tg.clearRect(0, 0, tw, th);
+      tg.imageSmoothingEnabled = false; tg.drawImage(low, 0, 0, bw, bh, 0, 0, bw * B, bh * B);
+      // the thin cut across, over the blocks (in them, a whole row of blocks went dark: a thick band)
+      const ch = th - pad;
+      tg.globalCompositeOperation = 'source-atop';
+      tg.fillStyle = INK; tg.fillRect(0, Math.round(pad + ch * .667), tw, Math.max(1, Math.round(ch * .026)));
+      tg.globalCompositeOperation = 'source-over';
+      g.drawImage(tmp, t.x, t.y);
       // the fields: what is typed (or the hint), the caret
       for (const f of fields) {
         if (!shown(f)) continue;
@@ -165,7 +182,7 @@ const Crt = (() => {
     if (!tv.offsetWidth) return;
     base = tv.getBoundingClientRect();
     const w = tv.offsetWidth, h = tv.offsetHeight;
-    if (Math.round(w * Math.min(devicePixelRatio || 1, 2)) !== Math.round(W / k * Math.min(devicePixelRatio || 1, 2)) || !map || Math.abs(h * k - H) > 1) layout(w, h);
+    if (!map || Math.abs(w * k - W) > 1 || Math.abs(h * k - H) > 1) layout(w, h);   // (a new size: worked out again)
     paint();
   }, 80);
 
