@@ -11,9 +11,10 @@
 // it, softly), so the glowing lettering and its bars stand out as in the intro's
 // dark, also over the bright Pattaya.
 // Drawn into a canvas over the picture, in the title sequence's 640×360 (at R
-// times that, so the smaller letters stay crisp).
+// times that – as sharp as the screen shows it, see fit).
 const GameOver = (() => {
-  const W = 640, H = 360, R = 2;
+  const W = 640, H = 360;
+  let R = 2, B = 4;                                                  // (the canvas's pixels a 640×360 one; the letters' pixels in the canvas's)
   const GREEN = '#6cb820', INK = '#0a0806', WHITE = '#ffffff';
   const TOWARDS = [[0, GREEN], [.5, '#86ec8e'], [1, '#e2fde0']];   // the bars: green by the word, nearly white towards the viewer (as in the intro)
   const FONT = Intro.font, BLUR = 'filter' in CanvasRenderingContext2D.prototype;
@@ -35,7 +36,20 @@ const GameOver = (() => {
   canvas.width = W * R; canvas.height = H * R;
   const ctx = canvas.getContext('2d');
   const layer = (w, h) => { const c = Util.canvas(w, h); return [c, c.getContext('2d')]; };
-  const [face, fg] = layer(W * R, H * R);                           // the letters (with their glow / shadow)
+  let face, fg, chunky, cg, shownAt = '';                           // the letters (with their glow / shadow); them low-res (see pixelate)
+  // the canvas as sharp as it is shown (object-fit: cover – the 640×360 at its scale, times the
+  // screen's pixels: R, 2 to 4), the letters' pixels 3 css px – as the sign-up's heading (index.html
+  // #pixelate); worked out when it comes up (and if its size changes)
+  function fit() {
+    const r = canvas.getBoundingClientRect(), scale = Math.max(r.width / W, r.height / H), dpr = devicePixelRatio || 1;
+    shownAt = r.width + 'x' + r.height;
+    const nr = scale ? Util.clamp(Math.ceil(scale * dpr - .05), 2, 4) : 2;   // (never fewer pixels than shown)
+    B = scale ? Math.max(1, Math.round(3 * nr / scale)) : 4;          // (3 css px: the canvas has nr / scale of its pixels in one)
+    if (nr !== R || !face) { R = nr; canvas.width = W * R; canvas.height = H * R; [face, fg] = layer(W * R, H * R); }
+    const cw = Math.ceil(W * R / B), ch = Math.ceil(H * R / B);
+    if (!chunky || chunky.width !== cw || chunky.height !== ch) [chunky, cg] = layer(cw, ch);
+  }
+  fit();
   const [bars, bg] = layer(W / 2, H / 2);                           // the bars (half size, they are soft anyway)…
   const [part, pg] = layer(W / 2, H / 2);                           // (…one focus of them…)
   const [fan, fng] = layer(W / 2, H / 2);                           // …all put together, faded out at the near end
@@ -109,16 +123,17 @@ const GameOver = (() => {
   }
   // under the letters on the face: GAME OVER a soft dark shadow (it stands over the
   // picture), HIGH SCORES its green glow (like the canopy's lights)
-  // the letters a little low-res, as the title's: blown up in big pixels from the
-  // game's own 320×180
-  const [chunky, cg] = layer(W / 2, H / 2);
+  // the letters a little low-res: shrunk to pixels of B (each the mean of what is in it) and blown
+  // up again – small ones, as the sign-up's heading (the game's own 320×180 made them so coarse
+  // that the thin cut became a band across them)
   function pixelate() {
-    cg.clearRect(0, 0, W / 2, H / 2);
-    cg.imageSmoothingEnabled = true;
-    cg.drawImage(face, 0, 0, W / 2, H / 2);
+    const cw = W * R / B, ch = H * R / B;
+    cg.clearRect(0, 0, chunky.width, chunky.height);
+    cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
+    cg.drawImage(face, 0, 0, cw, ch);
     fg.clearRect(0, 0, W * R, H * R);
     fg.imageSmoothingEnabled = false;
-    fg.drawImage(chunky, 0, 0, W * R, H * R);
+    fg.drawImage(chunky, 0, 0, cw, ch, 0, 0, W * R, H * R);
     fg.imageSmoothingEnabled = true;
   }
   function halo(kind, cap) {
@@ -232,6 +247,8 @@ const GameOver = (() => {
   function frame() {
     raf = requestAnimationFrame(frame);
     if (settled && (odd = !odd)) return;                               // all in place: every other frame is enough (the grain, the road)
+    const r = canvas.getBoundingClientRect();
+    if (r.width + 'x' + r.height !== shownAt) { fit(); drawn = ''; }   // (a new size: as sharp again, the letters drawn again)
     const t = performance.now() / 1000 - t0;
     const ready = !board.classList.contains('hidden') && board.querySelector('.board-row');
     if (hsAt === null && t >= T.cut && ready) { hsAt = t; box.classList.remove('plain', 'done'); }   // (the table may come later – from the server)
@@ -313,6 +330,7 @@ const GameOver = (() => {
 
   function start() {
     stop();
+    fit();
     t0 = performance.now() / 1000; hsAt = null; drawn = ''; road = null; settled = false;
     board.style.width = '';
     raf = requestAnimationFrame(frame);

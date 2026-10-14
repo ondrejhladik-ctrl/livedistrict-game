@@ -93,7 +93,7 @@ const Talk = (() => {
   // (the shots with no words: the words "begin" with the shot, said in no time; a 4th number: when the
   // boy's second pose comes – Dori's sip of the vodka, heard in the track – instead of after the words)
   const DUBS = {
-    prague: { src: 'assets/audio/dabing-prague.mp3', cues: [[0, .4, 2.2], [4.6, 5.1, 2], [7.5, 8, 2.7], [11.2, 13.5, .8]] },
+    prague: { src: 'assets/audio/dabing-prague.mp3', cues: [[0, .4, 2.2], [4.6, 5.1, 2], [8.6, 9.2, 1.7], [11.2, 13.5, .8]] },
     prague2: { src: 'assets/audio/dabing-prague2.mp3', cues: [[0, 0, .1], [2.5, 3, 1.4], [6.2, 6.8, 2.7]] },
     highway: { src: 'assets/audio/dabing-highway.mp3', cues: [[0, .9, 1], [3.9, 4.4, 1], [7.5, 8.1, 1.9], [11.3, 11.85, 1.7, 13.62], [15.2, 15.2, .1]] },
     pattaya: { src: 'assets/audio/dabing-pattaya.mp3', cues: [[0, .9, 2.2], [4.2, 4.8, 1.7], [8.2, 8.8, 2.5], [12.4, 13, 1], [16, 16.6, 1.5], [19.2, 19.2, .1], [20.4, 20.4, .1]] },
@@ -288,11 +288,12 @@ const Talk = (() => {
 
   const canvas = document.getElementById('talk'), ctx = canvas.getContext('2d');
   const hud = document.getElementById('hud'), skipBtn = document.getElementById('skip');
-  // skipping it all: into black at once, then on (the button, or Esc)
-  const skip = () => { if (window.DEV && line >= 0 && closing < 0) closing = 0; };   // (only on the developer's computer – js/dev.js)
+  // skipping it all: into black at once, then on (the button, or Esc) – for everyone (pressing through
+  // the lines one by one: only on the developer's computer – js/game/game.js, js/dev.js)
+  const skip = () => { if (line >= 0 && closing < 0) closing = 0; };
   skipBtn.addEventListener('pointerdown', e => e.stopPropagation());   // (not a press of the talk, nor steering)
   skipBtn.addEventListener('click', e => { e.preventDefault(); skip(); skipBtn.blur(); });
-  addEventListener('keydown', e => { if (e.code === 'Escape' && window.DEV) skip(); });   // (skipping: only on the developer's computer – js/dev.js)
+  addEventListener('keydown', e => { if (e.code === 'Escape') skip(); });
   let line = -1, t = 0, typed = 0, done = 0, raf = 0, last = 0, onEnd = null, grain = null;
   let boxAt = BOX_T;                                                 // (when the box comes, into the line)
   let bgName = null, bgT = 0;                                       // the background shown and for how long
@@ -522,7 +523,7 @@ const Talk = (() => {
       const key = SCENES[scene] ? scene : 'prague';
       dub = voices[key] && !Sound.muted() ? DUBS[key] : null; voice = dub ? voices[key] : null;
       if (voice) voice.play(0);
-      canvas.classList.remove('hidden'); hud.classList.add('hidden'); skipBtn.classList.toggle('hidden', !window.DEV);
+      canvas.classList.remove('hidden'); hud.classList.add('hidden'); skipBtn.classList.remove('hidden');
       Sound.duck(true);
       bgName = null; age = 0; closing = -1;
       show(0);
