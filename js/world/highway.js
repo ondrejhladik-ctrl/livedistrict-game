@@ -63,9 +63,8 @@ const Highway = (() => {
   }
 
   // the signs ahead of the camera: around every stop on the motorway. The "1 km" one
-  // stands 100 m past the station before (a whole kilometre before would be right on
-  // it – they are a kilometre apart); before the first one on the motorway a kilometre
-  // before it. Then a song, "500 m", a song – the songs only from the second station on
+  // stands a kilometre before it – but at least 100 m past the station before (were
+  // they a kilometre apart, it would be right on it). Then a song, "500 m", a song – the songs only from the second station on
   // (past the first one). None ever on a forecourt.
   const egg = k => ({ pic: eggs[k % eggs.length], song: EGGS[k % eggs.length][2] });
   const AFTER = 100 / MU, KM = 1000 / MU;
@@ -77,7 +76,7 @@ const Highway = (() => {
     for (const m of stops) {
       if (m < X.from) continue;
       const turn = turnOf(m), i = Math.round((m - X.from) / X.every), prev = m - X.every;
-      const kmAt = prev >= X.from ? turnOf(prev) + X.length + AFTER : turn - KM;
+      const kmAt = prev >= X.from ? Math.max(turnOf(prev) + X.length + AFTER, turn - KM) : turn - KM;
       const list = [[kmAt, { pic: station[1], wide: 1.15 }], [turn - 125, { pic: station[0], wide: 1.15 }]];
       if (i > 0) list.push([turn - 190, egg((i - 1) * 2)], [turn - 62, egg((i - 1) * 2 + 1)]);   // (the tracklist only past the first station: from track 1 on)
       for (const [wz, s] of list) if (wz < turn && Biome.zone(wz) === 'highway' && !onForecourt(wz)) out.push({ wz, ...s });
