@@ -138,6 +138,7 @@ function playerOrNull(req) {
 function player(req) {
   const p = playerOrNull(req);
   if (!p) throw new HttpError(401, 'unauthorized', 'Unknown player – register again');
+  if (p.banned) throw new HttpError(403, 'banned', 'This player is banned');
   return p;
 }
 
@@ -203,6 +204,7 @@ async function register(req) {
   const token = crypto.randomBytes(32).toString('hex');
   const byEmail = db.playerByEmail(email);
   if (byEmail) {
+    if (byEmail.banned) throw new HttpError(403, 'banned', 'This player is banned');
     // the same player on another device: e-mail + their nickname sign them in again
     if (byEmail.nickname.toLowerCase() !== nickname.toLowerCase())
       throw new HttpError(409, 'email_taken', 'This e-mail is registered with another nickname');

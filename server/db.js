@@ -1,7 +1,8 @@
 // The SQLite database behind the leaderboard (node:sqlite, built into Node 22.13+).
 //   players: one row per player – nickname and e-mail are unique (case-insensitive),
 //            only a hash of the player's token is stored; best = their best score,
-//            runs = how many of their runs counted
+//            runs = how many of their runs counted, banned = 1: out of the leaderboard,
+//            their runs not counted, no signing in again (admin.js ban / unban)
 //   runs:    the runs being driven right now (timed by the server) and the refused
 //            ones (score not possible in that time – admin.js flagged). A run that
 //            counted is deleted when it ends, so the table stays small however
@@ -49,6 +50,8 @@ function openDb(file) {
     ) WITHOUT ROWID;
   `);
   migrate(db);
+  if (!db.prepare('PRAGMA table_info(players)').all().some(c => c.name === 'banned'))
+    db.exec('ALTER TABLE players ADD COLUMN banned INTEGER NOT NULL DEFAULT 0');
   db.exec(`
     CREATE INDEX IF NOT EXISTS runs_open ON runs (started_at) WHERE finished_at IS NULL;
     CREATE INDEX IF NOT EXISTS runs_refused ON runs (finished_at) WHERE plausible = 0;
@@ -62,8 +65,8 @@ function openDb(file) {
 
   const q = sql => db.prepare(sql);
   const s = {
-    byToken: q('SELECT id, nickname, best FROM players WHERE token_hash = ?'),
-    byEmail: q('SELECT id, nickname FROM players WHERE email = ?'),
+    byToken: q('SELECT id, nickname, best, banned FROM players WHERE token_hash = ?'),
+    byEmail: q('SELECT id, nickname, banned FROM players WHERE email = ?'),
     byNick: q('SELECT id FROM players WHERE nickname = ?'),
     add: q('INSERT INTO players (nickname, email, token_hash, consent_at) VALUES (?, ?, ?, ?)'),
     token: q('UPDATE players SET token_hash = ? WHERE id = ?'),
@@ -74,13 +77,14 @@ function openDb(file) {
     best: q('UPDATE players SET best = ?, best_at = ? WHERE id = ? AND best < ?'),
     refuse: q('UPDATE runs SET finished_at = ?, score = ?, plausible = 0 WHERE id = ?'),
     dropOpen: q('DELETE FROM runs WHERE finished_at IS NULL AND started_at < ?'),
-    ranking: q('SELECT id, nickname, best, best_at FROM players WHERE best > 0 ORDER BY best DESC, best_at ASC, id ASC'),
+    ranking: q('SELECT id, nickname, best, best_at FROM players WHERE best > 0 AND banned = 0 ORDER BY best DESC, best_at ASC, id ASC'),
     visit: q('INSERT INTO visits (day, key, n) VALUES (?, ?, 1) ON CONFLICT (day, key) DO UPDATE SET n = n + 1'),
     visits: q('SELECT day, key, n FROM visits WHERE day >= ? ORDER BY day, n DESC, key'),
     version: q('PRAGMA data_version'),
     ping: q('SELECT 1 AS ok'),
     // admin.js only – these include e-mails
-    winners: q('SELECT nickname, email, best, best_at FROM players WHERE best > 0 ORDER BY best DESC, best_at ASC, id ASC LIMIT ?'),
+    winners: q('SELECT nickname, email, best, best_at FROM players WHERE best > 0 AND banned = 0 ORDER BY best DESC, best_at ASC, id ASC LIMIT ?'),
+    ban: q('UPDATE players SET banned = ? WHERE email = ?'),
     del: q('DELETE FROM players WHERE email = ?'),
     delTest: q('DELETE FROM players WHERE email LIKE ?'),
     count: q('SELECT COUNT(*) AS n FROM players'),
@@ -129,6 +133,7 @@ function openDb(file) {
     // admin.js only – these include e-mails
     winners: n => s.winners.all(n),
     deleteByEmail: e => Number(s.del.run(e.toLowerCase()).changes),
+    setBanned: (e, on) => Number(s.ban.run(on ? 1 : 0, e.toLowerCase()).changes),
     deleteTestPlayers: () => Number(s.delTest.run(TEST_EMAILS).changes),
     count: () => s.count.get().n,
     everyone: () => s.everyone.all(),

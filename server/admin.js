@@ -3,6 +3,7 @@
 //
 //   node admin.js top 10              best players with e-mails (CSV) – the winners
 //   node admin.js delete email@x.cz   delete a player and all their data (GDPR request)
+//   node admin.js ban email@x.cz      out of the leaderboard, runs not counted, no signing in again (unban: back)
 //   node admin.js flagged 20          refused runs (score impossible in that time)
 //   node admin.js all                 every player with e-mail (CSV), in order of signing up
 //   node admin.js count               number of registered players
@@ -32,6 +33,13 @@ switch (cmd) {
     if (!arg) { console.error('Usage: node admin.js delete email@example.com'); process.exit(1); }
     const n = db.deleteByEmail(arg);
     console.log(n ? `Deleted ${arg} and their runs.` : `No player with e-mail ${arg}.`);
+    break;
+  }
+  case 'ban':
+  case 'unban': {
+    if (!arg) { console.error(`Usage: node admin.js ${cmd} email@example.com`); process.exit(1); }
+    const n = db.setBanned(arg, cmd === 'ban');
+    console.log(n ? `${cmd === 'ban' ? 'Banned' : 'Unbanned'} ${arg}.` : `No player with e-mail ${arg}.`);
     break;
   }
   case 'flagged': {
@@ -70,5 +78,5 @@ switch (cmd) {
     break;
   }
   default:
-    console.log('Commands: all | top [n] | delete <email> | flagged [n] | count | visits [days] | backup <file>');
+    console.log('Commands: all | top [n] | delete <email> | ban <email> | unban <email> | flagged [n] | count | visits [days] | backup <file>');
 }
