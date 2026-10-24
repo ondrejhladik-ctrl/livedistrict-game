@@ -26,6 +26,7 @@
   }
 
   function frame(now) {
+    if (window.__ended) { Sound.engine(false, 0); return; }         // the game is over (js/ui/end.js): nothing more
     if (half) { skip = !skip; if (skip) { requestAnimationFrame(frame); return; } }   // (this frame skipped: the next one moves on by both)
     const t0 = performance.now();
     // clamp: never negative (the first rAF timestamp can be older than `last`),

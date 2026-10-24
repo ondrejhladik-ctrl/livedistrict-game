@@ -536,3 +536,25 @@ body.raster .dots { display: block; }
 
 /* the 16:9 pictures in the 4:3 stage: as high as it, their middle shown (not squeezed) */
 #loading-canvas, #gameover-fx { object-fit: cover; }
+
+/* ---------- the end of the game (js/ui/end.js): KONEC HRY and the final leaderboard ---------- */
+html.ended, html.ended body { overflow: hidden; }
+#end {
+  position: fixed; inset: 0; z-index: 400; background: #000; color: #6cb820;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 3vh 16px; box-sizing: border-box; font-family: 'VT323', monospace;
+  font-size: clamp(14px, min(3.3vh, 4.4vw), 30px);
+}
+.end-title {
+  margin: 0; font-family: Anton, Impact, 'Arial Narrow', sans-serif; font-weight: normal; line-height: 1;
+  font-size: 2.6em; letter-spacing: .07em; color: var(--neon); text-shadow: 0 0 .35em rgba(108, 184, 32, .55);
+}
+.end-sub { margin: .35em 0 .9em; letter-spacing: .25em; color: #fff; }
+.end-board { width: min(100%, 22em); line-height: 1.12; letter-spacing: .08em; }
+.end-row { display: flex; gap: .9em; color: #6cb820; }          /* the 8th–20th in the form's green… */
+.end-row.light { color: var(--neon); }                         /* …the 2nd–7th in the lighter one… */
+.end-row.first { color: #fff; }                                /* …and the winner in white */
+.end-row .rank { width: 3em; }
+.end-row .nick { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.end-row .pts { text-align: right; }
+.end-note { min-height: 1.2em; margin-top: .6em; font-size: .8em; color: #4f7a1c; }
